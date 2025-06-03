@@ -45,28 +45,54 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     // Extract domain from parent origin for guest users
     const getGuestDomain = () => {
         if (typeof window !== 'undefined') {
+            console.log('getGuestDomain: Starting domain extraction');
+
             // First try to get parentOrigin from URL params (widget context)
             const urlParams = new URLSearchParams(window.location.search);
             const parentOrigin = urlParams.get('parentOrigin');
 
+            console.log('getGuestDomain: URL params check', {
+                currentUrl: window.location.href,
+                searchParams: window.location.search,
+                parentOrigin: parentOrigin,
+                allParams: Object.fromEntries(urlParams.entries())
+            });
+
             if (parentOrigin && parentOrigin !== window.location.origin) {
                 try {
                     const url = new URL(parentOrigin);
+                    console.log('getGuestDomain: Successfully parsed parentOrigin', {
+                        originalUrl: parentOrigin,
+                        hostname: url.hostname,
+                        origin: url.origin
+                    });
                     return url.hostname;
                 } catch (error) {
-                    console.warn('Failed to parse parent origin:', parentOrigin, error);
+                    console.warn('getGuestDomain: Failed to parse parent origin:', parentOrigin, error);
                 }
             }
 
             // Fallback to document referrer
+            console.log('getGuestDomain: Fallback to document.referrer', {
+                referrer: document.referrer,
+                currentOrigin: window.location.origin
+            });
+
             if (document.referrer && document.referrer !== window.location.origin) {
                 try {
                     const url = new URL(document.referrer);
+                    console.log('getGuestDomain: Successfully parsed referrer', {
+                        originalUrl: document.referrer,
+                        hostname: url.hostname,
+                        origin: url.origin
+                    });
                     return url.hostname;
                 } catch (error) {
-                    console.warn('Failed to parse referrer:', document.referrer, error);
+                    console.warn('getGuestDomain: Failed to parse referrer:', document.referrer, error);
                 }
             }
+
+            console.log('getGuestDomain: No valid domain found, returning Unknown');
         }
 
         return 'Unknown';
