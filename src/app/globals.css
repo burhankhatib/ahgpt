@@ -1,26 +1,639 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root {
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+  
+  /* Font family variables */
+  --current-font-family: var(--font-roboto);
+  --current-font-size: 1rem;
+}
+
+@layer base {
+  * {
+    @apply border-0 outline-none;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "ss01" on, "ss02" on, "ss03" on, "liga" on;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Font family utilities */
+  .font-cairo {
+    font-family: var(--font-cairo), system-ui, sans-serif;
+  }
+  
+  .font-roboto {
+    font-family: var(--font-roboto), system-ui, sans-serif;
+  }
+  
+  .font-noto-sans-sc {
+    font-family: var(--font-noto-sans-sc), system-ui, sans-serif;
+  }
+  
+  .font-noto-sans-devanagari {
+    font-family: var(--font-noto-sans-devanagari), system-ui, sans-serif;
+  }
+  
+  .font-noto-sans-bengali {
+    font-family: var(--font-noto-sans-bengali), system-ui, sans-serif;
+  }
+  
+  .font-noto-sans-jp {
+    font-family: var(--font-noto-sans-jp), system-ui, sans-serif;
+  }
+  
+  .font-noto-sans-kr {
+    font-family: var(--font-noto-sans-kr), system-ui, sans-serif;
+  }
+  
+  .font-noto-sans-thai {
+    font-family: var(--font-noto-sans-thai), system-ui, sans-serif;
+  }
+  
+  .font-noto-sans-telugu {
+    font-family: var(--font-noto-sans-telugu), system-ui, sans-serif;
+  }
+  
+  .font-noto-sans-tamil {
+    font-family: var(--font-noto-sans-tamil), system-ui, sans-serif;
+  }
+  
+  /* Dynamic font class that uses CSS variables */
+  .font-dynamic {
+    font-family: var(--current-font-family);
+    font-size: var(--current-font-size);
+  }
+  
+  /* RTL-specific styles */
+  [dir="rtl"] {
+    text-align: right;
+  }
+  
+  [dir="rtl"] .chat-message-content {
+    text-align: right;
+    direction: rtl;
+  }
+  
+  [dir="rtl"] .chat-message-content ul {
+    padding-right: 0;
+    padding-left: 0;
+  }
+  
+  [dir="rtl"] .chat-message-content ul li {
+    padding-right: 1rem;
+    padding-left: 0;
+  }
+  
+  [dir="rtl"] .chat-message-content ul li::before {
+    right: 0.2rem;
+    left: auto;
+  }
+  
+  /* Arabic and Urdu-specific typography improvements */
+  .font-cairo {
+    line-height: 1.8; /* Better line height for Arabic */
+    letter-spacing: 0; /* Remove letter spacing for Arabic */
+  }
+  
+  .font-cairo .chat-message-content p {
+    line-height: 1.9;
+  }
+  
+  .font-cairo .chat-message-content li {
+    line-height: 1.8;
+  }
+  
+  /* Chinese-specific typography improvements */
+  .font-noto-sans-sc {
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+  }
+  
+  /* Japanese-specific typography improvements */
+  .font-noto-sans-jp {
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+  }
+  
+  /* Korean-specific typography improvements */
+  .font-noto-sans-kr {
+    line-height: 1.6;
+    letter-spacing: 0.01em;
+  }
+  
+  /* Devanagari script improvements (Hindi, Marathi) */
+  .font-noto-sans-devanagari {
+    line-height: 1.8;
+    letter-spacing: 0;
+  }
+  
+  /* Bengali script improvements */
+  .font-noto-sans-bengali {
+    line-height: 1.8;
+    letter-spacing: 0;
+  }
+  
+  /* Thai script improvements */
+  .font-noto-sans-thai {
+    line-height: 1.7;
+    letter-spacing: 0;
+  }
+  
+  /* Telugu script improvements */
+  .font-noto-sans-telugu {
+    line-height: 1.8;
+    letter-spacing: 0;
+  }
+  
+  /* Tamil script improvements */
+  .font-noto-sans-tamil {
+    line-height: 1.8;
+    letter-spacing: 0;
+  }
+  
+  /* Apple-style shadows and effects */
+  .apple-shadow {
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  }
+  
+  .apple-shadow-lg {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+  
+  .apple-shadow-xl {
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  }
+  
+  .apple-shadow-2xl {
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  }
+  
+  /* Smooth transitions */
+  .apple-transition {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  /* Glass morphism effect */
+  .glass {
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+  
+  /* Removed streaming animations as requested */
+}
+
+/* Chat message HTML content styles */
+.chat-message-content {
+  @apply prose prose-sm max-w-none dark:prose-invert text-gray-800;
+  font-feature-settings: "ss01" on, "ss02" on, "ss03" on, "liga" on;
+}
+
+/* Typography */
+.chat-message-content h1 {
+  @apply text-3xl font-semibold tracking-tight mb-6 text-gray-900;
+  letter-spacing: -0.02em;
+}
+
+.chat-message-content h2 {
+  @apply text-2xl font-semibold tracking-tight mb-4 text-gray-900;
+  letter-spacing: -0.01em;
+}
+
+.chat-message-content h3 {
+  @apply text-xl font-medium tracking-tight mb-3 text-gray-900;
+  letter-spacing: -0.01em;
+}
+
+.chat-message-content p {
+  @apply text-base leading-7 mb-5 text-gray-900;
+  letter-spacing: -0.01em;
+}
+
+/* Lists */
+.chat-message-content ul, .chat-message-content ol {
+  @apply mb-4 space-y-1;
+  margin-left: 0;
+  padding-left: 0;
+}
+
+.chat-message-content li {
+  @apply text-gray-900 leading-6;
+  letter-spacing: -0.01em;
+}
+
+.chat-message-content ul li {
+  @apply relative;
+  padding-left: 1rem;
+  margin-left: 0;
+}
+
+.chat-message-content ul li::before {
+  content: "•";
+  @apply absolute text-gray-400;
+  left: 0.2rem;
+  top: 0;
+}
+
+/* Code blocks */
+.chat-message-content code {
+  @apply bg-gray-50 px-1.5 py-0.5 rounded-md text-sm font-mono text-gray-800;
+  font-feature-settings: normal;
+}
+
+.chat-message-content pre {
+  @apply bg-gray-50 p-4 rounded-xl mb-6 overflow-x-auto border border-gray-100;
+}
+
+.chat-message-content pre code {
+  @apply bg-transparent p-0 text-sm leading-6;
+  font-feature-settings: normal;
+}
+
+/* Blockquotes */
+.chat-message-content blockquote {
+  @apply border-l-4 border-gray-200 pl-4 italic mb-6 text-gray-900;
+  letter-spacing: -0.01em;
+}
+
+/* Links */
+.chat-message-content a {
+  @apply text-blue-600 hover:text-blue-700 transition-colors duration-200 underline decoration-1 underline-offset-2;
+}
+
+/* Tables */
+.chat-message-content table {
+  @apply w-full border-collapse mb-6 rounded-lg overflow-hidden;
+}
+
+.chat-message-content th {
+  @apply bg-gray-50 text-left font-medium text-gray-900 px-4 py-3 border-b border-gray-200;
+  letter-spacing: -0.01em;
+}
+
+.chat-message-content td {
+  @apply px-4 py-3 border-b border-gray-100 text-gray-700;
+  letter-spacing: -0.01em;
+}
+
+.chat-message-content tr:last-child td {
+  @apply border-b-0;
+}
+
+/* Images */
+.chat-message-content img {
+  @apply max-w-full h-auto rounded-xl mb-6 shadow-sm;
+}
+
+/* Horizontal Rule */
+.chat-message-content hr {
+  @apply my-8 border-gray-200;
+}
+
+/* Ensure no default list styling conflicts */
+.chat-message-content ul {
+  @apply list-none;
+  list-style: none;
+}
+
+/* Ordered lists */
+.chat-message-content ol {
+  @apply list-decimal list-inside;
+}
+
+.chat-message-content ol li {
+  @apply pl-2;
+}
+
+/* Inline code */
+.chat-message-content p code, 
+.chat-message-content li code {
+  @apply bg-gray-50 px-1.5 py-0.5 rounded-md text-sm font-mono text-gray-800;
+  font-feature-settings: normal;
+}
+
+/* ===== CHAT PAGE SPECIFIC STYLES ===== */
+
+/* Multilingual Welcome Animation */
+.multilingual-welcome {
+  @apply relative h-32 flex items-center justify-center overflow-hidden;
+}
+
+.multilingual-welcome .welcome-word {
+  @apply absolute inset-0 flex items-center justify-center transition-all duration-500 ease-in-out transform;
+}
+
+.multilingual-welcome .welcome-word.visible {
+  @apply opacity-100 scale-100 translate-y-0;
+}
+
+.multilingual-welcome .welcome-word.hidden {
+  @apply opacity-0 scale-95 translate-y-2;
+}
+
+.multilingual-welcome .background-animation {
+  @apply absolute inset-0 bg-gradient-to-r from-transparent via-blue-50/20 to-transparent animate-pulse;
+}
+
+/* Suggested Questions Styling */
+.suggested-questions {
+  @apply mt-6 p-6 bg-gradient-to-br from-gray-50 to-slate-100 rounded-2xl border border-gray-200 shadow-sm;
+}
+
+.suggested-questions h4 {
+  @apply text-sm font-bold text-gray-600 mb-4 flex items-center gap-2 uppercase tracking-wide;
+}
+
+.suggested-questions h4::before {
+  content: "💡";
+  @apply text-lg;
+}
+
+/* Message Button Styling - Base */
+.messageButton,
+.suggested-questions a[data-question="true"] {
+  @apply block w-full my-3 px-5 py-4 bg-gradient-to-br from-white to-gray-50 border-2 border-gray-200 rounded-xl cursor-pointer transition-all duration-300 text-gray-700 text-sm font-semibold leading-relaxed relative overflow-hidden shadow-sm no-underline;
+}
+
+.messageButton:hover,
+.suggested-questions a[data-question="true"]:hover {
+  @apply bg-gradient-to-br from-blue-500 to-blue-600 text-white border-blue-500 transform -translate-y-0.5 shadow-lg no-underline;
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+}
+
+.messageButton:active,
+.suggested-questions a[data-question="true"]:active {
+  @apply transform -translate-y-px;
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+}
+
+.messageButton::before,
+.suggested-questions a[data-question="true"]::before {
+  content: "💬";
+  @apply mr-3 text-base;
+}
+
+/* Arrow styling - direction aware */
+.messageButton::after,
+.suggested-questions a[data-question="true"]::after {
+  content: "→";
+  @apply absolute top-1/2 transform -translate-y-1/2 text-xs opacity-60 font-medium transition-all duration-300;
+  right: 1.25rem;
+}
+
+.messageButton:hover::after,
+.suggested-questions a[data-question="true"]:hover::after {
+  @apply opacity-100 transform -translate-y-1/2 translate-x-0.5;
+}
+
+/* RTL support for message buttons */
+[dir="rtl"] .messageButton::after,
+[dir="rtl"] .suggested-questions a[data-question="true"]::after {
+  content: "←";
+  right: auto;
+  left: 1.25rem;
+}
+
+[dir="rtl"] .messageButton::before,
+[dir="rtl"] .suggested-questions a[data-question="true"]::before {
+  @apply mr-0 ml-3;
+}
+
+[dir="rtl"] .messageButton:hover::after,
+[dir="rtl"] .suggested-questions a[data-question="true"]:hover::after {
+  @apply transform -translate-y-1/2 -translate-x-0.5;
+}
+
+/* Loading state */
+.messageButton.disabled,
+.suggested-questions a[data-question="true"].disabled {
+  @apply opacity-60 cursor-not-allowed pointer-events-none;
+}
+
+/* Rich HTML Content Styling */
+.chat-message-content h1,
+.chat-message-content h2,
+.chat-message-content h3,
+.chat-message-content h4,
+.chat-message-content h5,
+.chat-message-content h6 {
+  @apply font-bold text-gray-800 leading-tight;
+  margin: 1.5rem 0 1rem 0;
+}
+
+.chat-message-content h1 {
+  @apply text-3xl border-b-4 border-blue-500 pb-2;
+}
+
+.chat-message-content h2 {
+  @apply text-2xl text-blue-800 border-l-4 border-blue-500 pl-4;
+}
+
+.chat-message-content h3 {
+  @apply text-xl text-blue-800;
+}
+
+.chat-message-content h4 {
+  @apply text-lg text-gray-700;
+}
+
+.chat-message-content h5 {
+  @apply text-base text-gray-700;
+}
+
+.chat-message-content h6 {
+  @apply text-sm text-gray-500 uppercase tracking-wider;
+}
+
+.chat-message-content p {
+  @apply my-4 leading-relaxed text-gray-700;
+}
+
+.chat-message-content p:first-child {
+  @apply mt-0;
+}
+
+.chat-message-content p:last-child {
+  @apply mb-0;
+}
+
+.chat-message-content strong {
+  @apply font-bold text-gray-800;
+}
+
+.chat-message-content em {
+  @apply italic text-gray-600;
+}
+
+.chat-message-content blockquote {
+  @apply my-6 p-4 bg-gradient-to-br from-blue-50 to-blue-100 border-l-4 border-blue-500 rounded-r-lg italic text-blue-800 relative;
+}
+
+.chat-message-content blockquote::before {
+  content: '"';
+  @apply text-5xl text-blue-300 absolute -top-2 left-2 font-serif;
+}
+
+.chat-message-content ul,
+.chat-message-content ol {
+  @apply my-4 pl-6;
+}
+
+.chat-message-content ul {
+  @apply list-none;
+}
+
+.chat-message-content ul li {
+  @apply relative my-2 pl-6 leading-relaxed;
+}
+
+.chat-message-content ul li::before {
+  content: "•";
+  @apply text-blue-500 font-bold absolute left-0 text-lg;
+}
+
+.chat-message-content ol {
+  @apply list-decimal list-outside;
+}
+
+.chat-message-content ol li {
+  @apply my-2 leading-relaxed text-gray-700;
+}
+
+.chat-message-content ol li::marker {
+  @apply text-blue-500 font-semibold;
+}
+
+.chat-message-content div {
+  @apply my-2;
+}
+
+.chat-message-content span {
+  @apply text-inherit;
+}
+
+/* Special styling for Bible verses and references */
+.chat-message-content blockquote cite {
+  @apply block text-right mt-2 text-sm text-gray-500 font-semibold;
+}
+
+/* Enhanced list styling for theological points */
+.chat-message-content ul li strong {
+  @apply text-blue-800;
+}
+
+/* Fade-in animation (keeping for backward compatibility) */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
 }
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .chat-message-content h1 {
+    @apply text-2xl;
+  }
+  
+  .chat-message-content h2 {
+    @apply text-xl;
+  }
+  
+  .chat-message-content blockquote {
+    @apply my-4 p-3;
+  }
+  
+  .messageButton::after,
+  .suggested-questions a[data-question="true"]::after {
+    @apply hidden;
+  }
+}
+
+

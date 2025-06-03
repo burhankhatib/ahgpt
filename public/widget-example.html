@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Al Hayat GPT Widget Example - Production</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            color: #1f2937;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #6b7280;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+        }
+        
+        .widget-container {
+            margin: 30px 0;
+            padding: 20px;
+            border: 2px dashed #d1d5db;
+            border-radius: 12px;
+            background-color: #f9fafb;
+        }
+        
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-weight: 500;
+        }
+        
+        .status.loading {
+            background-color: #eff6ff;
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
+        }
+        
+        .status.ready {
+            background-color: #f0f9f4;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+        
+        .status.error {
+            background-color: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+        
+        .code-example {
+            background-color: #1f2937;
+            color: #f9fafb;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.4;
+            margin: 20px 0;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: transform 0.2s;
+        }
+        
+        button:hover {
+            transform: translateY(-1px);
+        }
+        
+        .highlight {
+            background: #fef3c7;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #f59e0b;
+            margin: 20px 0;
+        }
+        
+        .highlight strong {
+            color: #92400e;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Al Hayat GPT Widget - Production Ready</h1>
+        <p class="subtitle">
+            Experience our advanced Christian AI chatbot with stable cross-origin support
+        </p>
+        
+        <div class="highlight">
+            <strong>✨ New in v2.0.0-stable:</strong> 
+            Popup authentication solves "refused to connect" errors on third-party websites.
+            Now works reliably on any domain with enhanced error handling and retry mechanisms.
+        </div>
+        
+        <div id="status" class="status loading">
+            🔄 Loading widget...
+        </div>
+        
+        <div class="widget-container">
+            <div id="chat-widget"></div>
+        </div>
+        
+        <div class="controls">
+            <button onclick="changeTheme('light')">Light Theme</button>
+            <button onclick="changeTheme('dark')">Dark Theme</button>
+            <button onclick="changeTheme('auto')">Auto Theme</button>
+            <button onclick="testAuth()">Test Authentication</button>
+            <button onclick="recreateWidget()">Recreate Widget</button>
+        </div>
+        
+        <div class="code-example">
+<strong>Basic Integration:</strong>
+
+&lt;script src="https://www.alhayatgpt.com/widget-sdk.min.js"&gt;&lt;/script&gt;
+&lt;div id="chat-widget"&gt;&lt;/div&gt;
+&lt;script&gt;
+  const widget = AlHayatGPT.createWidget({
+    containerId: 'chat-widget',
+    theme: 'auto',
+    allowGuests: true,
+    usePopupAuth: true,      // NEW: Popup authentication
+    fallbackToGuest: true,   // NEW: Graceful fallback
+    onReady: () =&gt; console.log('Widget ready!'),
+    onError: (error) =&gt; console.error('Error:', error)
+  });
+&lt;/script&gt;
+        </div>
+        
+        <div class="code-example">
+<strong>Advanced Configuration:</strong>
+
+const widget = AlHayatGPT.createWidget({
+  containerId: 'chat-widget',
+  theme: 'auto',
+  width: '100%',
+  height: '600px',
+  allowGuests: true,
+  usePopupAuth: true,
+  fallbackToGuest: true,
+  enableRetry: true,
+  retryAttempts: 3,
+  debug: false,
+  customStyles: {
+    borderRadius: '16px',
+    boxShadow: '0 8px 25px rgba(0,0,0,0.15)'
+  },
+  onReady: () =&gt; updateStatus('ready', '✅ Widget ready!'),
+  onUserSignIn: (user) =&gt; console.log('User signed in:', user),
+  onUserSignOut: () =&gt; console.log('User signed out'),
+  onError: (error) =&gt; handleError(error)
+});
+        </div>
+    </div>
+
+    <!-- Widget SDK -->
+    <script src="/widget-sdk.min.js"></script>
+    
+    <script>
+        let widget;
+        
+        function updateStatus(type, message) {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+        }
+        
+        function handleError(error) {
+            console.error('Widget error:', error);
+            updateStatus('error', `❌ Error: ${error.message}`);
+        }
+        
+        function initializeWidget() {
+            try {
+                widget = AlHayatGPT.createWidget({
+                    containerId: 'chat-widget',
+                    theme: 'auto',
+                    allowGuests: true,
+                    usePopupAuth: true,
+                    fallbackToGuest: true,
+                    enableRetry: true,
+                    debug: true,
+                    onReady: function() {
+                        updateStatus('ready', '✅ Widget ready and responsive!');
+                        console.log('Widget info:', {
+                            version: widget.getVersion(),
+                            isReady: widget.isWidgetReady(),
+                            isAuthenticated: widget.isAuthenticated()
+                        });
+                    },
+                    onUserSignIn: function(user) {
+                        console.log('User signed in:', user);
+                        updateStatus('ready', `✅ Welcome, ${user.firstName || 'User'}!`);
+                    },
+                    onUserSignOut: function() {
+                        console.log('User signed out');
+                        updateStatus('ready', '✅ Signed out - now in guest mode');
+                    },
+                    onError: handleError
+                });
+                
+                console.log('Widget created successfully');
+                
+            } catch (error) {
+                handleError(error);
+            }
+        }
+        
+        function changeTheme(theme) {
+            if (widget) {
+                widget.updateConfig({ theme: theme });
+                console.log(`Theme changed to: ${theme}`);
+            }
+        }
+        
+        async function testAuth() {
+            if (widget) {
+                try {
+                    if (widget.isAuthenticated()) {
+                        widget.signOut();
+                    } else {
+                        updateStatus('loading', '🔐 Opening authentication popup...');
+                        await widget.signIn();
+                    }
+                } catch (error) {
+                    handleError(error);
+                }
+            }
+        }
+        
+        function recreateWidget() {
+            if (widget) {
+                widget.destroy();
+                widget = null;
+                updateStatus('loading', '🔄 Recreating widget...');
+                setTimeout(initializeWidget, 1000);
+            }
+        }
+        
+        // Initialize widget when SDK is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof AlHayatGPT !== 'undefined') {
+                initializeWidget();
+            } else {
+                window.addEventListener('AlHayatGPTSDKReady', initializeWidget);
+                
+                setTimeout(() => {
+                    if (typeof AlHayatGPT === 'undefined') {
+                        updateStatus('error', '❌ SDK failed to load');
+                    }
+                }, 10000);
+            }
+        });
+        
+        // Global error handler
+        window.addEventListener('error', function(event) {
+            console.error('Global error:', event.error);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Al Hayat GPT Widget Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .widget-container {
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        .status {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+        .status.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+        .status.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+        }
+        .status.info {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #93c5fd;
+        }
+        .code {
+            background: #f3f4f6;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 14px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Al Hayat GPT Widget Test</h1>
+        
+        <div id="status-loading" class="status info">
+            ⏳ Loading widget SDK...
+        </div>
+    
+        <div id="status-ready" class="status success" style="display: none;">
+            ✅ Widget loaded successfully!
+        </div>
+    
+        <div id="status-error" class="status error" style="display: none;">
+            ❌ Error loading widget: <span id="error-message"></span>
+        </div>
+        
+        <div class="code">
+            <strong>Configuration:</strong><br>
+            • Domain: <span id="current-domain"></span><br>
+            • SDK URL: <span id="sdk-url"></span><br>
+            • Guest Mode: Enabled<br>
+            • Theme: Auto
+        </div>
+        
+        <div class="widget-container">
+            <div id="chat-widget"></div>
+        </div>
+        
+        <div class="code">
+            <strong>Integration Code:</strong><br>
+            &lt;script src="https://www.alhayatgpt.com/widget-sdk.min.js"&gt;&lt;/script&gt;<br>
+            &lt;script&gt;<br>
+            &nbsp;&nbsp;const widget = AlHayatGPT.createWidget({<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;containerId: 'chat-widget',<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;theme: 'auto',<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;allowGuests: true<br>
+            &nbsp;&nbsp;});<br>
+            &lt;/script&gt;
+        </div>
+    </div>
+
+    <script src="/widget-sdk.min.js"></script>
+    <script>
+        // Update domain info
+        document.getElementById('current-domain').textContent = window.location.origin;
+        document.getElementById('sdk-url').textContent = window.location.origin + '/widget-sdk.min.js';
+        
+        // Wait for SDK to load
+        function initWidget() {
+            try {
+                if (typeof AlHayatGPT === 'undefined') {
+                    throw new Error('AlHayatGPT SDK not loaded');
+                }
+                
+                const widget = AlHayatGPT.createWidget({
+                    containerId: 'chat-widget',
+                    theme: 'auto',
+                    allowGuests: true,
+                    onReady: () => {
+                        console.log('Widget ready!');
+                        document.getElementById('status-loading').style.display = 'none';
+                        document.getElementById('status-ready').style.display = 'block';
+                    },
+                    onError: (error) => {
+                        console.error('Widget error:', error);
+                        document.getElementById('status-loading').style.display = 'none';
+                        document.getElementById('status-error').style.display = 'block';
+                        document.getElementById('error-message').textContent = error.message;
+                    }
+                });
+                
+                console.log('Widget created:', widget);
+                
+            } catch (error) {
+                console.error('Failed to create widget:', error);
+                document.getElementById('status-loading').style.display = 'none';
+                document.getElementById('status-error').style.display = 'block';
+                document.getElementById('error-message').textContent = error.message;
+            }
+        }
+        
+        // Try to initialize immediately, or wait for SDK ready event
+        if (typeof AlHayatGPT !== 'undefined') {
+            initWidget();
+        } else {
+            window.addEventListener('AlHayatGPTSDKReady', initWidget);
+            
+            // Fallback timeout
+            setTimeout(() => {
+                if (document.getElementById('status-loading').style.display !== 'none') {
+                    document.getElementById('status-loading').style.display = 'none';
+                    document.getElementById('status-error').style.display = 'block';
+                    document.getElementById('error-message').textContent = 'SDK failed to load within 10 seconds';
+                }
+            }, 10000);
+        }
+    </script>
+</body>
+</html> 
