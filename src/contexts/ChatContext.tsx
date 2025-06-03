@@ -42,6 +42,36 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         return `guest_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
     };
 
+    // Extract domain from parent origin for guest users
+    const getGuestDomain = () => {
+        if (typeof window !== 'undefined') {
+            // First try to get parentOrigin from URL params (widget context)
+            const urlParams = new URLSearchParams(window.location.search);
+            const parentOrigin = urlParams.get('parentOrigin');
+
+            if (parentOrigin && parentOrigin !== window.location.origin) {
+                try {
+                    const url = new URL(parentOrigin);
+                    return url.hostname;
+                } catch (error) {
+                    console.warn('Failed to parse parent origin:', parentOrigin, error);
+                }
+            }
+
+            // Fallback to document referrer
+            if (document.referrer && document.referrer !== window.location.origin) {
+                try {
+                    const url = new URL(document.referrer);
+                    return url.hostname;
+                } catch (error) {
+                    console.warn('Failed to parse referrer:', document.referrer, error);
+                }
+            }
+        }
+
+        return 'Unknown';
+    };
+
     // Determine if user can manage chats (only authenticated users can delete)
     const canManageChats = !!user;
 
@@ -90,6 +120,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         setCurrentChat(null);
 
         const uniqueKey = `chat_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+        const guestDomain = getGuestDomain();
 
         // Extract user data from Clerk with comprehensive fallbacks
         const userData = user ? {
@@ -99,7 +130,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             clerkId: user.id
         } : {
             firstName: 'Guest',
-            lastName: 'User',
+            lastName: guestDomain, // Use domain as last name for guest users
             email: 'guest@example.com',
             clerkId: getGuestId() // Use persistent guest ID
         };
@@ -109,6 +140,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             console.log('Creating new chat with user data:', {
                 isAuthenticated: !!user,
                 userData,
+                guestDomain,
+                parentOrigin: typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('parentOrigin') : null,
+                referrer: typeof window !== 'undefined' ? document.referrer : null,
                 userObject: user ? {
                     id: user.id,
                     firstName: user.firstName,
@@ -162,6 +196,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
         // Save to Sanity for all users (authenticated and guests)
         try {
+            const guestDomain = getGuestDomain();
+
             // Ensure the chat has the latest user data
             const freshUserData = user ? {
                 firstName: user.firstName || user.fullName?.split(' ')[0] || user.username || 'User',
@@ -170,7 +206,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 clerkId: user.id
             } : {
                 firstName: 'Guest',
-                lastName: 'User',
+                lastName: guestDomain, // Use domain as last name for guest users
                 email: 'guest@example.com',
                 clerkId: getGuestId()
             };
@@ -186,6 +222,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 totalMessages: chatWithFreshUserData.messages.length,
                 messageTypes: chatWithFreshUserData.messages.map(m => m.role),
                 chatUser: freshUserData,
+                guestDomain,
                 isAuthenticated: !!user,
                 clerkUser: user ? {
                     id: user.id,
@@ -256,6 +293,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
         // Save to Sanity for all users (authenticated and guests)
         try {
+            const guestDomain = getGuestDomain();
+
             // Ensure the chat has the latest user data
             const freshUserData = user ? {
                 firstName: user.firstName || user.fullName?.split(' ')[0] || user.username || 'User',
@@ -264,7 +303,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 clerkId: user.id
             } : {
                 firstName: 'Guest',
-                lastName: 'User',
+                lastName: guestDomain, // Use domain as last name for guest users
                 email: 'guest@example.com',
                 clerkId: getGuestId()
             };
@@ -279,7 +318,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 messageTypes: messages.map(m => m.role),
                 totalMessages: chatWithFreshUserData.messages.length,
                 allMessageTypes: chatWithFreshUserData.messages.map(m => m.role),
-                chatUser: freshUserData
+                chatUser: freshUserData,
+                guestDomain
             });
 
             const savedChat = await chatService.saveChat(chatWithFreshUserData);
@@ -344,6 +384,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
         // Save to Sanity for all users (authenticated and guests)
         try {
+            const guestDomain = getGuestDomain();
+
             // Ensure the chat has the latest user data
             const freshUserData = user ? {
                 firstName: user.firstName || user.fullName?.split(' ')[0] || user.username || 'User',
@@ -352,7 +394,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 clerkId: user.id
             } : {
                 firstName: 'Guest',
-                lastName: 'User',
+                lastName: guestDomain, // Use domain as last name for guest users
                 email: 'guest@example.com',
                 clerkId: getGuestId()
             };
@@ -378,6 +420,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 totalMessages: chatWithFreshUserData.messages.length,
                 messageTypes: chatWithFreshUserData.messages.map(m => m.role),
                 chatUser: freshUserData,
+                guestDomain,
                 isNewChat: !currentChat._id || currentChat._id === currentChat.uniqueKey
             });
 
@@ -389,7 +432,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 lastTwoMessages: savedChat.messages.slice(-2).map(m => ({
                     role: m.role,
                     content: m.content.slice(0, 50) + '...'
-                }))
+                })),
+                isNewChat: !currentChat._id || currentChat._id === currentChat.uniqueKey
             });
 
             // Update with the saved version (which might have a proper _id)

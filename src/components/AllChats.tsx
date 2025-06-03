@@ -693,7 +693,10 @@ ${chat.messages.map(msg =>
                                             </span>
                                         )}
                                         <span className="text-xs text-gray-500">
-                                            {chat.user.firstName} {chat.user.lastName}
+                                            {chat.user.clerkId.startsWith('guest_')
+                                                ? `Guest from ${chat.user.lastName}`
+                                                : `${chat.user.firstName} ${chat.user.lastName}`
+                                            }
                                         </span>
                                     </div>
                                 </div>
@@ -747,7 +750,10 @@ ${chat.messages.map(msg =>
                                     </p>
                                 </div>
                                 <div className="text-sm text-gray-600">
-                                    <p>By: {currentChat.user.firstName} {currentChat.user.lastName}</p>
+                                    <p>By: {currentChat.user.clerkId.startsWith('guest_')
+                                        ? `Guest user from ${currentChat.user.lastName}`
+                                        : `${currentChat.user.firstName} ${currentChat.user.lastName}`
+                                    }</p>
                                     <p>{currentChat.user.email}</p>
                                 </div>
                             </div>
