@@ -14,6 +14,7 @@ type DateRange = {
     end: Date | null;
 };
 type Language = 'all' | 'en' | 'ar' | 'he' | 'fi' | 'sv' | 'no' | 'da' | 'zh' | 'hi' | 'es' | 'fr' | 'bn' | 'pt' | 'ru' | 'id' | 'ur' | 'de' | 'ja' | 'tr' | 'ko' | 'vi' | 'te' | 'mr' | 'ta' | 'th' | 'bal' | 'ms';
+type SourceFilter = 'all' | string;
 
 type LanguageOption = {
     code: Language;
@@ -116,14 +117,16 @@ export default function AllChats() {
     const [searchQuery, setSearchQuery] = useState('');
     const [userTypeFilter, setUserTypeFilter] = useState<UserType>('all');
     const [languageFilter, setLanguageFilter] = useState<Language>('all');
+    const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all');
     const [selectedDateRange, setSelectedDateRange] = useState<string>('all');
     const [dateRange, setDateRange] = useState<DateRange>({ start: null, end: null });
     const [isExporting, setIsExporting] = useState(false);
     const [detectedLanguages, setDetectedLanguages] = useState<Record<string, Language>>({});
     const [availableLanguages, setAvailableLanguages] = useState<LanguageOption[]>([]);
+    const [availableSources, setAvailableSources] = useState<string[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const CHATS_PER_PAGE = 100;
+    const CHATS_PER_PAGE = 50;
 
     // Add click outside handler
     useEffect(() => {
@@ -146,9 +149,10 @@ export default function AllChats() {
                 const chats = await getAllChats();
                 setAllChats(chats);
 
-                // Detect language for each chat
+                // Detect language for each chat and collect sources
                 const languages: Record<string, Language> = {};
                 const uniqueLanguages = new Set<Language>();
+                const sources = new Set<string>();
 
                 chats.forEach(chat => {
                     if (chat.messages.length > 0) {
@@ -159,9 +163,20 @@ export default function AllChats() {
                         languages[chat._id!] = detected as Language;
                         uniqueLanguages.add(detected as Language);
                     }
+
+                    // Collect sources from guest users (where firstName is "Guest" and lastName contains the source)
+                    if (chat.user.firstName === 'Guest' && chat.user.lastName && chat.user.lastName !== 'Unknown') {
+                        sources.add(`Guest: ${chat.user.lastName}`);
+                    }
+
+                    // Collect sources from registered users (non-guest users with valid emails)
+                    if (chat.user.firstName !== 'Guest' && chat.user.email && chat.user.email !== 'guest@example.com') {
+                        sources.add('Al Hayat GPT website');
+                    }
                 });
 
                 setDetectedLanguages(languages);
+                setAvailableSources(Array.from(sources).sort());
 
                 // Update available languages based on detected languages
                 const available = allLanguages.filter(lang =>
@@ -173,12 +188,17 @@ export default function AllChats() {
                 if (languageFilter !== 'all' && !uniqueLanguages.has(languageFilter)) {
                     setLanguageFilter('all');
                 }
+
+                // If current source filter is not available in detected sources, reset to 'all'
+                if (sourceFilter !== 'all' && !sources.has(sourceFilter)) {
+                    setSourceFilter('all');
+                }
             } catch (error) {
                 console.error('Error loading all chats:', error);
             }
         };
         loadAllChats();
-    }, []);
+    }, [sourceFilter, languageFilter]);
 
     const filteredChats = useMemo(() => {
         return allChats.filter(chat => {
@@ -186,6 +206,21 @@ export default function AllChats() {
             const isGuest = chat.user.clerkId.startsWith('guest_');
             if (userTypeFilter === 'registered' && isGuest) return false;
             if (userTypeFilter === 'guest' && !isGuest) return false;
+
+            // Source filter (applies to both guest users and registered users)
+            if (sourceFilter !== 'all') {
+                const isGuestUser = chat.user.firstName === 'Guest';
+                if (sourceFilter.startsWith('Guest: ')) {
+                    // Filter for guest users
+                    const guestSource = sourceFilter.replace('Guest: ', '');
+                    if (!isGuestUser || chat.user.lastName !== guestSource) return false;
+                } else if (sourceFilter === 'Al Hayat GPT website') {
+                    // Filter for registered users
+                    if (isGuestUser || !chat.user.email || chat.user.email === 'guest@example.com') return false;
+                } else {
+                    return false; // Unknown source format
+                }
+            }
 
             // Language filter
             if (languageFilter !== 'all') {
@@ -274,7 +309,7 @@ export default function AllChats() {
 
             return true;
         });
-    }, [allChats, userTypeFilter, languageFilter, selectedDateRange, dateRange, searchQuery, detectedLanguages]);
+    }, [allChats, userTypeFilter, sourceFilter, languageFilter, selectedDateRange, dateRange, searchQuery, detectedLanguages]);
 
     // Calculate pagination
     const totalPages = Math.ceil(filteredChats.length / CHATS_PER_PAGE);
@@ -315,12 +350,27 @@ export default function AllChats() {
             'ms': 0,
         };
 
-        // Filter chats by date and user type first, then count languages
+        // Filter chats by date, user type, and source first, then count languages
         const dateAndUserFilteredChats = allChats.filter(chat => {
             // User type filter
             const isGuest = chat.user.clerkId.startsWith('guest_');
             if (userTypeFilter === 'registered' && isGuest) return false;
             if (userTypeFilter === 'guest' && !isGuest) return false;
+
+            // Source filter (applies to both guest users and registered users)
+            if (sourceFilter !== 'all') {
+                const isGuestUser = chat.user.firstName === 'Guest';
+                if (sourceFilter.startsWith('Guest: ')) {
+                    // Filter for guest users
+                    const guestSource = sourceFilter.replace('Guest: ', '');
+                    if (!isGuestUser || chat.user.lastName !== guestSource) return false;
+                } else if (sourceFilter === 'Al Hayat GPT website') {
+                    // Filter for registered users
+                    if (isGuestUser || !chat.user.email || chat.user.email === 'guest@example.com') return false;
+                } else {
+                    return false; // Unknown source format
+                }
+            }
 
             // Date range filter
             if (selectedDateRange !== 'all') {
@@ -400,7 +450,109 @@ export default function AllChats() {
         });
 
         return counts;
-    }, [allChats, detectedLanguages, userTypeFilter, selectedDateRange, dateRange]);
+    }, [allChats, detectedLanguages, userTypeFilter, sourceFilter, selectedDateRange, dateRange]);
+
+    // Calculate source counts based on current filters (except source filter)
+    const sourceCounts = useMemo(() => {
+        const counts: Record<string, number> = {};
+
+        // Filter chats by date, user type, and language first, then count sources
+        const filteredForSourceCount = allChats.filter(chat => {
+            // User type filter
+            const isGuest = chat.user.clerkId.startsWith('guest_');
+            if (userTypeFilter === 'registered' && isGuest) return false;
+            if (userTypeFilter === 'guest' && !isGuest) return false;
+
+            // Language filter
+            if (languageFilter !== 'all') {
+                const chatLanguage = detectedLanguages[chat._id!] || chat.language;
+                if (chatLanguage !== languageFilter) return false;
+            }
+
+            // Date range filter
+            if (selectedDateRange !== 'all') {
+                let chatDate: Date;
+                if (chat.updatedAt instanceof Date) {
+                    chatDate = chat.updatedAt;
+                } else {
+                    chatDate = new Date(chat.updatedAt);
+                }
+
+                if (selectedDateRange === 'custom') {
+                    if (dateRange.start && dateRange.end) {
+                        const startDate = startOfDay(dateRange.start);
+                        const endDate = endOfDay(dateRange.end);
+
+                        if (!isWithinInterval(chatDate, {
+                            start: startDate,
+                            end: endDate
+                        })) return false;
+                    }
+                } else {
+                    let range: DateRange;
+                    switch (selectedDateRange) {
+                        case 'today':
+                            range = {
+                                start: startOfDay(new Date()),
+                                end: endOfDay(new Date())
+                            };
+                            break;
+                        case 'yesterday':
+                            range = {
+                                start: startOfDay(subDays(new Date(), 1)),
+                                end: endOfDay(subDays(new Date(), 1))
+                            };
+                            break;
+                        case 'last7days':
+                            range = {
+                                start: startOfDay(subDays(new Date(), 6)),
+                                end: endOfDay(new Date())
+                            };
+                            break;
+                        case 'lastWeek':
+                            range = {
+                                start: startOfDay(subWeeks(new Date(), 1)),
+                                end: endOfDay(subDays(new Date(), 1))
+                            };
+                            break;
+                        case 'currentMonth':
+                            range = {
+                                start: startOfMonth(new Date()),
+                                end: endOfDay(new Date())
+                            };
+                            break;
+                        default:
+                            range = { start: null, end: null };
+                    }
+
+                    if (range.start && range.end) {
+                        if (!isWithinInterval(chatDate, {
+                            start: range.start,
+                            end: range.end
+                        })) return false;
+                    }
+                }
+            }
+
+            return true;
+        });
+
+        filteredForSourceCount.forEach(chat => {
+            // Count guest user sources
+            if (chat.user.firstName === 'Guest' && chat.user.lastName && chat.user.lastName !== 'Unknown') {
+                const source = `Guest: ${chat.user.lastName}`;
+                counts[source] = (counts[source] || 0) + 1;
+            }
+
+            // Count registered users
+            if (chat.user.firstName !== 'Guest' && chat.user.email && chat.user.email !== 'guest@example.com') {
+                const source = 'Al Hayat GPT website';
+                counts[source] = (counts[source] || 0) + 1;
+            }
+        });
+
+        return counts;
+    }, [allChats, detectedLanguages, userTypeFilter, languageFilter, selectedDateRange, dateRange]);
 
     // Update available languages based on current counts
     const availableLanguagesWithCounts = useMemo(() => {
@@ -411,6 +563,7 @@ export default function AllChats() {
     const clearAllFilters = () => {
         setSearchQuery('');
         setUserTypeFilter('all');
+        setSourceFilter('all');
         setLanguageFilter('all');
         setSelectedDateRange('all');
         setDateRange({ start: null, end: null });
@@ -548,6 +701,28 @@ ${chat.messages.map(msg =>
                                 <option value="all">All Users</option>
                                 <option value="registered">Registered Users</option>
                                 <option value="guest">Guest Users</option>
+                            </select>
+                        </div>
+
+                        {/* Source/Referrer Filter */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Source/Referrer
+                            </label>
+                            <select
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                value={sourceFilter}
+                                onChange={(e) => {
+                                    setSourceFilter(e.target.value as SourceFilter);
+                                    setCurrentPage(1); // Reset to first page when filter changes
+                                }}
+                            >
+                                <option value="all">All Sources ({Object.values(sourceCounts).reduce((a, b) => a + b, 0)})</option>
+                                {availableSources.map((source) => (
+                                    <option key={source} value={source}>
+                                        {source} ({sourceCounts[source] || 0})
+                                    </option>
+                                ))}
                             </select>
                         </div>
 

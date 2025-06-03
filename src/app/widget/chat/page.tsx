@@ -347,7 +347,7 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
     useEffect(() => {
         if (!chatRef.current) return;
 
-        const handleQuestionClick = (event: Event) => {
+        const handleQuestionClick = async (event: Event) => {
             const target = event.target as HTMLElement;
 
             // Check if clicked element is a question button
@@ -355,21 +355,150 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
                 event.preventDefault();
                 const questionText = target.textContent?.trim();
 
-                if (questionText && inputRef.current) {
-                    // Set the question as input value
-                    setInput(questionText);
-
-                    // Focus the input field
-                    inputRef.current.focus();
-
-                    // Optional: Auto-scroll to input
-                    inputRef.current.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'nearest'
-                    });
-
+                if (questionText && !isLoading) {
                     // Track the click event
                     trackChatEvent('CLICK', `Suggested Question: ${questionText.substring(0, 50)}...`);
+
+                    // Create user message
+                    const userMessage: Message = {
+                        role: 'user',
+                        content: questionText,
+                        timestamp: new Date(),
+                        uniqueKey: `msg_user_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`,
+                        firstName,
+                        lastName,
+                        email,
+                    };
+
+                    // Clear input and start loading
+                    setInput("");
+                    setIsLoading(true);
+                    setStreamingMessage("");
+
+                    // Add user message to display
+                    setDisplayMessages(prev => [...prev, userMessage]);
+
+                    // Submit the question automatically
+                    try {
+                        const token = getToken();
+                        const response = await fetch('/api/chat', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                ...(token && { Authorization: `Bearer ${token}` }),
+                            },
+                            body: JSON.stringify({
+                                messages: [...(currentChat?.messages || []), userMessage].map(msg => ({
+                                    role: msg.role,
+                                    content: msg.content,
+                                    firstName: msg.firstName || firstName,
+                                    lastName: msg.lastName || lastName,
+                                    email: msg.email || email,
+                                })),
+                                isWidget: true,
+                                isGuest: isGuestMode
+                            }),
+                        });
+
+                        if (!response.ok) {
+                            throw new Error('Failed to get AI response');
+                        }
+
+                        const reader = response.body?.getReader();
+                        if (!reader) {
+                            throw new Error('No response body');
+                        }
+
+                        let aiResponseContent = "";
+                        const decoder = new TextDecoder();
+
+                        while (true) {
+                            const { done, value } = await reader.read();
+                            if (done) break;
+
+                            const chunk = decoder.decode(value, { stream: true });
+                            const lines = chunk.split('\n');
+
+                            for (const line of lines) {
+                                // Handle AI SDK streaming format: 0:"content"
+                                if (line.startsWith('0:"')) {
+                                    try {
+                                        // Extract content from 0:"content" format
+                                        const content = JSON.parse(line.slice(2));
+                                        if (typeof content === 'string') {
+                                            aiResponseContent += content;
+                                            setStreamingMessage(aiResponseContent);
+                                        }
+                                    } catch (e) {
+                                        // If JSON parsing fails, try to extract content manually
+                                        const match = line.match(/^0:"(.+)"$/);
+                                        if (match) {
+                                            const content = match[1].replace(/\\"/g, '"').replace(/\\n/g, '\n');
+                                            aiResponseContent += content;
+                                            setStreamingMessage(aiResponseContent);
+                                        }
+                                    }
+                                }
+                                // Also handle standard SSE format as fallback
+                                else if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+                                    try {
+                                        const data = JSON.parse(line.slice(6));
+                                        if (data.content) {
+                                            aiResponseContent += data.content;
+                                            setStreamingMessage(aiResponseContent);
+                                        }
+                                    } catch (e) {
+                                        console.error('Error parsing SSE data:', e);
+                                    }
+                                }
+                            }
+                        }
+
+                        const aiMessage: Message = {
+                            role: 'assistant',
+                            content: aiResponseContent,
+                            timestamp: new Date(),
+                            uniqueKey: `msg_ai_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`
+                        };
+
+                        setDisplayMessages(prev => [...prev, aiMessage]);
+                        setStreamingMessage("");
+
+                        // Save conversation to Sanity for tracking purposes
+                        try {
+                            await addConversationTurn(userMessage, aiMessage);
+                        } catch (error) {
+                            console.error('Error saving conversation turn:', error);
+                            if (isSanityPermissionError(error)) {
+                                setHasPermissionIssue(true);
+                            }
+                        }
+
+                        trackChatEvent('RECEIVE_MESSAGE', `Widget suggested question response length: ${aiResponseContent.length}`);
+
+                    } catch (error) {
+                        console.error('Error in suggested question submission:', error);
+
+                        const errorMessage: Message = {
+                            role: 'assistant',
+                            content: 'Sorry, I encountered an error. Please try again.',
+                            timestamp: new Date(),
+                            uniqueKey: `msg_error_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`
+                        };
+
+                        setDisplayMessages(prev => [...prev, errorMessage]);
+
+                        // Send error to parent
+                        if (window.parent && window.parent !== window) {
+                            window.parent.postMessage({
+                                type: 'ERROR',
+                                payload: { message: 'Chat error occurred' }
+                            }, parentOrigin);
+                        }
+                    } finally {
+                        setIsLoading(false);
+                        setStreamingMessage("");
+                    }
                 }
             }
         };
@@ -382,7 +511,7 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
                 chatRef.current.removeEventListener('click', handleQuestionClick);
             }
         };
-    }, [displayMessages]); // Re-run when messages change to ensure new questions get handlers
+    }, [displayMessages, isLoading, firstName, lastName, email, currentChat, isGuestMode, parentOrigin, addConversationTurn]); // Re-run when messages change to ensure new questions get handlers
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -587,8 +716,8 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
     // Show full chat interface for both authenticated and guest users
     return (
         <div className={`flex flex-col h-screen bg-gray-50/30 ${getFontClass()}`}>
-            {/* Authentication Status Banner */}
-            {isGuestMode && widgetConfig.allowGuests && (
+            {/* Authentication Status Banner - Hidden for widget users */}
+            {false && isGuestMode && widgetConfig.allowGuests && (
                 <div className="mx-2 mt-2">
                     <div className="bg-blue-50/80 backdrop-blur-sm border border-blue-200 rounded-xl p-3 shadow-sm">
                         <div className="flex items-start gap-2">
@@ -628,11 +757,11 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
             {/* Chat Messages Container */}
             <div
                 ref={chatRef}
-                className="flex-1 overflow-y-auto px-3 py-4 space-y-4 min-h-0"
+                className="flex-1 overflow-y-auto px-3 md:px-6 lg:px-8 py-4 space-y-4 min-h-0"
             >
                 {allMessages.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-8">
-                        <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-gray-200/50 max-w-sm text-center">
+                        <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-gray-200/50 max-w-sm md:max-w-md lg:max-w-lg text-center">
                             <div className="w-fit px-3 py-1 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
                                 <span className="text-white text-lg font-bold">Al Hayat GPT</span>
                             </div>
@@ -645,7 +774,7 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
                             <p className="text-xs text-gray-600 leading-relaxed">
                                 Start a conversation by typing your message below.
                             </p>
-                            {isGuestMode && (
+                            {false && isGuestMode && (
                                 <p className="text-xs text-blue-600 mt-2 italic">
                                     Currently in guest mode - conversations won&apos;t be saved.
                                 </p>
@@ -669,7 +798,7 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
                             {m.role === "assistant" && !isRTL && AVATARS.ai}
 
                             <div
-                                className={`max-w-xs ${m.role === "user"
+                                className={`max-w-xs md:max-w-md lg:max-w-lg ${m.role === "user"
                                     ? "bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg"
                                     : "bg-white/80 backdrop-blur-sm text-gray-800 shadow-lg border border-gray-200/50"
                                     } rounded-2xl px-4 py-3 transition-all duration-300`}
@@ -743,7 +872,7 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
             </div>
 
             {/* Input Form */}
-            <div className="flex-shrink-0 p-3 bg-white/50 backdrop-blur-sm border-t border-gray-200/50">
+            <div className="flex-shrink-0 p-3 md:p-4 lg:p-6 bg-white/50 backdrop-blur-sm border-t border-gray-200/50">
                 <form onSubmit={handleSubmit}>
                     <div className="relative flex items-center gap-2">
                         <div className="flex-1 relative">
