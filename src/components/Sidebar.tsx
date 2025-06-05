@@ -7,7 +7,9 @@ import {
     TrashIcon,
     PlusIcon,
     XMarkIcon,
-    ExclamationTriangleIcon
+    ExclamationTriangleIcon,
+    EyeSlashIcon,
+    EyeIcon
 } from '@heroicons/react/24/outline';
 import { useChat } from '@/contexts/ChatContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -20,7 +22,7 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     const { isRTL } = useLanguage();
-    const { chats, currentChat, switchChat, deleteChat, deleteAllChats, refreshChats, createNewChat } = useChat();
+    const { chats, currentChat, switchChat, hideChat, hideAllChats, refreshChats, createNewChat, isInvisibleMode, toggleInvisibleMode } = useChat();
     const [isRefreshing, setIsRefreshing] = useState(false);
 
     const handleNewChat = () => {
@@ -35,12 +37,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         onClose();
     };
 
-    const handleDeleteChat = async (e: React.MouseEvent, chatId: string) => {
+    const handleHideChat = async (e: React.MouseEvent, chatId: string) => {
         e.stopPropagation();
 
         if (window.confirm('Are you sure you want to delete this chat?')) {
             try {
-                await deleteChat(chatId);
+                await hideChat(chatId);
                 trackChatEvent('DELETE_CHAT', `Chat deleted: ${chatId}`);
             } catch (error) {
                 console.error('Failed to delete chat:', error);
@@ -48,10 +50,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         }
     };
 
-    const handleDeleteAllChats = async () => {
-        if (window.confirm('Are you sure you want to delete ALL chats? This action cannot be undone.')) {
+    const handleHideAllChats = async () => {
+        if (window.confirm('Are you sure you want to delete ALL chats?')) {
             try {
-                await deleteAllChats();
+                await hideAllChats();
                 trackChatEvent('DELETE_CHAT', 'All chats deleted');
             } catch (error) {
                 console.error('Failed to delete all chats:', error);
@@ -82,11 +84,11 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             )}
 
             {/* Sidebar */}
-            <div className={`fixed top-0 ${isRTL ? 'right-0' : 'left-0'} h-full w-80 bg-white/95 backdrop-blur-md border-r border-gray-200/50 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : isRTL ? 'translate-x-full' : '-translate-x-full'
+            <div className={`fixed top-0 ${isRTL ? 'right-0' : 'left-0'} h-full w-80 bg-white/95 backdrop-blur-md border-r border-gray-200/50 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col ${isOpen ? 'translate-x-0' : isRTL ? 'translate-x-full' : '-translate-x-full'
                 }`}>
 
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-gray-200/50">
+                <div className="flex-shrink-0 flex items-center justify-between p-6 border-b border-gray-200/50">
                     <div className="flex items-center gap-3">
                         <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
                             <span className="text-white text-sm font-bold">AH</span>
@@ -102,7 +104,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 </div>
 
                 {/* New Chat Button */}
-                <div className="p-4 border-b border-gray-200/30">
+                <div className="flex-shrink-0 p-4 border-b border-gray-200/30">
                     <button
                         onClick={handleNewChat}
                         className="w-full flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl"
@@ -112,8 +114,34 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     </button>
                 </div>
 
+                {/* Header Actions */}
+                <div className="flex-shrink-0 flex flex-col justify-evenly gap-2 px-4 py-2 border-t border-gray-200/30">
+                    {/* Invisible Mode Toggle */}
+                    <button
+                        onClick={toggleInvisibleMode}
+                        className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl transition-all duration-200 text-sm font-medium ${isInvisibleMode
+                            ? 'bg-purple-100/80 text-purple-700 hover:bg-purple-200/80'
+                            : 'bg-gray-100/80 text-gray-700 hover:bg-gray-200/80'
+                            }`}
+                    >
+                        {isInvisibleMode ? <EyeSlashIcon className="w-6 h-6" /> : <EyeIcon className="w-4 h-4" />}
+                        {isInvisibleMode ? 'Invisible Mode: ON' : 'Invisible Mode: OFF'}
+                    </button>
+
+                    {/* Hide All Chats */}
+                    {chats.length > 0 && (
+                        <button
+                            onClick={handleHideAllChats}
+                            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-red-600 hover:bg-red-50/80 rounded-xl transition-all duration-200 text-sm font-medium"
+                        >
+                            <TrashIcon className="w-6 h-6" />
+                            Delete All Chats
+                        </button>
+                    )}
+                </div>
+
                 {/* Chat List */}
-                <div className="flex-1 overflow-y-auto p-4">
+                <div className="flex-1 overflow-y-auto p-4 min-h-0">
                     <div className="space-y-4">
                         {/* Header with refresh button */}
                         <div className="flex items-center justify-between">
@@ -159,9 +187,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
                                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                                                 <button
-                                                    onClick={(e) => handleDeleteChat(e, chat._id || '')}
+                                                    onClick={(e) => handleHideChat(e, chat._id || '')}
                                                     className="p-2 rounded-lg hover:bg-red-100/80 transition-colors duration-200"
-                                                    title="Delete Chat"
+                                                    title="Hide Chat"
                                                 >
                                                     <TrashIcon className="w-4 h-4 text-red-600" />
                                                 </button>
@@ -180,18 +208,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     </div>
                 </div>
 
-                {/* Footer Actions */}
-                {chats.length > 0 && (
-                    <div className="p-4 border-t border-gray-200/30">
-                        <button
-                            onClick={handleDeleteAllChats}
-                            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-red-600 hover:bg-red-50/80 rounded-xl transition-all duration-200 text-sm font-medium"
-                        >
-                            <ExclamationTriangleIcon className="w-4 h-4" />
-                            Delete All Chats
-                        </button>
-                    </div>
-                )}
+
             </div>
         </>
     );

@@ -3,6 +3,13 @@ export interface User {
     lastName: string;
     email: string;
     clerkId: string;
+    // Location data
+    country?: string;
+    countryCode?: string;
+    city?: string;
+    region?: string;
+    ip?: string;
+    timezone?: string;
 }
 
 export interface Message {

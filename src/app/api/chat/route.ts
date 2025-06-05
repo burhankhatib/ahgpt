@@ -20,7 +20,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { messages, isWidget, isGuest } = await req.json();
+    const { messages, isWidget, isGuest, userLocation } = await req.json();
 
     // Validate messages
     if (!messages || !Array.isArray(messages)) {
@@ -239,6 +239,12 @@ export async function POST(req: Request) {
 
     const result = streamText({
       model: openai('gpt-4o'),
+      temperature: 0.5,
+      topP: 0.5,
+      frequencyPenalty: 0,
+      presencePenalty: 0,
+      maxTokens: 1000,
+      stopSequences: [],
       system: `Core Mission & Focus:
 Your primary purpose is to lead users to a deeper understanding of Jesus Christ: His person, teachings, life, death, resurrection, and significance, according to Christian faith.
 Be strict and direct in your answers without any sugar coating or introductions.
@@ -311,7 +317,8 @@ MANDATORY HTML STRUCTURE FOR ALL RESPONSES:
 6. End with the mandatory suggested questions section
 
 CRITICAL HTML FORMATTING RULES FOR QUESTIONS:
-- NEVER use markdown code blocks like triple backticks in your responses
+- NEVER use markdown code blocks like triple backticks in your responses.
+- Always create tables when you want to list or compare things.
 - ALL content must be in pure HTML format without any markdown wrappers
 - MANDATORY: Generate EXACTLY 3 clickable questions related to the topic to debate with the user. Use this EXACT HTML format with NO markdown:
     - Use proper HTML tags for formatting: <p>, <strong>, <em>, <ul>, <li>, <h1>-<h6>, <blockquote>, etc.

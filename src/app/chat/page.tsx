@@ -9,6 +9,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { Message } from '@/types/chat';
 import { isSanityPermissionError } from '@/utils/sanity-permissions';
 import { Button } from "@/components/ui/button";
+import { detectUserGeolocation, GeolocationData } from '@/utils/geolocationDetection';
 
 function formatTime(date: Date | string) {
     const dateObj = typeof date === 'string' ? new Date(date) : date;
@@ -96,12 +97,123 @@ export default function ChatPage() {
     const chatRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const [userLocationDetected, setUserLocationDetected] = useState(false);
 
     // Get user info from current chat context (which has proper Clerk data)
     const firstName = currentChat?.user?.firstName || 'User';
     const lastName = currentChat?.user?.lastName || '';
     const fullNameInitials = `${firstName[0] || 'U'}${lastName[0] || ''}`;
     const email = currentChat?.user?.email || '';
+
+    // Detect and store user location using HTML5 Geolocation API
+    useEffect(() => {
+        const detectAndStoreUserLocation = async () => {
+            if (!user?.id || userLocationDetected) return;
+
+            const userKey = user.id;
+            const existingLocation = localStorage.getItem(`userLocation_${userKey}`);
+
+            // Only detect if we don't have recent GEOLOCATION data (or it's older than 24 hours)
+            // Force re-detection for old data that wasn't from geolocation
+            let shouldDetect = true;
+            if (existingLocation) {
+                try {
+                    const parsed = JSON.parse(existingLocation);
+                    const detectedAt = new Date(parsed.detectedAt);
+                    const now = new Date();
+                    const hoursSinceDetection = (now.getTime() - detectedAt.getTime()) / (1000 * 60 * 60);
+
+                    // Only skip if we have recent geolocation data (not old language-based detection)
+                    if (hoursSinceDetection < 24 &&
+                        parsed.country !== 'Unknown' &&
+                        parsed.detectionMethod === 'geolocation') {
+                        shouldDetect = false;
+                        setUserLocationDetected(true);
+                        console.log(`📋 User ${userKey} has recent geolocation data:`, parsed);
+                    } else {
+                        // Clear old non-geolocation data to force new detection
+                        localStorage.removeItem(`userLocation_${userKey}`);
+                        console.log(`🔄 Clearing old location data for user ${userKey} to force geolocation`);
+                    }
+                } catch (error) {
+                    console.error('Error parsing existing location data:', error);
+                    localStorage.removeItem(`userLocation_${userKey}`);
+                }
+            }
+
+            if (shouldDetect) {
+                try {
+                    console.log(`🌍 Requesting geolocation for user ${userKey}...`);
+
+                    // Check if permission is already granted, otherwise ask user
+                    let shouldRequest = true;
+                    try {
+                        if ('permissions' in navigator) {
+                            const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
+                            if (permissionStatus.state === 'granted') {
+                                shouldRequest = true;
+                                console.log(`✅ Geolocation permission already granted for user ${userKey}`);
+                            } else if (permissionStatus.state === 'denied') {
+                                shouldRequest = false;
+                                console.log(`❌ Geolocation permission denied for user ${userKey}`);
+                            } else {
+                                // Ask for permission
+                                shouldRequest = window.confirm(
+                                    "🌍 Al Hayat GPT would like to know your location to show your country in the admin dashboard. This is completely optional and stored locally on your device. Allow GPS location access?"
+                                );
+                            }
+                        } else {
+                            // Fallback for browsers without permissions API
+                            shouldRequest = window.confirm(
+                                "🌍 Al Hayat GPT would like to know your location to show your country in the admin dashboard. This is completely optional and stored locally on your device. Allow GPS location access?"
+                            );
+                        }
+                    } catch (error) {
+                        // Fallback if permissions API fails
+                        shouldRequest = window.confirm(
+                            "🌍 Al Hayat GPT would like to know your location to show your country in the admin dashboard. This is completely optional and stored locally on your device. Allow GPS location access?"
+                        );
+                    }
+
+                    if (!shouldRequest) {
+                        console.log(`❌ User ${userKey} denied location permission`);
+                        setUserLocationDetected(true);
+                        return;
+                    }
+
+                    const locationData: GeolocationData | null = await detectUserGeolocation();
+
+                    if (locationData && locationData.country !== 'Unknown') {
+                        const locationToStore = {
+                            ...locationData,
+                            detectedAt: new Date().toISOString(),
+                            userKey: userKey
+                        };
+
+                        localStorage.setItem(`userLocation_${userKey}`, JSON.stringify(locationToStore));
+                        console.log(`✅ Geolocation stored for user ${userKey}:`, locationData);
+
+                        // Show success message to user
+                        setTimeout(() => {
+                            alert(`✅ Location detected: ${locationData.city ? `${locationData.city}, ` : ''}${locationData.country}`);
+                        }, 1000);
+
+                        setUserLocationDetected(true);
+                    } else {
+                        console.log(`❌ Could not detect location for user ${userKey}`);
+                        setUserLocationDetected(true);
+                    }
+                } catch (error) {
+                    console.error(`🚨 Error detecting location for user ${userKey}:`, error);
+                    setUserLocationDetected(true);
+                }
+            }
+        };
+
+        // Delay the location request slightly so the user sees the chat interface first
+        const timer = setTimeout(detectAndStoreUserLocation, 1000);
+        return () => clearTimeout(timer);
+    }, [user?.id, userLocationDetected]);
 
     // CSS styles for clickable questions and rich HTML content
     const questionStyles = `

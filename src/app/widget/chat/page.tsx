@@ -12,6 +12,8 @@ import { Message } from '@/types/chat';
 import { isSanityPermissionError } from '@/utils/sanity-permissions';
 import { Button } from "@/components/ui/button";
 import { redirectToProperDomain, isValidDomain, getApiEndpoint, getClerkConfig } from '@/utils/domain-config';
+import { useUserLocation } from '@/hooks/useUserLocation';
+import { detectUserGeolocation, GeolocationData, getCountryFlag } from '@/utils/geolocationDetection';
 
 // Widget-specific message types
 interface WidgetMessage {
@@ -153,6 +155,10 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
     });
     const [isGuestMode, setIsGuestMode] = useState(false);
 
+    // Location detection for SDK
+    const { location, isLoading: locationLoading } = useUserLocation();
+    const [userLocationDetected, setUserLocationDetected] = useState(false);
+
     const chatRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -162,6 +168,92 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
     const lastName = currentChat?.user?.lastName || user?.lastName || '';
     const fullNameInitials = `${firstName[0] || 'G'}${lastName[0] || ''}`;
     const email = currentChat?.user?.email || user?.emailAddresses?.[0]?.emailAddress || '';
+
+    // Detect and store user location using HTML5 Geolocation API (Widget)
+    useEffect(() => {
+        const detectAndStoreUserLocation = async () => {
+            if (userLocationDetected) return;
+
+            // For widget users, use a combination of user ID or generate a session-based ID
+            const userKey = user?.id || currentChat?.user?.clerkId || `guest_${Date.now()}`;
+            const existingLocation = localStorage.getItem(`userLocation_${userKey}`);
+
+            // Only detect if we don't have recent GEOLOCATION data (or it's older than 24 hours)
+            // Force re-detection for old data that wasn't from geolocation
+            let shouldDetect = true;
+            if (existingLocation) {
+                try {
+                    const parsed = JSON.parse(existingLocation);
+                    const detectedAt = new Date(parsed.detectedAt);
+                    const now = new Date();
+                    const hoursSinceDetection = (now.getTime() - detectedAt.getTime()) / (1000 * 60 * 60);
+
+                    // Only skip if we have recent geolocation data (not old language-based detection)
+                    if (hoursSinceDetection < 24 &&
+                        parsed.country !== 'Unknown' &&
+                        parsed.detectionMethod === 'geolocation') {
+                        shouldDetect = false;
+                        setUserLocationDetected(true);
+                        console.log(`📋 [Widget] User ${userKey} has recent geolocation data:`, parsed);
+                    } else {
+                        // Clear old non-geolocation data to force new detection
+                        localStorage.removeItem(`userLocation_${userKey}`);
+                        console.log(`🔄 [Widget] Clearing old location data for user ${userKey} to force geolocation`);
+                    }
+                } catch (error) {
+                    console.error('[Widget] Error parsing existing location data:', error);
+                    localStorage.removeItem(`userLocation_${userKey}`);
+                }
+            }
+
+            if (shouldDetect) {
+                try {
+                    console.log(`🌍 [Widget] Requesting geolocation for user ${userKey}...`);
+
+                    // For widget, be less intrusive - just request directly without confirmation
+                    const locationData: GeolocationData | null = await detectUserGeolocation();
+
+                    if (locationData && locationData.country !== 'Unknown') {
+                        const locationToStore = {
+                            ...locationData,
+                            detectedAt: new Date().toISOString(),
+                            userKey: userKey,
+                            source: 'widget'
+                        };
+
+                        localStorage.setItem(`userLocation_${userKey}`, JSON.stringify(locationToStore));
+                        console.log(`✅ [Widget] Geolocation stored for user ${userKey}:`, locationData);
+                        setUserLocationDetected(true);
+
+                        // Also notify parent frame about user location if in widget mode
+                        if (window.parent && window.parent !== window) {
+                            try {
+                                window.parent.postMessage({
+                                    type: 'USER_LOCATION_DETECTED',
+                                    payload: {
+                                        userKey,
+                                        location: locationData
+                                    }
+                                }, parentOrigin);
+                            } catch (error) {
+                                console.log('Could not notify parent about location:', error);
+                            }
+                        }
+                    } else {
+                        console.log(`❌ [Widget] Could not detect location for user ${userKey}`);
+                        setUserLocationDetected(true);
+                    }
+                } catch (error) {
+                    console.error(`🚨 [Widget] Error detecting location for user ${userKey}:`, error);
+                    setUserLocationDetected(true);
+                }
+            }
+        };
+
+        // Delay the location request slightly so the widget loads first
+        const timer = setTimeout(detectAndStoreUserLocation, 1000);
+        return () => clearTimeout(timer);
+    }, [user?.id, currentChat?.user?.clerkId, userLocationDetected, parentOrigin]);
 
     // Widget communication setup
     useEffect(() => {
@@ -553,7 +645,14 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
                         email: msg.email || email,
                     })),
                     isWidget: true,
-                    isGuest: isGuestMode
+                    isGuest: isGuestMode,
+                    userLocation: location ? {
+                        country: location.country,
+                        countryCode: location.countryCode,
+                        city: location.city,
+                        region: location.region,
+                        timezone: location.timezone
+                    } : undefined
                 }),
             });
 
@@ -807,6 +906,11 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
                                     <span className={`text-xs font-medium ${m.role === "user" ? "text-blue-100" : "text-gray-500"}`}>
                                         {m.role === "user" ? (isGuestMode ? "Guest" : "You") : "Assistant"}
                                     </span>
+                                    {m.role === "user" && location && location.country !== 'Unknown' && location.countryCode && (
+                                        <span className="text-xs" title={`From ${location.country}`}>
+                                            {getCountryFlag(location.countryCode)}
+                                        </span>
+                                    )}
                                     <span className={`text-xs ${m.role === "user" ? "text-blue-200" : "text-gray-400"}`}>
                                         {timestamp}
                                     </span>

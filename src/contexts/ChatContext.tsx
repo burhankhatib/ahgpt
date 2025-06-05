@@ -17,9 +17,13 @@ interface ChatContextType {
     switchChat: (chatId: string) => void;
     deleteChat: (chatId: string) => Promise<void>;
     deleteAllChats: () => Promise<void>;
+    hideChat: (chatId: string) => Promise<void>;
+    hideAllChats: () => Promise<void>;
     setCurrentChat: (chat: Chat | null) => void;
     refreshChats: () => Promise<void>;
     canManageChats: boolean;
+    isInvisibleMode: boolean;
+    toggleInvisibleMode: () => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -28,6 +32,38 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     const { user } = useUser();
     const [currentChat, setCurrentChat] = useState<Chat | null>(null);
     const [chats, setChats] = useState<Chat[]>([]);
+    const [hiddenChatIds, setHiddenChatIds] = useState<Set<string>>(new Set());
+    const [isInvisibleMode, setIsInvisibleMode] = useState(false);
+
+    // Load hidden chats and invisible mode from localStorage
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const userId = user ? user.id : getGuestId();
+            const savedHiddenChats = localStorage.getItem(`hidden_chats_${userId}`);
+            if (savedHiddenChats) {
+                setHiddenChatIds(new Set(JSON.parse(savedHiddenChats)));
+            }
+
+            const savedInvisibleMode = localStorage.getItem(`invisible_mode_${userId}`);
+            setIsInvisibleMode(savedInvisibleMode === 'true');
+        }
+    }, [user]);
+
+    // Save hidden chats to localStorage when it changes
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const userId = user ? user.id : getGuestId();
+            localStorage.setItem(`hidden_chats_${userId}`, JSON.stringify(Array.from(hiddenChatIds)));
+        }
+    }, [hiddenChatIds, user]);
+
+    // Save invisible mode to localStorage when it changes
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const userId = user ? user.id : getGuestId();
+            localStorage.setItem(`invisible_mode_${userId}`, isInvisibleMode.toString());
+        }
+    }, [isInvisibleMode, user]);
 
     // Generate or retrieve persistent guest ID
     const getGuestId = () => {
@@ -125,7 +161,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 }))
             });
 
-            setChats(userChats);
+            // Filter out hidden chats from the display
+            const visibleChats = userChats.filter(chat => !hiddenChatIds.has(chat._id || ''));
+            setChats(visibleChats);
         } catch (error) {
             console.error('Error loading chats:', error);
             showNotification({
@@ -134,7 +172,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 type: 'error'
             });
         }
-    }, [user]);
+    }, [user, hiddenChatIds]);
 
     // Load chats when user changes
     useEffect(() => {
@@ -464,9 +502,14 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
             // Update with the saved version (which might have a proper _id)
             setCurrentChat(savedChat);
-            // Only reload chats if this is a new chat (no _id yet) and user is authenticated
-            if ((!currentChat._id || currentChat._id === currentChat.uniqueKey) && user) {
+            // Only reload chats if this is a new chat (no _id yet) and user is authenticated and not in invisible mode
+            if ((!currentChat._id || currentChat._id === currentChat.uniqueKey) && user && !isInvisibleMode) {
                 await loadChats();
+            } else if (isInvisibleMode) {
+                // In invisible mode, add the chat to hidden list immediately
+                if (savedChat._id) {
+                    setHiddenChatIds(prev => new Set([...prev, savedChat._id!]));
+                }
             }
         } catch (error) {
             console.error('Error saving conversation turn:', error);
@@ -589,6 +632,65 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
+    const hideChat = async (chatId: string): Promise<void> => {
+        try {
+            setHiddenChatIds(prev => new Set([...prev, chatId]));
+            setChats(prev => prev.filter(chat => chat._id !== chatId));
+
+            // If the hidden chat was the current chat, clear it
+            if (currentChat?._id === chatId) {
+                setCurrentChat(null);
+            }
+
+            showNotification({
+                title: 'Success',
+                message: 'Chat hidden from sidebar (still saved in database)',
+                type: 'success'
+            });
+        } catch (error) {
+            console.error('Error hiding chat:', error);
+            showNotification({
+                title: 'Error',
+                message: 'Failed to hide chat',
+                type: 'error'
+            });
+            throw error;
+        }
+    };
+
+    const hideAllChats = async (): Promise<void> => {
+        try {
+            const allChatIds = chats.map(chat => chat._id).filter(Boolean) as string[];
+            setHiddenChatIds(prev => new Set([...prev, ...allChatIds]));
+            setChats([]);
+            setCurrentChat(null);
+            showNotification({
+                title: 'Success',
+                message: 'All chats hidden from sidebar (still saved in database)',
+                type: 'success'
+            });
+        } catch (error) {
+            console.error('Error hiding all chats:', error);
+            showNotification({
+                title: 'Error',
+                message: 'Failed to hide all chats',
+                type: 'error'
+            });
+            throw error;
+        }
+    };
+
+    const toggleInvisibleMode = () => {
+        setIsInvisibleMode(prev => !prev);
+        showNotification({
+            title: isInvisibleMode ? 'Invisible Mode OFF' : 'Invisible Mode ON',
+            message: isInvisibleMode
+                ? 'New chats will now appear in sidebar'
+                : 'New chats will be hidden from sidebar but saved to database',
+            type: 'info'
+        });
+    };
+
     return (
         <ChatContext.Provider value={{
             currentChat,
@@ -600,9 +702,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             switchChat,
             deleteChat,
             deleteAllChats,
+            hideChat,
+            hideAllChats,
             setCurrentChat,
             refreshChats: loadChats,
-            canManageChats: canManageChats
+            canManageChats: canManageChats,
+            isInvisibleMode,
+            toggleInvisibleMode
         }}>
             {children}
         </ChatContext.Provider>
