@@ -2,7 +2,7 @@
 import { useRef, useEffect, useState } from "react";
 import { PaperAirplaneIcon } from '@heroicons/react/24/solid';
 import { ExclamationTriangleIcon, InformationCircleIcon, DocumentDuplicateIcon, CheckIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
-import { ClerkProvider, SignInButton, useUser } from '@clerk/nextjs';
+import { ClerkProvider, useUser } from '@clerk/nextjs';
 import { trackChatEvent } from '@/utils/analytics';
 import { useChat as useChatContext } from '@/contexts/ChatContext';
 import { ChatProvider } from '@/contexts/ChatContext';
