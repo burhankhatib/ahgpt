@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { client } from '@/sanity/lib/client';
 import { Chat, SanityChat, convertSanityChatToChat } from '@/types/chat';
+import { validateDomainAccess, createDomainBlockedResponse } from '@/utils/domain-validation';
 
 // Helper function to generate unique keys
 const generateUniqueKey = (prefix: string) => {
@@ -14,8 +15,22 @@ export async function POST(request: NextRequest) {
     console.log('API route hit: /api/chat/operations');
     
     try {
-        const { operation, data } = await request.json();
+        const { operation, data, isWidget, parentOrigin } = await request.json();
         console.log('Operation:', operation);
+
+        // Always validate domain access, regardless of widget status
+        const domainValidation = await validateDomainAccess(request, { isWidget, parentOrigin });
+        
+        console.log('=== OPERATIONS DOMAIN VALIDATION ===');
+        console.log('Is Widget Request:', isWidget);
+        console.log('Domain detected:', domainValidation.domain);
+        console.log('Validation result:', domainValidation.allowed);
+        console.log('=== END OPERATIONS DEBUG ===');
+        
+        if (!domainValidation.allowed) {
+            console.log(`SDK operations access blocked for domain: ${domainValidation.domain}, reason: ${domainValidation.reason}`);
+            return createDomainBlockedResponse(domainValidation.domain, domainValidation.reason);
+        }
 
         switch (operation) {
             case 'saveChat': {

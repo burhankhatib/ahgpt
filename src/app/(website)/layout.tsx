@@ -38,7 +38,7 @@ export default function RootLayout({
       afterSignUpUrl={clerkConfig.afterSignUpUrl}
     >
       <LanguageProvider>
-        <div className={cairo.className}>
+        <div className={`flex flex-col justify-center items-center min-h-screen ${cairo.className}`}>
           {children}
         </div>
         <SanityLive />

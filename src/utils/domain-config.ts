@@ -3,6 +3,11 @@
  * Handles proper domain resolution and prevents subdomain issues
  */
 
+/**
+ * Domain Configuration Utility
+ * Handles proper domain resolution and prevents subdomain issues
+ */
+
 export interface DomainConfig {
   main: string;
   api: string;

@@ -3,19 +3,17 @@
 import { Suspense } from 'react';
 import { useState, useEffect } from 'react';
 import { useUserLocation } from '@/hooks/useUserLocation';
-import { detectLocationBrowserOnly, getCountryFlag } from '@/utils/locationDetection';
+import { getCountryFlag } from '@/utils/visitorApiDetection';
 
 export default function LocationDemo() {
     const { location, isLoading, error } = useUserLocation();
-    const [browserLocation, setBrowserLocation] = useState<any>(null);
     const [testResults, setTestResults] = useState<any[]>([]);
 
     useEffect(() => {
-        // Test browser-only detection
-        const browserResult = detectLocationBrowserOnly();
-        setBrowserLocation(browserResult);
+        // Only run on client side
+        if (typeof window === 'undefined') return;
 
-        // Run multiple tests
+        // Run multiple tests for browser capabilities
         const tests = [
             {
                 name: 'Browser Language Detection',
@@ -33,8 +31,12 @@ export default function LocationDemo() {
                 }
             },
             {
-                name: 'Combined Browser Detection',
-                data: browserResult
+                name: 'Screen Information',
+                data: {
+                    width: window.screen.width,
+                    height: window.screen.height,
+                    pixelRatio: window.devicePixelRatio
+                }
             }
         ];
 
@@ -46,30 +48,31 @@ export default function LocationDemo() {
             <div className="max-w-4xl mx-auto">
                 <div className="text-center mb-8">
                     <h1 className="text-4xl font-bold text-gray-800 mb-4">
-                        🌍 Location Detection Demo
+                        🌍 VisitorAPI Location Demo
                     </h1>
                     <p className="text-lg text-gray-600">
-                        Experience our revolutionary browser-only location detection system
+                        Experience our new VisitorAPI-based location detection system
                     </p>
                     <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-4">
-                        <h2 className="text-lg font-semibold text-green-800 mb-2">✅ Problem Solved!</h2>
+                        <h2 className="text-lg font-semibold text-green-800 mb-2">✅ VisitorAPI Benefits!</h2>
                         <p className="text-green-700">
-                            <strong>Before:</strong> All users showed the same location (admin&apos;s location)<br />
-                            <strong>Now:</strong> Each user gets their location detected from their own browser<br />
-                            <strong>Iranian Users:</strong> Persian/Farsi speakers now correctly show Iran 🇮🇷 instead of Palestine
+                            <strong>No Permissions:</strong> Works automatically without user prompts<br />
+                            <strong>High Accuracy:</strong> IP-based location detection with city-level precision<br />
+                            <strong>Rich Data:</strong> Additional visitor information (browser, OS, etc.)<br />
+                            <strong>Better UX:</strong> Instant detection, no waiting for GPS or user interaction
                         </p>
                     </div>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Current Location */}
+                    {/* Current Location with VisitorAPI */}
                     <div className="bg-white rounded-lg shadow-md p-6">
-                        <h2 className="text-xl font-semibold text-gray-800 mb-4">📍 Current Location</h2>
+                        <h2 className="text-xl font-semibold text-gray-800 mb-4">📍 VisitorAPI Location</h2>
 
                         {isLoading && (
                             <div className="flex items-center space-x-2">
                                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                                <span className="text-gray-600">Detecting location...</span>
+                                <span className="text-gray-600">Detecting location with VisitorAPI...</span>
                             </div>
                         )}
 
@@ -88,46 +91,37 @@ export default function LocationDemo() {
                                         {location.city && (
                                             <div className="text-gray-600">{location.city}</div>
                                         )}
-                                    </div>
-                                </div>
-
-                                <div className="text-sm text-gray-500 space-y-1">
-                                    <div>Detection Method: {location.detectionMethod || 'browser-only'}</div>
-                                    <div>Confidence: {location.confidence || 'medium'}</div>
-                                    {location.timezone && <div>Timezone: {location.timezone}</div>}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Browser-Only Detection */}
-                    <div className="bg-white rounded-lg shadow-md p-6">
-                        <h2 className="text-xl font-semibold text-gray-800 mb-4">🖥️ Browser-Only Detection</h2>
-
-                        {browserLocation && (
-                            <div className="space-y-3">
-                                <div className="flex items-center space-x-3">
-                                    <span className="text-3xl">{getCountryFlag(browserLocation.countryCode)}</span>
-                                    <div>
-                                        <div className="font-semibold text-lg">{browserLocation.country}</div>
-                                        {browserLocation.city && (
-                                            <div className="text-gray-600">{browserLocation.city}</div>
+                                        {location.region && (
+                                            <div className="text-gray-500 text-sm">{location.region}</div>
                                         )}
                                     </div>
                                 </div>
 
                                 <div className="text-sm text-gray-500 space-y-1">
-                                    <div>Method: {browserLocation.detectionMethod}</div>
-                                    <div>Confidence: {browserLocation.confidence}</div>
-                                    <div>Timezone: {browserLocation.timezone}</div>
+                                    <div>Detection Method: {location.detectionMethod}</div>
+                                    <div>Confidence: {location.confidence}</div>
+                                    {location.ipAddress && <div>IP Address: {location.ipAddress}</div>}
                                 </div>
 
-                                {browserLocation.browserInfo && (
-                                    <div className="mt-4 p-3 bg-gray-50 rounded">
-                                        <div className="text-xs text-gray-600">
-                                            <div>Primary Language: {browserLocation.browserInfo.language}</div>
-                                            <div>All Languages: {browserLocation.browserInfo.languages.join(', ')}</div>
-                                            <div>Locale: {browserLocation.browserInfo.locale}</div>
+                                {/* Additional VisitorAPI Data */}
+                                {(location.browser || location.os || location.currencies || location.languages) && (
+                                    <div className="mt-4 p-3 bg-blue-50 rounded">
+                                        <div className="text-xs text-blue-800 space-y-1">
+                                            {location.browser && (
+                                                <div>Browser: {location.browser} {location.browserVersion}</div>
+                                            )}
+                                            {location.os && (
+                                                <div>OS: {location.os} {location.osVersion}</div>
+                                            )}
+                                            {location.currencies && (
+                                                <div>Currencies: {location.currencies.join(', ')}</div>
+                                            )}
+                                            {location.languages && (
+                                                <div>Languages: {location.languages.join(', ')}</div>
+                                            )}
+                                            {location.cityLatLong && (
+                                                <div>Coordinates: {location.cityLatLong.lat.toFixed(4)}, {location.cityLatLong.lng.toFixed(4)}</div>
+                                            )}
                                         </div>
                                     </div>
                                 )}
@@ -135,9 +129,38 @@ export default function LocationDemo() {
                         )}
                     </div>
 
+                    {/* Browser Capabilities */}
+                    <div className="bg-white rounded-lg shadow-md p-6">
+                        <h2 className="text-xl font-semibold text-gray-800 mb-4">🖥️ Browser Capabilities</h2>
+
+                        <div className="space-y-3">
+                            {typeof window !== 'undefined' && (
+                                <>
+                                    <div className="text-sm">
+                                        <div className="font-medium text-gray-700">Language Settings:</div>
+                                        <div className="text-gray-600">Primary: {navigator.language}</div>
+                                        <div className="text-gray-600">Locale: {Intl.DateTimeFormat().resolvedOptions().locale}</div>
+                                    </div>
+
+                                    <div className="text-sm">
+                                        <div className="font-medium text-gray-700">Timezone:</div>
+                                        <div className="text-gray-600">{Intl.DateTimeFormat().resolvedOptions().timeZone}</div>
+                                        <div className="text-gray-600">Offset: {new Date().getTimezoneOffset()} minutes</div>
+                                    </div>
+
+                                    <div className="text-sm">
+                                        <div className="font-medium text-gray-700">Screen:</div>
+                                        <div className="text-gray-600">{window.screen.width} × {window.screen.height}</div>
+                                        <div className="text-gray-600">Pixel Ratio: {window.devicePixelRatio}</div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </div>
+
                     {/* Test Results */}
                     <div className="lg:col-span-2 bg-white rounded-lg shadow-md p-6">
-                        <h2 className="text-xl font-semibold text-gray-800 mb-4">🧪 Detection Tests</h2>
+                        <h2 className="text-xl font-semibold text-gray-800 mb-4">🧪 Browser Detection Tests</h2>
 
                         <div className="space-y-4">
                             {testResults.map((test, index) => (
@@ -151,24 +174,29 @@ export default function LocationDemo() {
                         </div>
                     </div>
 
-                    {/* Performance Info */}
+                    {/* VisitorAPI Benefits */}
                     <div className="lg:col-span-2 bg-green-50 border border-green-200 rounded-lg p-6">
-                        <h2 className="text-xl font-semibold text-green-800 mb-4">⚡ Performance Benefits</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                        <h2 className="text-xl font-semibold text-green-800 mb-4">⚡ VisitorAPI Advantages</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
                             <div className="text-center p-3 bg-white rounded-lg">
                                 <div className="text-2xl mb-2">🚀</div>
-                                <div className="font-medium">Instant Detection</div>
-                                <div className="text-gray-600">No network requests</div>
+                                <div className="font-medium">No Permissions</div>
+                                <div className="text-gray-600">Works automatically</div>
                             </div>
                             <div className="text-center p-3 bg-white rounded-lg">
-                                <div className="text-2xl mb-2">♾️</div>
-                                <div className="font-medium">No Rate Limits</div>
-                                <div className="text-gray-600">Unlimited requests</div>
+                                <div className="text-2xl mb-2">🎯</div>
+                                <div className="font-medium">High Accuracy</div>
+                                <div className="text-gray-600">IP-based detection</div>
                             </div>
                             <div className="text-center p-3 bg-white rounded-lg">
-                                <div className="text-2xl mb-2">🔒</div>
-                                <div className="font-medium">Privacy Friendly</div>
-                                <div className="text-gray-600">No IP data sent</div>
+                                <div className="text-2xl mb-2">📊</div>
+                                <div className="font-medium">Rich Data</div>
+                                <div className="text-gray-600">Browser, OS, more</div>
+                            </div>
+                            <div className="text-center p-3 bg-white rounded-lg">
+                                <div className="text-2xl mb-2">⚡</div>
+                                <div className="font-medium">Fast</div>
+                                <div className="text-gray-600">Instant results</div>
                             </div>
                         </div>
                     </div>

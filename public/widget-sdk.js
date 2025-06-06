@@ -26,6 +26,37 @@
         }
     }
 
+    function destroyAllWidgets() {
+        debugLog('info', 'Destroying ALL existing AlHayatGPT widgets to ensure a clean slate.');
+
+        // 1. Destroy all registered widget instances
+        if (window.AlHayatGPT_Instances) {
+            Object.values(window.AlHayatGPT_Instances).forEach(instance => {
+                if (instance && typeof instance.destroy === 'function') {
+                    try {
+                        instance.destroy();
+                    } catch (e) {
+                        debugLog('warn', 'Error destroying a widget instance.', e);
+                    }
+                }
+            });
+        }
+        window.AlHayatGPT_Instances = {}; // Reset the global registry
+
+        // 2. Aggressively scan the DOM and remove any orphaned widgets
+        const orphanedIframes = document.querySelectorAll('iframe[src*="alhayatgpt.com/widget/chat"]');
+        orphanedIframes.forEach(iframe => {
+            debugLog('warn', 'Found and removing an orphaned widget iframe.', iframe);
+            const container = iframe.parentElement;
+            if (container) {
+                // To be safe, remove the container of the iframe, which might be the root.
+                container.remove();
+            } else {
+                iframe.remove();
+            }
+        });
+    }
+
     // Configuration constants
     const CONSTANTS = {
         VERSION: '2.0.0-stable',
@@ -36,9 +67,9 @@
         MESSAGE_TIMEOUT: 30000,
         SUPPORTED_THEMES: ['light', 'dark', 'auto'],
         DEFAULT_WIDTH: '100%',
-        DEFAULT_HEIGHT: '600px',
+        DEFAULT_HEIGHT: '100%',
         MIN_HEIGHT: '300px',
-        MAX_HEIGHT: '800px'
+        MAX_HEIGHT: 'none'
     };
 
     // Error types for better error handling
@@ -64,6 +95,12 @@
                 throw error;
             }
 
+            // Clean the target container before initialization
+            const containerElement = document.getElementById(config.containerId);
+            if (containerElement) {
+                containerElement.innerHTML = '';
+            }
+
             // Initialize configuration with secure defaults
             this.config = {
                 apiEndpoint: 'https://www.alhayatgpt.com',
@@ -77,10 +114,20 @@
                 usePopupAuth: true,
                 fallbackToGuest: true,
                 autoResize: true,
+                smartHeight: true,
+                responsiveHeight: true,
+                minHeight: 400,
+                maxHeight: 800,
                 secureOrigin: true,
                 enableRetry: true,
                 ...config
             };
+
+            // Register this instance globally
+            if (!window.AlHayatGPT_Instances) {
+                window.AlHayatGPT_Instances = {};
+            }
+            window.AlHayatGPT_Instances[config.containerId] = this;
 
             // Validate and sanitize configuration
             this.validateAndSanitizeConfig();
@@ -197,6 +244,16 @@
                 const findContainer = () => {
                     this.container = document.getElementById(this.config.containerId);
                     if (this.container) {
+                        // Check for existing widget to prevent duplication
+                        const existingWidget = this.container.querySelector('iframe[src*="/widget/chat"]');
+                        if (existingWidget) {
+                            debugLog('warn', 'Widget already exists in container, cleaning up...');
+                            existingWidget.remove();
+                        }
+                        
+                        // Clear any existing content
+                        this.container.innerHTML = '';
+                        
                         // Prepare container for widget
                         this.prepareContainer();
                         debugLog('info', 'Container found and prepared');
@@ -527,6 +584,7 @@
             widgetUrl.searchParams.set('allowGuests', this.config.allowGuests.toString());
             widgetUrl.searchParams.set('parentOrigin', window.location.origin);
             widgetUrl.searchParams.set('version', CONSTANTS.VERSION);
+            widgetUrl.searchParams.set('enhanced_styling', 'true'); // Enable enhanced styling
             
             // Add authentication info if available
             if (this.currentUser) {
@@ -605,13 +663,6 @@
                     this.currentUser = null;
                     localStorage.removeItem('ahgpt_auth');
                     this.triggerCallback('onUserSignOut');
-                    break;
-                    
-                case 'RESIZE':
-                    if (this.config.autoResize && this.iframe && message.payload?.height) {
-                        const height = Math.max(300, Math.min(800, message.payload.height));
-                        this.iframe.style.height = `${height}px`;
-                    }
                     break;
                     
                 case 'ERROR':
@@ -879,9 +930,16 @@
             // Clear message handlers
             this.messageHandlers.clear();
 
-            // Clear container
+            // COMPLETELY CLEAR container to prevent any remnants
             if (this.container) {
                 this.container.innerHTML = '';
+                this.container.style.cssText = '';
+                this.container = null;
+            }
+
+            // Remove from global registry
+            if (window.AlHayatGPT_Instances && this.config.containerId) {
+                delete window.AlHayatGPT_Instances[this.config.containerId];
             }
 
             debugLog('info', 'Widget destroyed successfully');
@@ -892,6 +950,10 @@
     const AlHayatGPT = {
         createWidget(config) {
             try {
+                // Destroy any and all existing widgets first to guarantee a clean slate.
+                destroyAllWidgets();
+
+                // Now, create the new widget instance.
                 return new AlHayatGPTWidget(config);
             } catch (error) {
                 debugLog('error', 'Failed to create widget', error);

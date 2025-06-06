@@ -3,17 +3,17 @@ import "../globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { SanityLive } from "@/sanity/lib/live";
-import { Cairo } from 'next/font/google';
+import { Roboto } from 'next/font/google';
 import { getClerkConfig } from "@/utils/domain-config";
 
-const cairo = Cairo({
+const roboto = Roboto({
   subsets: ['latin'],
   weight: ['400', '700'],
 })
 
 export const metadata: Metadata = {
-  title: "Al Hayat GPT",
-  description: "The first and most advanced Christian AI chatbot in the world!",
+  title: "Admin Dashboard",
+  description: "You can whitelist domain names and export analytics data.",
 };
 
 export default function RootLayout({
@@ -38,7 +38,7 @@ export default function RootLayout({
       afterSignUpUrl={clerkConfig.afterSignUpUrl}
     >
       <LanguageProvider>
-        <div className={cairo.className}>
+        <div className={roboto.className}>
           {children}
         </div>
         <SanityLive />

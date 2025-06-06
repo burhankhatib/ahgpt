@@ -9,7 +9,7 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             margin: 0;
             padding: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
             min-height: 100vh;
         }
         
@@ -23,7 +23,7 @@
         }
         
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
             color: white;
             padding: 40px;
             text-align: center;
@@ -75,7 +75,7 @@
             background: #f8f9fa;
             padding: 20px;
             border-radius: 12px;
-            border-left: 4px solid #667eea;
+            border-left: 4px solid #3b82f6;
         }
         
         .feature h3 {
@@ -158,6 +158,95 @@
             margin: 0;
             color: #1976d2;
             font-size: 0.9rem;
+        }
+
+        /* Enhanced table styling for SDK documentation */
+        .sdk-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e5e7eb;
+            margin: 30px 0;
+        }
+
+        .sdk-table th {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            text-align: left;
+            font-weight: bold;
+            padding: 20px 24px;
+            border-bottom: 2px solid #1d4ed8;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            white-space: nowrap;
+        }
+
+        .sdk-table td {
+            padding: 20px 24px;
+            border-bottom: 1px solid #f3f4f6;
+            color: #4b5563;
+            line-height: 1.6;
+            min-width: 150px;
+            word-wrap: break-word;
+            max-width: 400px;
+            vertical-align: top;
+        }
+
+        .sdk-table tr:hover {
+            background-color: rgba(59, 130, 246, 0.05);
+            transition: background-color 0.2s ease-in-out;
+        }
+
+        .sdk-table tbody tr:nth-child(even) {
+            background-color: rgba(248, 250, 252, 0.5);
+        }
+
+        .sdk-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .sdk-table td code {
+            background: #f1f5f9;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 13px;
+            color: #374151;
+            border: 1px solid #e2e8f0;
+        }
+
+        /* Table badges */
+        .table-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .table-badge.success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .table-badge.error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .table-badge.warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .table-badge.info {
+            background: #dbeafe;
+            color: #1e40af;
         }
         
         @media (max-width: 768px) {

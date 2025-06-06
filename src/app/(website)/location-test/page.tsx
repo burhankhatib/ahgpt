@@ -2,34 +2,35 @@
 
 import { useState, useEffect } from 'react';
 import { useUserLocation } from '@/hooks/useUserLocation';
-import { getCountryFlag } from '@/utils/locationDetection';
+import { getCountryFlag } from '@/utils/visitorApiDetection';
 
 export default function LocationTestPage() {
     const { location, isLoading, error, refetch } = useUserLocation();
-    const [apiTest, setApiTest] = useState<any>(null);
-    const [apiLoading, setApiLoading] = useState(false);
+    const [directTest, setDirectTest] = useState<any>(null);
+    const [directLoading, setDirectLoading] = useState(false);
 
-    const testLocationAPI = async () => {
-        setApiLoading(true);
+    const testDirectVisitorAPI = async () => {
+        setDirectLoading(true);
         try {
-            const response = await fetch('/api/location');
-            const data = await response.json();
-            setApiTest(data);
+            // Import and test VisitorAPI directly
+            const { detectUserLocation } = await import('@/utils/visitorApiDetection');
+            const data = await detectUserLocation();
+            setDirectTest(data);
         } catch (err) {
-            setApiTest({ error: err instanceof Error ? err.message : 'Unknown error' });
+            setDirectTest({ error: err instanceof Error ? err.message : 'Unknown error' });
         } finally {
-            setApiLoading(false);
+            setDirectLoading(false);
         }
     };
 
     useEffect(() => {
-        testLocationAPI();
+        testDirectVisitorAPI();
     }, []);
 
     return (
         <div className="min-h-screen bg-gray-50 py-8">
             <div className="max-w-4xl mx-auto px-4">
-                <h1 className="text-3xl font-bold text-gray-900 mb-8">Location Detection Test</h1>
+                <h1 className="text-3xl font-bold text-gray-900 mb-8">VisitorAPI Location Test</h1>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Hook Test */}
@@ -37,7 +38,7 @@ export default function LocationTestPage() {
                         <h2 className="text-xl font-semibold mb-4">useUserLocation Hook</h2>
 
                         {isLoading && (
-                            <div className="text-blue-600">Loading location...</div>
+                            <div className="text-blue-600">Loading location with VisitorAPI...</div>
                         )}
 
                         {error && (
@@ -54,8 +55,11 @@ export default function LocationTestPage() {
                                     <div>Country Code: {location.countryCode}</div>
                                     <div>City: {location.city || 'N/A'}</div>
                                     <div>Region: {location.region || 'N/A'}</div>
-                                    <div>Timezone: {location.timezone || 'N/A'}</div>
-                                    <div>Detection Method: {location.detectionMethod || 'N/A'}</div>
+                                    <div>Detection Method: {location.detectionMethod}</div>
+                                    <div>Confidence: {location.confidence}</div>
+                                    {location.ipAddress && <div>IP Address: {location.ipAddress}</div>}
+                                    {location.browser && <div>Browser: {location.browser} {location.browserVersion}</div>}
+                                    {location.os && <div>OS: {location.os} {location.osVersion}</div>}
                                 </div>
                             </div>
                         )}
@@ -69,30 +73,40 @@ export default function LocationTestPage() {
                         </button>
                     </div>
 
-                    {/* Direct API Test */}
+                    {/* Direct VisitorAPI Test */}
                     <div className="bg-white rounded-lg shadow p-6">
-                        <h2 className="text-xl font-semibold mb-4">Direct API Test</h2>
+                        <h2 className="text-xl font-semibold mb-4">Direct VisitorAPI Test</h2>
 
-                        {apiLoading && (
-                            <div className="text-blue-600">Testing API...</div>
+                        {directLoading && (
+                            <div className="text-blue-600">Testing VisitorAPI directly...</div>
                         )}
 
-                        {apiTest && (
+                        {directTest && (
                             <div className="space-y-2">
-                                {apiTest.error ? (
-                                    <div className="text-red-600">Error: {apiTest.error}</div>
+                                {directTest.error ? (
+                                    <div className="text-red-600">Error: {directTest.error}</div>
                                 ) : (
                                     <>
                                         <div className="flex items-center gap-2">
-                                            <span className="text-2xl">{getCountryFlag(apiTest.countryCode)}</span>
-                                            <span className="font-medium">{apiTest.country}</span>
+                                            <span className="text-2xl">{getCountryFlag(directTest.countryCode)}</span>
+                                            <span className="font-medium">{directTest.country}</span>
                                         </div>
                                         <div className="text-sm text-gray-600">
-                                            <div>Country Code: {apiTest.countryCode}</div>
-                                            <div>City: {apiTest.city || 'N/A'}</div>
-                                            <div>Region: {apiTest.region || 'N/A'}</div>
-                                            <div>Timezone: {apiTest.timezone || 'N/A'}</div>
-                                            <div>IP: {apiTest.ip || 'N/A'}</div>
+                                            <div>Country Code: {directTest.countryCode}</div>
+                                            <div>City: {directTest.city || 'N/A'}</div>
+                                            <div>Region: {directTest.region || 'N/A'}</div>
+                                            <div>Detection Method: {directTest.detectionMethod}</div>
+                                            <div>Confidence: {directTest.confidence}</div>
+                                            {directTest.ipAddress && <div>IP: {directTest.ipAddress}</div>}
+                                            {directTest.currencies && directTest.currencies.length > 0 && (
+                                                <div>Currencies: {directTest.currencies.join(', ')}</div>
+                                            )}
+                                            {directTest.languages && directTest.languages.length > 0 && (
+                                                <div>Languages: {directTest.languages.join(', ')}</div>
+                                            )}
+                                            {directTest.cityLatLong && (
+                                                <div>Coordinates: {directTest.cityLatLong.lat.toFixed(4)}, {directTest.cityLatLong.lng.toFixed(4)}</div>
+                                            )}
                                         </div>
                                     </>
                                 )}
@@ -100,11 +114,11 @@ export default function LocationTestPage() {
                         )}
 
                         <button
-                            onClick={testLocationAPI}
-                            disabled={apiLoading}
+                            onClick={testDirectVisitorAPI}
+                            disabled={directLoading}
                             className="mt-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
                         >
-                            Test API Again
+                            Test VisitorAPI Again
                         </button>
                     </div>
                 </div>
@@ -120,10 +134,29 @@ export default function LocationTestPage() {
                             </pre>
                         </div>
                         <div>
-                            <h3 className="font-medium mb-2">API Data:</h3>
+                            <h3 className="font-medium mb-2">Direct VisitorAPI Data:</h3>
                             <pre className="text-xs bg-gray-100 p-2 rounded overflow-auto">
-                                {JSON.stringify(apiTest, null, 2)}
+                                {JSON.stringify(directTest, null, 2)}
                             </pre>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Additional Info */}
+                <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
+                    <h2 className="text-xl font-semibold text-blue-800 mb-4">VisitorAPI Features</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                        <div>
+                            <h3 className="font-medium text-blue-900 mb-2">✅ No Permissions Required</h3>
+                            <p className="text-blue-700">Works automatically using IP geolocation, no user prompts needed.</p>
+                        </div>
+                        <div>
+                            <h3 className="font-medium text-blue-900 mb-2">🎯 High Accuracy</h3>
+                            <p className="text-blue-700">Provides city-level location accuracy in most cases.</p>
+                        </div>
+                        <div>
+                            <h3 className="font-medium text-blue-900 mb-2">📊 Rich Data</h3>
+                            <p className="text-blue-700">Additional visitor information including browser, OS, currencies, and languages.</p>
                         </div>
                     </div>
                 </div>

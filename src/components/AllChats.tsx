@@ -7,7 +7,7 @@ import { format, isWithinInterval, parseISO, startOfDay, endOfDay, startOfMonth,
 import { getAllChats } from '@/sanity/lib/data/getAllChats';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { detectLanguage } from '@/utils/languageDetection';
-import { getCountryFlag } from '@/utils/geolocationDetection';
+import { getCountryFlag } from '@/utils/visitorApiDetection';
 
 type UserType = 'all' | 'registered' | 'guest';
 type DateRange = {
@@ -437,25 +437,27 @@ export default function AllChats() {
                     const userKey = chat.user.clerkId;
 
                     // Method 1: Check if this user has stored location data from their browser sessions (highest priority)
-                    const storedLocation = localStorage.getItem(`userLocation_${userKey}`);
-                    if (storedLocation) {
-                        try {
-                            const parsed = JSON.parse(storedLocation);
-                            if (parsed.country && parsed.country !== 'Unknown') {
-                                userLocationData[userKey] = {
-                                    country: parsed.country,
-                                    countryCode: parsed.countryCode || '',
-                                    city: parsed.city,
-                                    region: parsed.region,
-                                    confidence: parsed.confidence || 'high',
-                                    detectionMethod: parsed.detectionMethod || 'geolocation'
-                                };
-                                console.log(`📋 Loaded stored location for ${userKey}:`, parsed);
-                                continue;
+                    if (typeof window !== 'undefined') {
+                        const storedLocation = localStorage.getItem(`userLocation_${userKey}`);
+                        if (storedLocation) {
+                            try {
+                                const parsed = JSON.parse(storedLocation);
+                                if (parsed.country && parsed.country !== 'Unknown') {
+                                    userLocationData[userKey] = {
+                                        country: parsed.country,
+                                        countryCode: parsed.countryCode || '',
+                                        city: parsed.city,
+                                        region: parsed.region,
+                                        confidence: parsed.confidence || 'high',
+                                        detectionMethod: parsed.detectionMethod || 'geolocation'
+                                    };
+                                    console.log(`📋 Loaded stored location for ${userKey}:`, parsed);
+                                    continue;
+                                }
+                            } catch (error) {
+                                console.error(`❌ Error parsing stored location for ${userKey}:`, error);
+                                localStorage.removeItem(`userLocation_${userKey}`);
                             }
-                        } catch (error) {
-                            console.error(`❌ Error parsing stored location for ${userKey}:`, error);
-                            localStorage.removeItem(`userLocation_${userKey}`);
                         }
                     }
 
@@ -552,6 +554,44 @@ export default function AllChats() {
     useEffect(() => {
         updateLocationStats();
     }, [userLocations]);
+
+    // Helper function to get language name
+    const getLanguageName = (code: string): string => {
+        const languages: Record<string, string> = {
+            'en': 'English',
+            'ar': 'Arabic',
+            'he': 'Hebrew',
+            'fa': 'Persian',
+            'es': 'Spanish',
+            'fr': 'French',
+            'de': 'German',
+            'it': 'Italian',
+            'pt': 'Portuguese',
+            'zh': 'Chinese',
+            'ja': 'Japanese',
+            'ko': 'Korean',
+            'ru': 'Russian',
+            'hi': 'Hindi',
+            'tr': 'Turkish',
+            'fi': 'Finnish',
+            'sv': 'Swedish',
+            'no': 'Norwegian',
+            'da': 'Danish',
+            'nl': 'Dutch',
+            'pl': 'Polish',
+            'th': 'Thai',
+            'vi': 'Vietnamese',
+            'bn': 'Bengali',
+            'ur': 'Urdu',
+            'id': 'Indonesian',
+            'ms': 'Malay',
+            'bal': 'Balochi',
+            'te': 'Telugu',
+            'mr': 'Marathi',
+            'ta': 'Tamil'
+        };
+        return languages[code] || code.toUpperCase();
+    };
 
     const filteredChats = useMemo(() => {
         return allChats.filter(chat => {
@@ -934,44 +974,126 @@ export default function AllChats() {
         return format(date, 'MMM d, yyyy h:mm a');
     };
 
-    const exportChats = async (format: 'text' | 'json') => {
+    const exportChats = async (exportFormat: 'text' | 'json') => {
         setIsExporting(true);
         try {
-            const exportData = filteredChats.map(chat => ({
-                title: chat.title,
-                user: `${chat.user.firstName} ${chat.user.lastName}`,
-                email: !chat.user.clerkId.startsWith('guest_') ? chat.user.email : 'Guest user (no email)',
-                createdAt: formatDate(chat.createdAt),
-                updatedAt: formatDate(chat.updatedAt),
-                messages: chat.messages.map(msg => ({
-                    role: msg.role,
-                    content: msg.content,
-                    timestamp: formatDate(msg.timestamp)
-                }))
-            }));
+            const exportData = filteredChats.map(chat => {
+                // Get user location data
+                const userLocation = userLocations[chat.user.clerkId];
+
+                // Get detected language
+                const detectedLang = detectedLanguages[chat._id!];
+
+                // Determine source (SDK vs Website)
+                const isGuestUser = chat.user.clerkId.startsWith('guest_');
+                const isSDKUser = isGuestUser && chat.user.lastName && chat.user.lastName !== 'Unknown';
+                const source = isSDKUser ? `SDK: ${chat.user.lastName}` : 'Al Hayat GPT website';
+
+                return {
+                    // Basic chat info
+                    id: chat._id,
+                    title: chat.title,
+                    createdAt: formatDate(chat.createdAt),
+                    updatedAt: formatDate(chat.updatedAt),
+                    messageCount: chat.messages.length,
+
+                    // User information
+                    user: {
+                        name: `${chat.user.firstName} ${chat.user.lastName}`,
+                        email: !chat.user.clerkId.startsWith('guest_') ? chat.user.email : 'Guest user (no email)',
+                        type: isGuestUser ? 'Guest' : 'Registered',
+                        clerkId: chat.user.clerkId
+                    },
+
+                    // Location information
+                    location: userLocation ? {
+                        country: userLocation.country,
+                        countryCode: userLocation.countryCode,
+                        city: userLocation.city || 'Unknown',
+                        region: userLocation.region || 'Unknown',
+                        confidence: userLocation.confidence,
+                        detectionMethod: userLocation.detectionMethod
+                    } : {
+                        country: 'Unknown',
+                        countryCode: 'Unknown',
+                        city: 'Unknown',
+                        region: 'Unknown',
+                        confidence: 'low',
+                        detectionMethod: 'none'
+                    },
+
+                    // Language information
+                    language: {
+                        code: detectedLang || chat.language || 'en',
+                        name: getLanguageName(detectedLang || chat.language || 'en'),
+                        originalLanguage: chat.language
+                    },
+
+                    // Source information
+                    source: {
+                        type: isSDKUser ? 'SDK' : 'Website',
+                        platform: source,
+                        isGuest: isGuestUser
+                    },
+
+                    // Messages
+                    messages: chat.messages.map(msg => ({
+                        role: msg.role,
+                        content: msg.content,
+                        timestamp: formatDate(msg.timestamp),
+                        timestampISO: msg.timestamp
+                    }))
+                };
+            });
 
             let content: string;
             let filename: string;
             let mimeType: string;
 
-            if (format === 'json') {
+            const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm-ss');
+
+            if (exportFormat === 'json') {
                 content = JSON.stringify(exportData, null, 2);
-                filename = `chats_export_${formatDate(new Date())}.json`;
+                filename = `chats_full_export_${timestamp}.json`;
                 mimeType = 'application/json';
             } else {
                 content = exportData.map(chat =>
-                    `Chat: ${chat.title}
-User: ${chat.user}
-Email: ${chat.email}
+                    `Chat ID: ${chat.id}
+Title: ${chat.title}
 Created: ${chat.createdAt}
 Updated: ${chat.updatedAt}
-Messages:
+Message Count: ${chat.messageCount}
+
+USER INFORMATION:
+Name: ${chat.user.name}
+Email: ${chat.user.email}
+Type: ${chat.user.type}
+Clerk ID: ${chat.user.clerkId}
+
+LOCATION INFORMATION:
+Country: ${chat.location.country}
+Country Code: ${chat.location.countryCode}
+City: ${chat.location.city}
+Region: ${chat.location.region}
+Detection Method: ${chat.location.detectionMethod}
+Confidence: ${chat.location.confidence}
+
+LANGUAGE INFORMATION:
+Detected Language: ${chat.language.name} (${chat.language.code})
+Original Language: ${chat.language.originalLanguage}
+
+SOURCE INFORMATION:
+Type: ${chat.source.type}
+Platform: ${chat.source.platform}
+Is Guest: ${chat.source.isGuest}
+
+MESSAGES:
 ${chat.messages.map(msg =>
                         `[${msg.timestamp}] ${msg.role.toUpperCase()}: ${msg.content}`
                     ).join('\n')}
-----------------------------------------`
+================================================`
                 ).join('\n\n');
-                filename = `chats_export_${formatDate(new Date())}.txt`;
+                filename = `chats_full_export_${timestamp}.txt`;
                 mimeType = 'text/plain';
             }
 
@@ -994,13 +1116,15 @@ ${chat.messages.map(msg =>
     // Function to clear location cache (for debugging)
     const clearLocationCache = () => {
         // Clear all location cache
-        Object.keys(localStorage).forEach(key => {
-            if (key.startsWith('userLocation_')) {
-                localStorage.removeItem(key);
-            }
-        });
+        if (typeof window !== 'undefined') {
+            Object.keys(localStorage).forEach(key => {
+                if (key.startsWith('userLocation_')) {
+                    localStorage.removeItem(key);
+                }
+            });
 
-        console.log('🗑️ Cleared all location cache');
+            console.log('🗑️ Cleared all location cache');
+        }
 
         // Reload chats to re-detect locations
         const loadAllChats = async () => {
@@ -1046,14 +1170,16 @@ ${chat.messages.map(msg =>
     const redetectAllLocations = () => {
         console.log('🔄 Re-detecting all locations...');
         // Clear stored locations for testing
-        Object.keys(localStorage).forEach(key => {
-            if (key.startsWith('userLocation_')) {
-                localStorage.removeItem(key);
-            }
-        });
+        if (typeof window !== 'undefined') {
+            Object.keys(localStorage).forEach(key => {
+                if (key.startsWith('userLocation_')) {
+                    localStorage.removeItem(key);
+                }
+            });
 
-        // Reload chats to trigger re-detection
-        window.location.reload();
+            // Reload chats to trigger re-detection
+            window.location.reload();
+        }
     };
 
     // Add to window for debugging (only in development)
@@ -1106,16 +1232,16 @@ ${chat.messages.map(msg =>
             >
                 <div className="p-4 pt-16 lg:pt-4">
                     <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-xl font-semibold text-gray-800">All Chats</h2>
+                        <h2 className="text-xl font-semibold text-gray-800 text-left">All Chats</h2>
                         <div className="flex items-center gap-3">
-                            <div className="text-sm text-gray-500">
+                            <div className="text-sm text-gray-500 text-left">
                                 {filteredChats.length} / {allChats.length} chats
                             </div>
                             {/* Debug controls - only show in development */}
                             {process.env.NODE_ENV === 'development' && (
                                 <button
                                     onClick={clearLocationCache}
-                                    className="text-xs px-2 py-1 bg-yellow-100 text-yellow-700 rounded border border-yellow-200 hover:bg-yellow-200 transition-colors"
+                                    className="text-xs px-2 py-1 bg-yellow-100 text-yellow-700 rounded border border-yellow-200 hover:bg-yellow-200 transition-colors text-left"
                                     title="Clear location cache and re-detect"
                                 >
                                     🔄 Refresh Locations
@@ -1129,7 +1255,7 @@ ${chat.messages.map(msg =>
                         <input
                             type="text"
                             placeholder="Search chats..."
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-left"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
@@ -1139,11 +1265,11 @@ ${chat.messages.map(msg =>
                     <div className="mb-4 space-y-4">
                         {/* User Type Filter */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 text-left">
                                 User Type
                             </label>
                             <select
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-left"
                                 value={userTypeFilter}
                                 onChange={(e) => setUserTypeFilter(e.target.value as UserType)}
                             >
@@ -1155,77 +1281,77 @@ ${chat.messages.map(msg =>
 
                         {/* Source/Referrer Filter */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 text-left">
                                 Source/Referrer
                             </label>
                             <select
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-left"
                                 value={sourceFilter}
                                 onChange={(e) => {
                                     setSourceFilter(e.target.value as SourceFilter);
                                     setCurrentPage(1); // Reset to first page when filter changes
                                 }}
                             >
-                                <option value="all">All Sources ({Object.values(sourceCounts).reduce((a, b) => a + b, 0)})</option>
-                                {availableSources.map((source) => (
+                                <option value="all">All Sources ({Object.values(sourceCounts || {}).reduce((a, b) => a + b, 0)})</option>
+                                {availableSources?.map((source) => (
                                     <option key={source} value={source}>
-                                        {source} ({sourceCounts[source] || 0})
+                                        {source} ({sourceCounts?.[source] || 0})
                                     </option>
-                                ))}
+                                )) || []}
                             </select>
                         </div>
 
                         {/* Language Filter */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 text-left">
                                 Language
                             </label>
                             <select
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-left"
                                 value={languageFilter}
                                 onChange={(e) => {
                                     setLanguageFilter(e.target.value as Language);
                                     setCurrentPage(1); // Reset to first page when filter changes
                                 }}
                             >
-                                <option value="all">All Languages ({languageCounts['all']})</option>
-                                {availableLanguagesWithCounts.map((lang) => (
+                                <option value="all">All Languages ({languageCounts?.['all'] || 0})</option>
+                                {availableLanguagesWithCounts?.map((lang) => (
                                     <option key={lang.code} value={lang.code}>
-                                        {lang.flag} {lang.name} ({lang.nativeName}) - {languageCounts[lang.code]}
+                                        {lang.flag} {lang.name} ({lang.nativeName}) - {languageCounts?.[lang.code] || 0}
                                     </option>
-                                ))}
+                                )) || []}
                             </select>
                         </div>
 
                         {/* Location Filter */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 text-left">
                                 User Location
                             </label>
                             <select
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-left"
                                 value={locationFilter}
                                 onChange={(e) => {
                                     setLocationFilter(e.target.value as LocationFilter);
                                     setCurrentPage(1); // Reset to first page when filter changes
                                 }}
                             >
-                                <option value="all">All Locations ({Object.keys(userLocations).length})</option>
-                                {availableLocations.map((location) => (
+                                <option value="all">All Locations ({Object.keys(userLocations || {}).length})</option>
+                                {availableLocations?.map((location) => (
                                     <option key={location.country} value={location.country}>
                                         {location.flag} {location.country} ({location.count})
                                     </option>
-                                ))}
+                                )) || []}
                             </select>
                         </div>
 
                         {/* Date Range Filter */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 text-left">
                                 Date Range
                             </label>
                             <select
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2 text-left"
                                 value={selectedDateRange}
                                 onChange={(e) => {
                                     const value = e.target.value;
@@ -1253,10 +1379,10 @@ ${chat.messages.map(msg =>
                             {selectedDateRange === 'custom' && (
                                 <div className="grid grid-cols-2 gap-2">
                                     <div>
-                                        <label className="block text-xs text-gray-500 mb-1">From</label>
+                                        <label className="block text-xs text-gray-500 mb-1 text-left">From</label>
                                         <input
                                             type="date"
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-left"
                                             value={dateRange.start ? format(dateRange.start, 'yyyy-MM-dd') : ''}
                                             onChange={(e) => {
                                                 const newDate = e.target.value ? new Date(e.target.value) : null;
@@ -1269,10 +1395,10 @@ ${chat.messages.map(msg =>
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-xs text-gray-500 mb-1">To</label>
+                                        <label className="block text-xs text-gray-500 mb-1 text-left">To</label>
                                         <input
                                             type="date"
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-left"
                                             value={dateRange.end ? format(dateRange.end, 'yyyy-MM-dd') : ''}
                                             onChange={(e) => {
                                                 const newDate = e.target.value ? new Date(e.target.value) : null;
@@ -1293,14 +1419,14 @@ ${chat.messages.map(msg =>
                             <button
                                 onClick={() => exportChats('text')}
                                 disabled={isExporting}
-                                className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                                className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 text-left"
                             >
                                 {isExporting ? 'Exporting...' : 'Export as Text'}
                             </button>
                             <button
                                 onClick={() => exportChats('json')}
                                 disabled={isExporting}
-                                className="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50"
+                                className="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 text-left"
                             >
                                 {isExporting ? 'Exporting...' : 'Export as JSON'}
                             </button>
@@ -1310,7 +1436,7 @@ ${chat.messages.map(msg =>
                         <div className="pt-2 space-y-2">
                             <button
                                 onClick={clearAllFilters}
-                                className="w-full px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                                className="w-full px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 text-left"
                             >
                                 Clear All Filters
                             </button>
@@ -1320,19 +1446,19 @@ ${chat.messages.map(msg =>
                                 <>
                                     <button
                                         onClick={debugLocationDetection}
-                                        className="w-full px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                                        className="w-full px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-left"
                                     >
                                         🔍 Debug Locations
                                     </button>
                                     <button
                                         onClick={clearLocationCache}
-                                        className="w-full px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
+                                        className="w-full px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm text-left"
                                     >
                                         🗑️ Clear Location Cache
                                     </button>
                                     <button
                                         onClick={redetectAllLocations}
-                                        className="w-full px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 text-sm"
+                                        className="w-full px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 text-sm text-left"
                                     >
                                         🔄 Re-detect All Locations
                                     </button>
@@ -1343,18 +1469,18 @@ ${chat.messages.map(msg =>
 
                     {/* Chat List */}
                     <div className="space-y-3">
-                        {currentChats.map((chat: Chat) => (
+                        {currentChats?.map((chat: Chat) => (
                             <div
                                 key={chat._id}
                                 onClick={() => switchChat(chat._id!)}
-                                className={`p-4 rounded-xl cursor-pointer transition-all duration-200 hover:shadow-md ${currentChat?._id === chat._id
-                                    ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 shadow-sm'
-                                    : 'hover:bg-gray-50 border border-gray-100 bg-white'
+                                className={`p-6 rounded-xl cursor-pointer transition-all duration-200 hover:shadow-lg ${currentChat?._id === chat._id
+                                    ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 shadow-md'
+                                    : 'hover:bg-gray-50 border border-gray-100 bg-white shadow-sm'
                                     }`}
                             >
                                 {/* Header with title and language */}
                                 <div className="flex justify-between items-start mb-3">
-                                    <h3 className="font-semibold text-gray-900 text-base leading-5 line-clamp-1">
+                                    <h3 className="font-semibold text-gray-900 text-base leading-5 line-clamp-1 text-left">
                                         {chat.title || 'New Chat'}
                                     </h3>
                                     {detectedLanguages[chat._id!] && (
@@ -1378,7 +1504,7 @@ ${chat.messages.map(msg =>
                                                         {getCountryFlag(userLocations[chat.user.clerkId].countryCode || '')}
                                                     </span>
                                                 )}
-                                                <span className="font-medium text-gray-900 text-sm truncate">
+                                                <span className="font-medium text-gray-900 text-sm truncate text-left">
                                                     {chat.user.clerkId.startsWith('guest_')
                                                         ? `Guest from ${chat.user.lastName}`
                                                         : `${chat.user.firstName} ${chat.user.lastName}`
@@ -1391,229 +1517,182 @@ ${chat.messages.map(msg =>
                                                 <div className="bg-white rounded-lg p-2 border border-gray-200 mb-2">
                                                     <div className="flex items-center gap-1.5 mb-1">
                                                         <span className="text-blue-500 text-sm">📍</span>
-                                                        <span className="text-xs font-medium text-gray-700">Location</span>
-                                                        {/* Detection Method Indicator */}
-                                                        {userLocations[chat.user.clerkId].detectionMethod && (
-                                                            <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ml-auto ${userLocations[chat.user.clerkId].detectionMethod === 'geolocation' ? 'bg-purple-100 text-purple-600' :
-                                                                userLocations[chat.user.clerkId].detectionMethod === 'browser-only' ? 'bg-green-100 text-green-600' :
-                                                                    userLocations[chat.user.clerkId].detectionMethod === 'content-analysis' ? 'bg-blue-100 text-blue-600' :
-                                                                        userLocations[chat.user.clerkId].detectionMethod === 'language-based' ? 'bg-yellow-100 text-yellow-600' :
-                                                                            'bg-gray-100 text-gray-600'
-                                                                }`} title={`Detection method: ${userLocations[chat.user.clerkId].detectionMethod}`}>
-                                                                {userLocations[chat.user.clerkId].detectionMethod === 'geolocation' ? '📍' :
-                                                                    userLocations[chat.user.clerkId].detectionMethod === 'browser-only' ? '🌐' :
-                                                                        userLocations[chat.user.clerkId].detectionMethod === 'content-analysis' ? '🔍' :
-                                                                            userLocations[chat.user.clerkId].detectionMethod === 'language-based' ? '🗣️' :
-                                                                                '🎲'}
-                                                            </span>
-                                                        )}
-                                                    </div>
-
-                                                    <div className="space-y-1">
-                                                        {/* Primary location line - City, Region if available */}
-                                                        {(userLocations[chat.user.clerkId].city || userLocations[chat.user.clerkId].region) && (
-                                                            <div className="text-xs font-medium text-gray-800">
-                                                                {userLocations[chat.user.clerkId].city && userLocations[chat.user.clerkId].region ?
-                                                                    `${userLocations[chat.user.clerkId].city}, ${userLocations[chat.user.clerkId].region}` :
-                                                                    userLocations[chat.user.clerkId].city || userLocations[chat.user.clerkId].region
-                                                                }
-                                                            </div>
-                                                        )}
-
-                                                        {/* Country line */}
-                                                        <div className="text-xs text-gray-600">
+                                                        <span className="text-sm font-medium text-gray-700 text-left">
                                                             {userLocations[chat.user.clerkId].country}
-                                                        </div>
+                                                            {userLocations[chat.user.clerkId].city && `, ${userLocations[chat.user.clerkId].city}`}
+                                                        </span>
+                                                    </div>
+                                                    <div className="text-xs text-gray-500 text-left">
+                                                        Detected via {userLocations[chat.user.clerkId].detectionMethod?.replace('-', ' ')} •
+                                                        Confidence: {userLocations[chat.user.clerkId].confidence}
                                                     </div>
                                                 </div>
                                             )}
 
-                                            {/* User Type Badge */}
-                                            <div className="flex items-center gap-2">
-                                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${chat.user.clerkId.startsWith('guest_')
-                                                    ? 'bg-orange-100 text-orange-700 border border-orange-200'
-                                                    : 'bg-green-100 text-green-700 border border-green-200'
-                                                    }`}>
-                                                    {chat.user.clerkId.startsWith('guest_') ? 'Guest' : 'Registered'}
-                                                </span>
-                                            </div>
+                                            {/* Email (for registered users only) */}
+                                            {!chat.user.clerkId.startsWith('guest_') && chat.user.email && (
+                                                <div className="text-xs text-gray-500 truncate text-left">
+                                                    📧 {chat.user.email}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Source indicator */}
+                                        <div className="text-xs text-gray-400 ml-2 flex-shrink-0 text-right">
+                                            {chat.user.clerkId.startsWith('guest_') ? '👤 SDK' : '🌐 Web'}
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Chat metadata */}
+                                {/* Message preview */}
+                                {chat.messages.length > 0 && (
+                                    <div className="text-sm text-gray-600 line-clamp-2 mb-2 text-left" dir="auto">
+                                        {chat.messages[chat.messages.length - 1]?.content.substring(0, 150)}
+                                        {chat.messages[chat.messages.length - 1]?.content.length > 150 && '...'}
+                                    </div>
+                                )}
+
+                                {/* Footer with stats */}
                                 <div className="flex justify-between items-center text-xs text-gray-500">
-                                    <span>
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-left">💬 {chat.messages.length} messages</span>
+                                        {detectedLanguages[chat._id!] && (
+                                            <span className="flex items-center gap-1 text-left">
+                                                {allLanguages.find(l => l.code === detectedLanguages[chat._id!])?.flag}
+                                                {getLanguageName(detectedLanguages[chat._id!])}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <span className="text-right">
                                         {formatDate(chat.updatedAt)}
                                     </span>
-                                    <span className="text-gray-400">
-                                        {chat.messages.length} message{chat.messages.length !== 1 ? 's' : ''}
-                                    </span>
                                 </div>
-
-                                {/* Last message preview */}
-                                <p className="text-sm text-gray-600 mt-2 line-clamp-2 leading-5">
-                                    {chat.messages[chat.messages.length - 1]?.content || 'No messages yet'}
-                                </p>
                             </div>
                         ))}
+
+                        {currentChats.length === 0 && (
+                            <div className="text-center py-8 text-gray-500">
+                                <p className="text-left">No chats found matching your filters.</p>
+                            </div>
+                        )}
                     </div>
 
                     {/* Pagination */}
                     {totalPages > 1 && (
-                        <div className="mt-4 flex justify-between items-center">
+                        <div className="mt-6 flex justify-center items-center gap-2">
                             <button
-                                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                                 disabled={currentPage === 1}
-                                className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 disabled:opacity-50"
+                                className="px-3 py-1 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 text-left"
                             >
-                                Previous
+                                ←
                             </button>
-                            <span className="text-sm text-gray-600">
+                            <span className="text-sm text-gray-600 text-left">
                                 Page {currentPage} of {totalPages}
                             </span>
                             <button
-                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                                 disabled={currentPage === totalPages}
-                                className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 disabled:opacity-50"
+                                className="px-3 py-1 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 text-left"
                             >
-                                Next
+                                →
                             </button>
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* Right Column - Messages */}
-            <div className="w-full lg:w-2/3 bg-gray-50 overflow-y-auto">
+            {/* Right Column - Chat View */}
+            <div className="flex-1 lg:w-2/3 bg-white overflow-hidden">
                 {currentChat ? (
-                    <div className="p-6 pt-16 lg:pt-6">
-                        <div className="mb-6">
-                            <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                                <div className="flex justify-between items-start">
-                                    <div className="flex-1 min-w-0">
-                                        <h2 className="text-2xl font-bold text-gray-800 mb-2 truncate">
-                                            {currentChat.title || 'New Chat'}
-                                        </h2>
-                                        <p className="text-sm text-gray-500 mb-4">
-                                            Created: {formatDate(currentChat.createdAt)}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                {/* Enhanced User Information Card */}
-                                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-100">
-                                    <div className="flex items-start gap-4">
-                                        {/* User Avatar/Flag */}
-                                        <div className="flex-shrink-0">
-                                            {userLocations[currentChat.user.clerkId] && userLocations[currentChat.user.clerkId].country !== 'Unknown' ? (
-                                                <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center text-xl border border-blue-200">
-                                                    {getCountryFlag(userLocations[currentChat.user.clerkId].countryCode || '')}
-                                                </div>
-                                            ) : (
-                                                <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center text-xl border border-blue-200">
-                                                    👤
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* User Details */}
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <span className="text-sm font-medium text-blue-600">
-                                                    {currentChat.user.clerkId.startsWith('guest_') ? 'Guest User' : 'Registered User'}
-                                                </span>
-                                            </div>
-
-                                            <h3 className="font-semibold text-gray-900 text-lg mb-1 truncate">
-                                                {currentChat.user.clerkId.startsWith('guest_')
-                                                    ? `Guest user from ${currentChat.user.lastName}`
-                                                    : `${currentChat.user.firstName} ${currentChat.user.lastName}`
-                                                }
-                                            </h3>
-
-                                            {/* Enhanced Location Display */}
-                                            {userLocations[currentChat.user.clerkId] && userLocations[currentChat.user.clerkId].country !== 'Unknown' && (
-                                                <div className="bg-white rounded-lg p-3 border border-blue-200 mb-3">
-                                                    <div className="flex items-start gap-2">
-                                                        <span className="text-blue-500 text-lg mt-0.5">📍</span>
-                                                        <div className="flex-1">
-                                                            <h4 className="text-sm font-semibold text-gray-900 mb-1">Location</h4>
-                                                            <div className="space-y-1">
-                                                                {/* Country with flag */}
-                                                                <div className="flex items-center gap-1.5">
-                                                                    <span className="text-lg">{getCountryFlag(userLocations[currentChat.user.clerkId].countryCode || '')}</span>
-                                                                    <span className="text-sm font-medium text-gray-800">
-                                                                        {userLocations[currentChat.user.clerkId].country}
-                                                                    </span>
-                                                                </div>
-
-                                                                {/* City and Region if available */}
-                                                                {(userLocations[currentChat.user.clerkId].city || userLocations[currentChat.user.clerkId].region) && (
-                                                                    <div className="text-xs text-gray-600">
-                                                                        {userLocations[currentChat.user.clerkId].city && userLocations[currentChat.user.clerkId].region ?
-                                                                            `${userLocations[currentChat.user.clerkId].city}, ${userLocations[currentChat.user.clerkId].region}` :
-                                                                            userLocations[currentChat.user.clerkId].city || userLocations[currentChat.user.clerkId].region
-                                                                        }
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* Email for registered users */}
-                                            {!currentChat.user.clerkId.startsWith('guest_') && currentChat.user.email && (
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-blue-500">✉️</span>
-                                                    <span className="text-sm text-gray-600 truncate">
-                                                        {currentChat.user.email}
-                                                    </span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
+                    <div className="h-full flex flex-col">
+                        {/* Chat Header */}
+                        <div className="border-b border-gray-200 p-4 bg-white">
+                            <div className="flex justify-between items-start mb-2">
+                                <h1 className="text-xl font-semibold text-gray-900 text-left">
+                                    {currentChat.title || 'Chat Details'}
+                                </h1>
+                                <div className="flex items-center gap-2">
+                                    {detectedLanguages[currentChat._id!] && (
+                                        <span className="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full flex items-center gap-1 text-left">
+                                            {allLanguages.find(l => l.code === detectedLanguages[currentChat._id!])?.flag}
+                                            {getLanguageName(detectedLanguages[currentChat._id!])}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
+                            <div className="text-sm text-gray-600 text-left">
+                                {currentChat.user.clerkId.startsWith('guest_')
+                                    ? `Guest from ${currentChat.user.lastName}`
+                                    : `${currentChat.user.firstName} ${currentChat.user.lastName}`
+                                }
+                                {!currentChat.user.clerkId.startsWith('guest_') && currentChat.user.email && (
+                                    <span className="ml-2">({currentChat.user.email})</span>
+                                )}
+                                <span className="ml-2">• {formatDate(currentChat.updatedAt)}</span>
+                            </div>
                         </div>
-                        <div className="space-y-4">
-                            {currentChat.messages.map((message: Message) => (
+
+                        {/* Messages */}
+                        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                            {currentChat.messages.map((message: Message, index: number) => (
                                 <div
-                                    key={message.uniqueKey}
-                                    className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'
-                                        }`}
+                                    key={index}
+                                    className={`flex ${message.role === 'user' ? 'justify-start' : 'justify-start'} mb-4`}
                                 >
                                     <div
-                                        className={`max-w-[70%] rounded-lg p-4 ${message.role === 'user'
-                                            ? 'bg-blue-500 text-white'
-                                            : 'bg-white border border-gray-200'
+                                        className={`${message.role === 'user' ? 'max-w-[75%]' : 'max-w-[95%]'} rounded-lg px-4 py-3 ${message.role === 'user'
+                                            ? 'bg-blue-500 text-white ml-0'
+                                            : 'bg-gray-100 text-gray-900 mr-0'
                                             }`}
                                     >
-                                        <div className="text-sm mb-1">
-                                            {message.role === 'user' ? 'You' : 'Assistant'}
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <span className="text-xs font-medium opacity-75 text-left">
+                                                {message.role === 'user' ? '👤 User' : '🤖 AI'}
+                                            </span>
+                                            <span className="text-xs opacity-75 text-left">
+                                                {format(new Date(message.timestamp), 'HH:mm')}
+                                            </span>
                                         </div>
-                                        <div
-                                            className="whitespace-pre-wrap"
-                                            dangerouslySetInnerHTML={{ __html: message.content }}
-                                        />
-                                        <div className="text-xs mt-2 opacity-70">
-                                            {formatDate(message.timestamp)}
-                                        </div>
+                                        {message.role === 'assistant' ? (
+                                            <div
+                                                className="whitespace-pre-wrap text-left prose prose-sm max-w-none"
+                                                dir="auto"
+                                                style={{ direction: 'ltr', textAlign: 'left' }}
+                                                dangerouslySetInnerHTML={{ __html: message.content }}
+                                            />
+                                        ) : (
+                                            <div
+                                                className="whitespace-pre-wrap text-left"
+                                                dir="auto"
+                                                style={{ direction: 'ltr', textAlign: 'left' }}
+                                            >
+                                                {message.content}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             ))}
                         </div>
                     </div>
                 ) : (
-                    <div className="h-full flex items-center justify-center">
+                    <div className="h-full flex items-center justify-center bg-gray-50">
                         <div className="text-center text-gray-500">
-                            <h3 className="text-xl font-medium mb-2">No Chat Selected</h3>
-                            <p>Select a chat from the list to view messages</p>
+                            <h3 className="text-lg font-medium mb-2 text-left">Select a chat to view details</h3>
+                            <p className="text-sm text-left">Choose a chat from the list to see the conversation.</p>
                         </div>
                     </div>
                 )}
             </div>
+
+            {/* Overlay for mobile menu */}
+            {isMenuOpen && (
+                <div
+                    className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30"
+                    onClick={() => setIsMenuOpen(false)}
+                />
+            )}
         </div>
     );
 }
+

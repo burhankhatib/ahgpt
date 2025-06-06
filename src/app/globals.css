@@ -341,21 +341,155 @@
 
 /* Tables */
 .chat-message-content table {
-  @apply w-full border-collapse mb-6 rounded-lg overflow-hidden;
+  @apply w-full border-collapse mb-6 rounded-lg overflow-hidden shadow-sm border border-gray-200;
+  background: white;
 }
 
 .chat-message-content th {
-  @apply bg-gray-50 text-left font-medium text-gray-900 px-4 py-3 border-b border-gray-200;
+  @apply bg-gradient-to-br from-gray-50 to-gray-100 text-left font-semibold text-gray-800 px-6 py-4 border-b border-gray-300;
   letter-spacing: -0.01em;
+  white-space: nowrap;
+  min-width: 120px;
 }
 
 .chat-message-content td {
-  @apply px-4 py-3 border-b border-gray-100 text-gray-700;
+  @apply px-6 py-4 border-b border-gray-100 text-gray-700 align-top;
   letter-spacing: -0.01em;
+  min-width: 120px;
+  word-wrap: break-word;
+  max-width: 300px;
 }
 
 .chat-message-content tr:last-child td {
   @apply border-b-0;
+}
+
+.chat-message-content tr:hover {
+  @apply bg-gray-50/50 transition-colors duration-150;
+}
+
+.chat-message-content tbody tr:nth-child(even) {
+  @apply bg-gray-50/30;
+}
+
+/* Enhanced table styling for better readability */
+.chat-message-content table {
+  border-spacing: 0;
+}
+
+.chat-message-content th:first-child {
+  @apply rounded-tl-lg;
+}
+
+.chat-message-content th:last-child {
+  @apply rounded-tr-lg;
+}
+
+.chat-message-content tr:last-child td:first-child {
+  @apply rounded-bl-lg;
+}
+
+.chat-message-content tr:last-child td:last-child {
+  @apply rounded-br-lg;
+}
+
+/* Responsive table styling */
+@media (max-width: 768px) {
+  .chat-message-content table {
+    @apply text-sm;
+  }
+  
+  .chat-message-content th,
+  .chat-message-content td {
+    @apply px-3 py-2;
+    min-width: 80px;
+    max-width: 200px;
+  }
+}
+
+/* Additional table variants for admin interfaces */
+.admin-table {
+  @apply w-full border-collapse bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6;
+}
+
+.admin-table th {
+  @apply bg-gradient-to-br from-blue-50 to-blue-100 text-left font-semibold text-blue-900 px-6 py-4 border-b border-blue-200 text-sm uppercase tracking-wide;
+  letter-spacing: 0.5px;
+}
+
+.admin-table td {
+  @apply px-6 py-4 border-b border-gray-100 text-gray-700 align-top;
+  min-width: 120px;
+}
+
+.admin-table tr:last-child td {
+  @apply border-b-0;
+}
+
+.admin-table tr:hover {
+  @apply bg-blue-50/30 transition-colors duration-200;
+}
+
+.admin-table tbody tr:nth-child(even) {
+  @apply bg-gray-50/30;
+}
+
+/* SDK Documentation table styling */
+.sdk-table {
+  @apply w-full border-collapse bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden mb-8;
+}
+
+.sdk-table th {
+  @apply bg-gradient-to-br from-purple-50 to-purple-100 text-left font-bold text-purple-900 px-8 py-5 border-b border-purple-200 text-sm uppercase tracking-wider;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+
+.sdk-table td {
+  @apply px-8 py-5 border-b border-gray-100 text-gray-700 align-top leading-relaxed;
+  min-width: 150px;
+  word-wrap: break-word;
+  max-width: 400px;
+}
+
+.sdk-table tr:last-child td {
+  @apply border-b-0;
+}
+
+.sdk-table tr:hover {
+  @apply bg-purple-50/40 transition-colors duration-200;
+}
+
+.sdk-table tbody tr:nth-child(even) {
+  @apply bg-gray-50/50;
+}
+
+/* Code cells in tables */
+.sdk-table td code,
+.admin-table td code,
+.chat-message-content td code {
+  @apply bg-gray-100 px-2 py-1 rounded text-sm font-mono text-gray-800 border;
+}
+
+/* Status badges in tables */
+.table-badge {
+  @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium;
+}
+
+.table-badge.success {
+  @apply bg-green-100 text-green-800;
+}
+
+.table-badge.error {
+  @apply bg-red-100 text-red-800;
+}
+
+.table-badge.warning {
+  @apply bg-yellow-100 text-yellow-800;
+}
+
+.table-badge.info {
+  @apply bg-blue-100 text-blue-800;
 }
 
 /* Images */

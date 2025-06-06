@@ -9,7 +9,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { Message } from '@/types/chat';
 import { isSanityPermissionError } from '@/utils/sanity-permissions';
 import { Button } from "@/components/ui/button";
-import { detectUserGeolocation, GeolocationData } from '@/utils/geolocationDetection';
+import { detectUserLocation, VisitorApiData } from '@/utils/visitorApiDetection';
 
 function formatTime(date: Date | string) {
     const dateObj = typeof date === 'string' ? new Date(date) : date;
@@ -105,7 +105,7 @@ export default function ChatPage() {
     const fullNameInitials = `${firstName[0] || 'U'}${lastName[0] || ''}`;
     const email = currentChat?.user?.email || '';
 
-    // Detect and store user location using HTML5 Geolocation API
+    // Detect and store user location using VisitorAPI
     useEffect(() => {
         const detectAndStoreUserLocation = async () => {
             if (!user?.id || userLocationDetected) return;
@@ -113,8 +113,8 @@ export default function ChatPage() {
             const userKey = user.id;
             const existingLocation = localStorage.getItem(`userLocation_${userKey}`);
 
-            // Only detect if we don't have recent GEOLOCATION data (or it's older than 24 hours)
-            // Force re-detection for old data that wasn't from geolocation
+            // Only detect if we don't have recent VisitorAPI data (or it's older than 24 hours)
+            // Force re-detection for old data that wasn't from VisitorAPI
             let shouldDetect = true;
             if (existingLocation) {
                 try {
@@ -123,17 +123,17 @@ export default function ChatPage() {
                     const now = new Date();
                     const hoursSinceDetection = (now.getTime() - detectedAt.getTime()) / (1000 * 60 * 60);
 
-                    // Only skip if we have recent geolocation data (not old language-based detection)
+                    // Only skip if we have recent VisitorAPI data (not old detection methods)
                     if (hoursSinceDetection < 24 &&
                         parsed.country !== 'Unknown' &&
-                        parsed.detectionMethod === 'geolocation') {
+                        parsed.detectionMethod === 'visitorapi') {
                         shouldDetect = false;
                         setUserLocationDetected(true);
-                        console.log(`📋 User ${userKey} has recent geolocation data:`, parsed);
+                        console.log(`📋 User ${userKey} has recent VisitorAPI data:`, parsed);
                     } else {
-                        // Clear old non-geolocation data to force new detection
+                        // Clear old non-VisitorAPI data to force new detection
                         localStorage.removeItem(`userLocation_${userKey}`);
-                        console.log(`🔄 Clearing old location data for user ${userKey} to force geolocation`);
+                        console.log(`🔄 Clearing old location data for user ${userKey} to force VisitorAPI detection`);
                     }
                 } catch (error) {
                     console.error('Error parsing existing location data:', error);
@@ -143,45 +143,10 @@ export default function ChatPage() {
 
             if (shouldDetect) {
                 try {
-                    console.log(`🌍 Requesting geolocation for user ${userKey}...`);
+                    console.log(`🌍 Detecting location with VisitorAPI for user ${userKey}...`);
 
-                    // Check if permission is already granted, otherwise ask user
-                    let shouldRequest = true;
-                    try {
-                        if ('permissions' in navigator) {
-                            const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
-                            if (permissionStatus.state === 'granted') {
-                                shouldRequest = true;
-                                console.log(`✅ Geolocation permission already granted for user ${userKey}`);
-                            } else if (permissionStatus.state === 'denied') {
-                                shouldRequest = false;
-                                console.log(`❌ Geolocation permission denied for user ${userKey}`);
-                            } else {
-                                // Ask for permission
-                                shouldRequest = window.confirm(
-                                    "🌍 Al Hayat GPT would like to know your location to show your country in the admin dashboard. This is completely optional and stored locally on your device. Allow GPS location access?"
-                                );
-                            }
-                        } else {
-                            // Fallback for browsers without permissions API
-                            shouldRequest = window.confirm(
-                                "🌍 Al Hayat GPT would like to know your location to show your country in the admin dashboard. This is completely optional and stored locally on your device. Allow GPS location access?"
-                            );
-                        }
-                    } catch (error) {
-                        // Fallback if permissions API fails
-                        shouldRequest = window.confirm(
-                            "🌍 Al Hayat GPT would like to know your location to show your country in the admin dashboard. This is completely optional and stored locally on your device. Allow GPS location access?"
-                        );
-                    }
-
-                    if (!shouldRequest) {
-                        console.log(`❌ User ${userKey} denied location permission`);
-                        setUserLocationDetected(true);
-                        return;
-                    }
-
-                    const locationData: GeolocationData | null = await detectUserGeolocation();
+                    // VisitorAPI doesn't require user permission - it works with IP address
+                    const locationData: VisitorApiData | null = await detectUserLocation();
 
                     if (locationData && locationData.country !== 'Unknown') {
                         const locationToStore = {
@@ -191,7 +156,7 @@ export default function ChatPage() {
                         };
 
                         localStorage.setItem(`userLocation_${userKey}`, JSON.stringify(locationToStore));
-                        console.log(`✅ Geolocation stored for user ${userKey}:`, locationData);
+                        console.log(`✅ VisitorAPI location stored for user ${userKey}:`, locationData);
 
                         // Show success message to user
                         setTimeout(() => {
@@ -227,6 +192,67 @@ export default function ChatPage() {
         a.messageButton:hover,
         .suggested-questions a[data-question="true"]:hover {
             text-decoration: none !important;
+        }
+
+        /* Enhanced table styling for chat content */
+        .chat-message-content table {
+            margin: 1.5rem 0 !important;
+            border-radius: 12px !important;
+            overflow: hidden !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+            border: 1px solid #e5e7eb !important;
+            background: white !important;
+        }
+
+        .chat-message-content th {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
+            padding: 16px 24px !important;
+            border-bottom: 2px solid #d1d5db !important;
+            font-weight: 600 !important;
+            font-size: 14px !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.5px !important;
+            color: #374151 !important;
+            min-width: 120px !important;
+            white-space: nowrap !important;
+        }
+
+        .chat-message-content td {
+            padding: 16px 24px !important;
+            border-bottom: 1px solid #f3f4f6 !important;
+            color: #4b5563 !important;
+            line-height: 1.6 !important;
+            min-width: 120px !important;
+            word-wrap: break-word !important;
+            max-width: 300px !important;
+            vertical-align: top !important;
+        }
+
+        .chat-message-content tr:hover {
+            background-color: rgba(248, 250, 252, 0.7) !important;
+            transition: background-color 0.15s ease-in-out !important;
+        }
+
+        .chat-message-content tbody tr:nth-child(even) {
+            background-color: rgba(248, 250, 252, 0.3) !important;
+        }
+
+        .chat-message-content tr:last-child td {
+            border-bottom: none !important;
+        }
+
+        /* Responsive table adjustments */
+        @media (max-width: 768px) {
+            .chat-message-content table {
+                font-size: 14px !important;
+            }
+            
+            .chat-message-content th,
+            .chat-message-content td {
+                padding: 12px 16px !important;
+                min-width: 80px !important;
+                max-width: 200px !important;
+            }
         }
 
         /* Dynamic height adaptation for embedded contexts */
@@ -628,7 +654,7 @@ export default function ChatPage() {
             // Add error message to display
             const errorMessage: Message = {
                 role: 'assistant',
-                content: 'Sorry, I encountered an error. Please try again.',
+                content: 'Sorry, I encountered an error. Please try again. If you are an Admin then please contact alhayatgpt.com to white-list your domain.',
                 timestamp: new Date(),
                 uniqueKey: `msg_error_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`
             };
@@ -911,7 +937,7 @@ export default function ChatPage() {
                             )}
 
                             <div
-                                className={`max-w-2xl ${m.role === "user"
+                                className={`${m.role === "user" ? "max-w-2xl" : "max-w-6xl"} ${m.role === "user"
                                     ? "bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg"
                                     : "bg-white/80 backdrop-blur-sm text-gray-800 shadow-lg border border-gray-200/50"
                                     } rounded-3xl px-6 py-4 transition-all duration-300 hover:shadow-xl`}

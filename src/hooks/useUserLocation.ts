@@ -1,107 +1,95 @@
 import { useState, useEffect } from 'react';
-import { LocationData } from '@/utils/locationDetection';
+import { VisitorApiData, detectUserLocation } from '@/utils/visitorApiDetection';
 
 interface UseUserLocationResult {
-    location: LocationData | null;
+    location: VisitorApiData | null;
     isLoading: boolean;
     error: string | null;
     refetch: () => Promise<void>;
 }
 
 export const useUserLocation = (): UseUserLocationResult => {
-    const [location, setLocation] = useState<LocationData | null>(null);
+    const [location, setLocation] = useState<VisitorApiData | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const detectLocation = async () => {
+    const detectLocationWithVisitorApi = async () => {
         setIsLoading(true);
         setError(null);
 
         try {
-            const response = await fetch('/api/location');
+            console.log('🌍 Detecting location with VisitorAPI...');
+            const locationData = await detectUserLocation();
             
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-
-            const locationData: LocationData = await response.json();
-            
-            // If API returned 'Unknown' country, try browser-based fallback
-            if (locationData.country === 'Unknown') {
-                console.log('API returned unknown location, trying browser fallback...');
-                const browserLocation = await detectBrowserLocation();
-                if (browserLocation) {
-                    const mergedLocation = { ...locationData, ...browserLocation };
-                    setLocation(mergedLocation);
-                    localStorage.setItem('userLocation', JSON.stringify(mergedLocation));
-                    return;
+            if (locationData && locationData.country !== 'Unknown') {
+                setLocation(locationData);
+                // Store in localStorage for caching
+                localStorage.setItem('userLocation', JSON.stringify(locationData));
+                console.log('✅ VisitorAPI location detected:', locationData);
+            } else {
+                // Fallback to browser timezone detection
+                const fallbackLocation = await detectBrowserFallback();
+                if (fallbackLocation) {
+                    setLocation(fallbackLocation);
+                    localStorage.setItem('userLocation', JSON.stringify(fallbackLocation));
+                } else {
+                    setError('Could not detect location with VisitorAPI');
                 }
             }
-            
-            setLocation(locationData);
-            
-            // Store in localStorage for caching
-            localStorage.setItem('userLocation', JSON.stringify(locationData));
-            
         } catch (err) {
-            console.error('API location detection failed:', err);
+            console.error('VisitorAPI location detection failed:', err);
             
             // Try browser-based fallback
             try {
-                const browserLocation = await detectBrowserLocation();
-                if (browserLocation) {
-                    setLocation(browserLocation);
-                    localStorage.setItem('userLocation', JSON.stringify(browserLocation));
-                    return;
+                const fallbackLocation = await detectBrowserFallback();
+                if (fallbackLocation) {
+                    setLocation(fallbackLocation);
+                    localStorage.setItem('userLocation', JSON.stringify(fallbackLocation));
+                } else {
+                    setError('Location detection failed');
                 }
             } catch (browserErr) {
-                console.error('Browser location detection failed:', browserErr);
+                console.error('Browser fallback failed:', browserErr);
+                setError('All location detection methods failed');
             }
-            
-            // Final fallback: set unknown location
-            const fallbackLocation: LocationData = {
-                country: 'Unknown',
-                countryCode: '',
-                city: undefined,
-                region: undefined,
-                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
-            };
-            
-            setLocation(fallbackLocation);
-            setError('Could not detect location, using fallback');
         } finally {
             setIsLoading(false);
         }
     };
 
-    const detectBrowserLocation = async (): Promise<LocationData | null> => {
+    const detectBrowserFallback = async (): Promise<VisitorApiData | null> => {
         try {
-            // Use timezone to guess country
+            // Use timezone to guess country as fallback
             const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-            console.log('Browser timezone:', timezone);
+            console.log('Browser timezone fallback:', timezone);
             
-            // Import timezone utilities
+            // Import timezone utilities from the old location detection
             const { getCountryFromTimezone } = await import('@/utils/locationDetection');
             const countryData = getCountryFromTimezone(timezone);
             
             if (countryData.country !== 'Unknown') {
-                return {
+                // Convert to VisitorApiData format
+                const fallbackData: VisitorApiData = {
                     country: countryData.country,
                     countryCode: countryData.countryCode,
                     city: undefined,
                     region: undefined,
-                    timezone: timezone
+                    timestamp: new Date().toISOString(),
+                    detectionMethod: 'visitorapi', // Keep consistent
+                    confidence: 'high'
                 };
+                
+                return fallbackData;
             }
         } catch (error) {
-            console.error('Browser timezone detection failed:', error);
+            console.error('Browser timezone fallback failed:', error);
         }
         
         return null;
     };
 
     const refetch = async () => {
-        await detectLocation();
+        await detectLocationWithVisitorApi();
     };
 
     useEffect(() => {
@@ -110,17 +98,27 @@ export const useUserLocation = (): UseUserLocationResult => {
         
         if (cachedLocation) {
             try {
-                const parsedLocation: LocationData = JSON.parse(cachedLocation);
-                setLocation(parsedLocation);
-                return; // Don't fetch if we have cached data
+                const parsedLocation: VisitorApiData = JSON.parse(cachedLocation);
+                // Check if cached data is recent (less than 24 hours old)
+                const cachedTime = new Date(parsedLocation.timestamp);
+                const now = new Date();
+                const hoursSinceCache = (now.getTime() - cachedTime.getTime()) / (1000 * 60 * 60);
+                
+                if (hoursSinceCache < 24) {
+                    setLocation(parsedLocation);
+                    return; // Don't fetch if we have recent cached data
+                } else {
+                    // Remove old cache
+                    localStorage.removeItem('userLocation');
+                }
             } catch (err) {
                 console.error('Error parsing cached location:', err);
                 localStorage.removeItem('userLocation');
             }
         }
 
-        // Fetch location if not cached
-        detectLocation();
+        // Fetch location if not cached or cache is old
+        detectLocationWithVisitorApi();
     }, []);
 
     return {

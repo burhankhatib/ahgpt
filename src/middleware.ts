@@ -5,7 +5,9 @@ import { NextResponse } from 'next/server'
 const isProtectedRoute = createRouteMatcher([
   '/studio(.*)',  // Sanity Studio
   '/admin(.*)',   // Admin routes
-  '/dashboard(.*)',   // Admin routes
+  '/instructions(.*)',   // Admin routes
+  '/admin/dashboard(.*)',   // Admin routes
+  '/admin/domains(.*)',   // Admin routes
 ]);
 
 // Define public routes that should always be accessible

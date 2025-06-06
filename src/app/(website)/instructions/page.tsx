@@ -1,6 +1,10 @@
 "use client";
 import React, { useState } from 'react';
 import { CheckIcon, DocumentDuplicateIcon, CodeBracketIcon, GlobeAltIcon, Cog6ToothIcon, CommandLineIcon } from '@heroicons/react/24/outline';
+import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
+import { FaWordpress, FaReact, FaHtml5, FaAngular } from "react-icons/fa";
+
 
 interface CodeBlockProps {
     code: string;
@@ -22,25 +26,25 @@ function CodeBlock({ code, language, filename }: CodeBlockProps) {
     };
 
     return (
-        <div className="relative bg-gray-900 rounded-2xl overflow-hidden shadow-lg" dir="ltr">
+        <div className="relative bg-gray-900 rounded-xl sm:rounded-2xl overflow-hidden shadow-lg" dir="ltr">
             {filename && (
-                <div className="bg-gray-800 px-4 py-2 text-sm text-gray-300 border-b border-gray-700">
+                <div className="bg-gray-800 px-3 sm:px-4 py-2 text-xs sm:text-sm text-gray-300 border-b border-gray-700 overflow-x-auto">
                     {filename}
                 </div>
             )}
             <div className="relative">
-                <pre className="p-6 text-sm text-gray-100 overflow-x-auto">
+                <pre className="p-3 sm:p-4 lg:p-6 text-xs sm:text-sm text-gray-100 overflow-x-auto">
                     <code className={`language-${language}`}>{code}</code>
                 </pre>
                 <button
                     onClick={copyToClipboard}
-                    className="absolute top-4 right-4 p-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
+                    className="absolute top-2 sm:top-4 right-2 sm:right-4 p-1.5 sm:p-2 bg-gray-800 hover:bg-gray-700 rounded-md sm:rounded-lg transition-colors"
                     title="Copy to clipboard"
                 >
                     {copied ? (
-                        <CheckIcon className="h-4 w-4 text-green-400" />
+                        <CheckIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-400" />
                     ) : (
-                        <DocumentDuplicateIcon className="h-4 w-4 text-gray-400" />
+                        <DocumentDuplicateIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-400" />
                     )}
                 </button>
             </div>
@@ -76,12 +80,12 @@ function Step({ number, title, children }: {
     children: React.ReactNode;
 }) {
     return (
-        <div className="flex gap-4 mb-8">
-            <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0">
+        <div className="flex gap-3 sm:gap-4 mb-6 sm:mb-8">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs sm:text-sm font-semibold flex-shrink-0">
                 {number}
             </div>
             <div className="flex-1">
-                <h4 className="font-semibold text-gray-900 mb-3">{title}</h4>
+                <h4 className="font-semibold text-gray-900 mb-2 sm:mb-3 text-sm sm:text-base">{title}</h4>
                 {children}
             </div>
         </div>
@@ -92,22 +96,49 @@ export default function InstructionsPage() {
     const [activeTab, setActiveTab] = useState('wordpress');
 
     const platforms = [
-        { id: 'wordpress', name: 'WordPress', icon: <GlobeAltIcon className="h-5 w-5" /> },
-        { id: 'react', name: 'React/Next.js', icon: <CodeBracketIcon className="h-5 w-5" /> },
-        { id: 'html', name: 'HTML/Static', icon: <DocumentDuplicateIcon className="h-5 w-5" /> },
-        { id: 'angular', name: 'Angular', icon: <CommandLineIcon className="h-5 w-5" /> },
+        { id: 'wordpress', name: 'WordPress', icon: <FaWordpress className="h-5 w-5" /> },
+        { id: 'react', name: 'React/Next.js', icon: <FaReact className="h-5 w-5" /> },
+        { id: 'html', name: 'HTML/Static', icon: <FaHtml5 className="h-5 w-5" /> },
+        { id: 'angular', name: 'Angular', icon: <FaAngular className="h-5 w-5" /> },
     ];
 
     return (
         <div className="min-h-screen bg-gray-50" dir="ltr" lang="en">
+            <style jsx>{`
+                .scrollbar-hide {
+                    -ms-overflow-style: none;
+                    scrollbar-width: none;
+                }
+                .scrollbar-hide::-webkit-scrollbar {
+                    display: none;
+                }
+                @media (max-width: 475px) {
+                    .xs\\:inline {
+                        display: inline;
+                    }
+                }
+            `}</style>
+            {/* Back Button */}
+            <div className="bg-white border-b border-gray-100">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
+                    <Link
+                        href="/"
+                        className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 bg-white hover:bg-gray-50 border border-gray-200 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md"
+                    >
+                        <ArrowLeft className="w-4 h-4 mr-2" />
+                        Back to Home
+                    </Link>
+                </div>
+            </div>
+
             {/* Header */}
             <div className="bg-white border-b border-gray-100">
-                <div className="max-w-7xl mx-auto px-6 py-16">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-16">
                     <div className="text-center" dir="ltr">
-                        <h1 className="text-4xl font-bold text-gray-900 mb-4">
+                        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
                             Add Al Hayat GPT to Your Website
                         </h1>
-                        <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+                        <p className="text-base sm:text-lg lg:text-xl text-gray-600 max-w-3xl mx-auto px-4">
                             Integrate our powerful Christian AI chatbot into your website with just a few lines of code.
                             Available for all major platforms and frameworks.
                         </p>
@@ -116,10 +147,10 @@ export default function InstructionsPage() {
             </div>
 
             {/* Quick Start */}
-            <div className="max-w-7xl mx-auto px-6 py-16" dir="ltr">
-                <div className="text-center mb-16">
-                    <h2 className="text-3xl font-bold text-gray-900 mb-4">Quick Start</h2>
-                    <p className="text-gray-600 max-w-2xl mx-auto">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-16" dir="ltr">
+                <div className="text-center mb-8 sm:mb-16">
+                    <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">Quick Start</h2>
+                    <p className="text-gray-600 max-w-2xl mx-auto px-4">
                         Choose your platform below and follow the simple integration steps.
                         No API keys required - just copy, paste, and customize.
                     </p>
@@ -128,37 +159,37 @@ export default function InstructionsPage() {
 
 
                 {/* Platform Tabs */}
-                <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="bg-white rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
                     {/* Tab Navigation */}
                     <div className="border-b border-gray-100" dir="ltr">
-                        <div className="flex overflow-x-auto">
+                        <div className="flex overflow-x-auto scrollbar-hide">
                             {platforms.map((platform) => (
                                 <button
                                     key={platform.id}
                                     onClick={() => setActiveTab(platform.id)}
-                                    className={`flex items-center gap-3 px-6 py-4 text-sm font-medium whitespace-nowrap transition-all duration-200 border-b-2 ${activeTab === platform.id
+                                    className={`flex items-center gap-2 sm:gap-3 px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-medium whitespace-nowrap transition-all duration-200 border-b-2 min-w-max ${activeTab === platform.id
                                         ? 'text-blue-600 border-blue-600 bg-blue-50'
                                         : 'text-gray-600 border-transparent hover:text-gray-900 hover:border-gray-200'
                                         }`}
                                 >
-                                    {platform.icon}
-                                    {platform.name}
+                                    <span className="w-4 h-4 sm:w-5 sm:h-5">{platform.icon}</span>
+                                    <span className="">{platform.name}</span>
                                 </button>
                             ))}
                         </div>
                     </div>
 
                     {/* Tab Content */}
-                    <div className="p-8 text-left">
+                    <div className="p-4 sm:p-6 lg:p-8 text-left">
                         {activeTab === 'wordpress' && (
                             <div>
-                                <div className="flex items-center gap-4 mb-8">
-                                    <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center">
-                                        <GlobeAltIcon className="h-6 w-6 text-blue-600" />
+                                <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
+                                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-50 rounded-xl sm:rounded-2xl flex items-center justify-center flex-shrink-0">
+                                        <FaWordpress className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
                                     </div>
                                     <div>
-                                        <h3 className="text-2xl font-bold text-gray-900">WordPress Integration</h3>
-                                        <p className="text-gray-600">Add to posts, pages, or widgets</p>
+                                        <h3 className="text-xl sm:text-2xl font-bold text-gray-900">WordPress Integration</h3>
+                                        <p className="text-sm sm:text-base text-gray-600">Add to posts, pages, or widgets</p>
                                     </div>
                                 </div>
                                 <Step number={1} title="Add to Post/Page">
@@ -284,13 +315,13 @@ add_shortcode('ahgpt_widget', 'ahgpt_widget_shortcode');
 
                         {activeTab === 'react' && (
                             <div>
-                                <div className="flex items-center gap-4 mb-8">
-                                    <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center">
-                                        <CodeBracketIcon className="h-6 w-6 text-blue-600" />
+                                <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
+                                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-50 rounded-xl sm:rounded-2xl flex items-center justify-center flex-shrink-0">
+                                        <FaReact className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
                                     </div>
                                     <div>
-                                        <h3 className="text-2xl font-bold text-gray-900">React / Next.js Integration</h3>
-                                        <p className="text-gray-600">Component-based integration</p>
+                                        <h3 className="text-xl sm:text-2xl font-bold text-gray-900">React / Next.js Integration</h3>
+                                        <p className="text-sm sm:text-base text-gray-600">Component-based integration</p>
                                     </div>
                                 </div>
 
@@ -300,7 +331,7 @@ add_shortcode('ahgpt_widget', 'ahgpt_widget_shortcode');
                                         filename="components/AlHayatGPTWidget.tsx"
                                         code={`'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useId } from 'react';
 
 interface LanguageDetection {
     language: string;
@@ -327,6 +358,7 @@ declare global {
         AlHayatGPT: {
             createWidget: (config: AlHayatGPTConfig) => AlHayatGPTWidget;
         };
+        AlHayatGPTSDKLoaded?: boolean;
     }
 }
 
@@ -337,59 +369,127 @@ interface Props {
 export default function AlHayatGPTWidget({ height = '600px' }: Props): React.ReactElement {
     const containerRef = useRef<HTMLDivElement>(null);
     const widgetRef = useRef<AlHayatGPTWidget | null>(null);
+    const scriptRef = useRef<HTMLScriptElement | null>(null);
+    const initAttemptedRef = useRef(false);
+
+    // Generate unique ID for this widget instance
+    const uniqueId = useId();
+    const containerId = \`chat-widget-\${uniqueId.replace(/:/g, '')}\`;
 
     useEffect(() => {
-        const script = document.createElement('script');
-        script.src = 'https://www.alhayatgpt.com/widget-sdk.min.js';
-        script.async = true;
-        document.body.appendChild(script);
+        // Prevent multiple initialization attempts
+        if (initAttemptedRef.current) {
+            return;
+        }
+        initAttemptedRef.current = true;
 
         const initWidget = (): void => {
-            if (window.AlHayatGPT && containerRef.current) {
-                widgetRef.current = window.AlHayatGPT.createWidget({
-                    containerId: 'chat-widget',
-                    clerkPublishableKey: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || '',
-                    height: height,
-                    allowGuests: true,
-                    autoDetectLanguage: true,
-                    
-                    onReady: () => {
-                        console.log('Widget is ready');
-                    },
-                    
-                    onLanguageDetected: (detection: LanguageDetection) => {
-                        console.log('Language detected:', detection.language, 'Direction:', detection.direction);
-                        if (containerRef.current) {
-                            containerRef.current.dir = detection.direction;
+            // Check if widget already exists to prevent duplicates
+            if (widgetRef.current || !containerRef.current) {
+                return;
+            }
+
+            if (window.AlHayatGPT) {
+                try {
+                    widgetRef.current = window.AlHayatGPT.createWidget({
+                        containerId: containerId,
+                        clerkPublishableKey: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || '',
+                        height: height,
+                        allowGuests: true,
+                        autoDetectLanguage: true,
+
+                        onReady: () => {
+                            console.log('Widget is ready');
+                        },
+
+                        onLanguageDetected: (detection: LanguageDetection) => {
+                            console.log('Language detected:', detection.language, 'Direction:', detection.direction);
+                            if (containerRef.current) {
+                                containerRef.current.dir = detection.direction;
+                            }
                         }
-                    }
-                });
+                    });
+                } catch (error) {
+                    console.error('Error creating AlHayatGPT widget:', error);
+                }
             }
         };
 
-        script.onload = () => {
+        // Check if SDK is already loaded
+        if (window.AlHayatGPTSDKLoaded && window.AlHayatGPT) {
             initWidget();
-            window.addEventListener('AlHayatGPTSDKReady', initWidget);
+            return;
+        }
+
+        // Check if script is already being loaded or exists
+        const existingScript = document.querySelector('script[src="https://www.alhayatgpt.com/widget-sdk.min.js"]');
+        if (existingScript) {
+            // Script exists, wait for it to load or try initializing if already loaded
+            if (window.AlHayatGPT) {
+                initWidget();
+            } else {
+                const handleLoad = () => {
+                    window.AlHayatGPTSDKLoaded = true;
+                    initWidget();
+                    existingScript.removeEventListener('load', handleLoad);
+                };
+                existingScript.addEventListener('load', handleLoad);
+            }
+            return;
+        }
+
+        // Create and load the script
+        const script = document.createElement('script');
+        script.src = 'https://www.alhayatgpt.com/widget-sdk.min.js';
+        script.async = true;
+        scriptRef.current = script;
+
+        const handleScriptLoad = () => {
+            window.AlHayatGPTSDKLoaded = true;
+            initWidget();
+            script.removeEventListener('load', handleScriptLoad);
+            script.removeEventListener('error', handleScriptError);
         };
 
+        const handleScriptError = (error: Event) => {
+            console.error('Failed to load AlHayatGPT SDK:', error);
+            script.removeEventListener('load', handleScriptLoad);
+            script.removeEventListener('error', handleScriptError);
+        };
+
+        script.addEventListener('load', handleScriptLoad);
+        script.addEventListener('error', handleScriptError);
+
+        document.head.appendChild(script);
+
+        // Cleanup function
         return () => {
+            initAttemptedRef.current = false;
+
+            // Destroy widget instance
             if (widgetRef.current) {
                 try {
                     widgetRef.current.destroy();
+                    widgetRef.current = null;
                 } catch (error) {
                     console.error('Error destroying widget:', error);
                 }
             }
-            window.removeEventListener('AlHayatGPTSDKReady', initWidget);
-            if (script.parentNode) {
-                script.parentNode.removeChild(script);
+
+            // Clean up script event listeners
+            if (scriptRef.current) {
+                scriptRef.current.removeEventListener('load', handleScriptLoad);
+                scriptRef.current.removeEventListener('error', handleScriptError);
             }
+
+            // Note: We don't remove the script from DOM as it might be used by other instances
+            // The SDK should handle multiple widget instances properly
         };
-    }, [height]);
+    }, [height, containerId]);
 
     return (
         <div className="w-full" dir="auto" style={{ height }}>
-            <div id="chat-widget" ref={containerRef} />
+            <div id={containerId} ref={containerRef} />
         </div>
     );
 }`}
@@ -424,13 +524,13 @@ export default function HomePage() {
 
                         {activeTab === 'html' && (
                             <div>
-                                <div className="flex items-center gap-4 mb-8">
-                                    <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center">
-                                        <DocumentDuplicateIcon className="h-6 w-6 text-blue-600" />
+                                <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
+                                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-50 rounded-xl sm:rounded-2xl flex items-center justify-center flex-shrink-0">
+                                        <FaHtml5 className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
                                     </div>
                                     <div>
-                                        <h3 className="text-2xl font-bold text-gray-900">HTML / Static Sites Integration</h3>
-                                        <p className="text-gray-600">Pure HTML implementation</p>
+                                        <h3 className="text-xl sm:text-2xl font-bold text-gray-900">HTML / Static Sites Integration</h3>
+                                        <p className="text-sm sm:text-base text-gray-600">Pure HTML implementation</p>
                                     </div>
                                 </div>
                                 <Step number={1} title="Basic Integration">
@@ -621,13 +721,13 @@ export default function HomePage() {
 
                         {activeTab === 'angular' && (
                             <div>
-                                <div className="flex items-center gap-4 mb-8">
-                                    <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center">
-                                        <CommandLineIcon className="h-6 w-6 text-blue-600" />
+                                <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
+                                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-50 rounded-xl sm:rounded-2xl flex items-center justify-center flex-shrink-0">
+                                        <FaAngular className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
                                     </div>
                                     <div>
-                                        <h3 className="text-2xl font-bold text-gray-900">Angular Integration</h3>
-                                        <p className="text-gray-600">Angular component integration</p>
+                                        <h3 className="text-xl sm:text-2xl font-bold text-gray-900">Angular Integration</h3>
+                                        <p className="text-sm sm:text-base text-gray-600">Angular component integration</p>
                                     </div>
                                 </div>
                                 <Step number={1} title="Create Widget Component">
@@ -651,6 +751,7 @@ declare global {
     AlHayatGPT: {
       createWidget: (config: any) => AlHayatGPTWidget;
     };
+    AlHayatGPTSDKLoaded?: boolean;
   }
 }
 
@@ -676,42 +777,99 @@ export class AhgptWidgetComponent implements OnInit, OnDestroy {
   containerId: string = 'ahgpt-widget-' + Math.random().toString(36).substr(2, 9);
   
   private widget: AlHayatGPTWidget | null = null;
+  private initAttempted: boolean = false;
+  private scriptEventHandlers: { [key: string]: () => void } = {};
 
   ngOnInit() {
     this.loadSDK();
   }
 
   ngOnDestroy() {
+    // Cleanup widget
     if (this.widget) {
       try {
         this.widget.destroy();
+        this.widget = null;
       } catch (error) {
         console.error('Error destroying widget:', error);
       }
     }
+
+    // Cleanup event listeners
+    Object.keys(this.scriptEventHandlers).forEach(event => {
+      window.removeEventListener(event, this.scriptEventHandlers[event]);
+    });
+    
+    this.initAttempted = false;
   }
 
   private loadSDK() {
-    if (window.AlHayatGPT) {
+    // Prevent multiple initialization attempts
+    if (this.initAttempted) {
+      return;
+    }
+    this.initAttempted = true;
+
+    // Check if SDK is already loaded
+    if (window.AlHayatGPTSDKLoaded && window.AlHayatGPT) {
       this.initializeWidget();
       return;
     }
 
+    // Check if script is already being loaded or exists
+    const existingScript = document.querySelector('script[src="https://www.alhayatgpt.com/widget-sdk.min.js"]');
+    if (existingScript) {
+      // Script exists, wait for it to load or try initializing if already loaded
+      if (window.AlHayatGPT) {
+        this.initializeWidget();
+      } else {
+        const handleLoad = () => {
+          window.AlHayatGPTSDKLoaded = true;
+          this.initializeWidget();
+          existingScript.removeEventListener('load', handleLoad);
+        };
+        existingScript.addEventListener('load', handleLoad);
+      }
+      return;
+    }
+
+    // Create and load the script
     const script = document.createElement('script');
     script.src = 'https://www.alhayatgpt.com/widget-sdk.min.js';
     script.async = true;
     
-    script.onload = () => {
+    const handleScriptLoad = () => {
+      window.AlHayatGPTSDKLoaded = true;
       this.initializeWidget();
+      script.removeEventListener('load', handleScriptLoad);
+      script.removeEventListener('error', handleScriptError);
     };
 
+    const handleScriptError = (error: Event) => {
+      console.error('Failed to load AlHayatGPT SDK:', error);
+      script.removeEventListener('load', handleScriptLoad);
+      script.removeEventListener('error', handleScriptError);
+    };
+
+    script.addEventListener('load', handleScriptLoad);
+    script.addEventListener('error', handleScriptError);
+
     document.head.appendChild(script);
-    window.addEventListener('AlHayatGPTSDKReady', () => {
+
+    // Also listen for SDK ready event
+    const handleSDKReady = () => {
       this.initializeWidget();
-    });
+    };
+    this.scriptEventHandlers['AlHayatGPTSDKReady'] = handleSDKReady;
+    window.addEventListener('AlHayatGPTSDKReady', handleSDKReady);
   }
 
   private initializeWidget() {
+    // Check if widget already exists to prevent duplicates
+    if (this.widget || !this.widgetContainer) {
+      return;
+    }
+
     if (!window.AlHayatGPT) {
       setTimeout(() => this.initializeWidget(), 100);
       return;
@@ -885,29 +1043,29 @@ export class AppComponent {
                 </div>
 
                 {/* Quick Implementation Summary */}
-                <div className="mt-16">
-                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-3xl p-8 border border-blue-100">
-                        <h3 className="text-2xl font-bold text-gray-900 mb-8 flex items-center gap-3">
-                            <Cog6ToothIcon className="h-7 w-7 text-blue-600" />
+                <div className="mt-8 sm:mt-16">
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 border border-blue-100">
+                        <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6 sm:mb-8 flex items-center gap-2 sm:gap-3">
+                            <Cog6ToothIcon className="h-6 w-6 sm:h-7 sm:w-7 text-blue-600" />
                             Quick Implementation Summary
                         </h3>
 
-                        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                             {/* WordPress */}
-                            <div className="bg-white rounded-2xl p-6 shadow-sm">
-                                <h4 className="font-bold text-gray-900 mb-3 text-lg">WordPress</h4>
-                                <ol className="text-sm text-gray-600 space-y-2">
+                            <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-sm">
+                                <h4 className="font-bold text-gray-900 mb-3 text-base sm:text-lg">WordPress</h4>
+                                <ol className="text-xs sm:text-sm text-gray-600 space-y-1.5 sm:space-y-2">
                                     <li><strong>1.</strong> Add functions.php code</li>
                                     <li><strong>2.</strong> Add CSS to Additional CSS</li>
-                                    <li><strong>3.</strong> Use shortcode: <code>[ahgpt_widget]</code></li>
+                                    <li><strong>3.</strong> Use shortcode: <code className="text-xs bg-gray-100 px-1 rounded">[ahgpt_widget]</code></li>
                                     <li><strong>4.</strong> Configure Clerk key in settings</li>
                                 </ol>
                             </div>
 
                             {/* React/Next.js */}
-                            <div className="bg-white rounded-2xl p-6 shadow-sm">
-                                <h4 className="font-bold text-gray-900 mb-3 text-lg">React/Next.js</h4>
-                                <ol className="text-sm text-gray-600 space-y-2">
+                            <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-sm">
+                                <h4 className="font-bold text-gray-900 mb-3 text-base sm:text-lg">React/Next.js</h4>
+                                <ol className="text-xs sm:text-sm text-gray-600 space-y-1.5 sm:space-y-2">
                                     <li><strong>1.</strong> Create widget component</li>
                                     <li><strong>2.</strong> Create CSS file</li>
                                     <li><strong>3.</strong> Import styles in app</li>
@@ -916,9 +1074,9 @@ export class AppComponent {
                             </div>
 
                             {/* HTML/Static */}
-                            <div className="bg-white rounded-2xl p-6 shadow-sm">
-                                <h4 className="font-bold text-gray-900 mb-3 text-lg">HTML/Static</h4>
-                                <ol className="text-sm text-gray-600 space-y-2">
+                            <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-sm">
+                                <h4 className="font-bold text-gray-900 mb-3 text-base sm:text-lg">HTML/Static</h4>
+                                <ol className="text-xs sm:text-sm text-gray-600 space-y-1.5 sm:space-y-2">
                                     <li><strong>1.</strong> Create CSS file</li>
                                     <li><strong>2.</strong> Link CSS in HTML head</li>
                                     <li><strong>3.</strong> Add widget div + script</li>
@@ -927,9 +1085,9 @@ export class AppComponent {
                             </div>
 
                             {/* Angular */}
-                            <div className="bg-white rounded-2xl p-6 shadow-sm">
-                                <h4 className="font-bold text-gray-900 mb-3 text-lg">Angular</h4>
-                                <ol className="text-sm text-gray-600 space-y-2">
+                            <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-sm">
+                                <h4 className="font-bold text-gray-900 mb-3 text-base sm:text-lg">Angular</h4>
+                                <ol className="text-xs sm:text-sm text-gray-600 space-y-1.5 sm:space-y-2">
                                     <li><strong>1.</strong> Create component files</li>
                                     <li><strong>2.</strong> Add to app module</li>
                                     <li><strong>3.</strong> Add CSS styles</li>
@@ -939,53 +1097,71 @@ export class AppComponent {
                         </div>
 
                         {/* Key Features Reminder */}
-                        <div className="mt-8 grid md:grid-cols-3 gap-6">
+                        <div className="mt-6 sm:mt-8 grid sm:grid-cols-3 gap-4 sm:gap-6">
                             <div className="text-center">
-                                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                                    <GlobeAltIcon className="h-8 w-8 text-blue-600" />
+                                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-3">
+                                    <GlobeAltIcon className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
                                 </div>
-                                <h5 className="font-semibold text-gray-900 mb-2">Auto Language Detection</h5>
-                                <p className="text-sm text-gray-600">Automatically detects user language and switches RTL/LTR direction</p>
+                                <h5 className="font-semibold text-gray-900 mb-1 sm:mb-2 text-sm sm:text-base">Auto Language Detection</h5>
+                                <p className="text-xs sm:text-sm text-gray-600">Automatically detects user language and switches RTL/LTR direction</p>
                             </div>
 
                             <div className="text-center">
-                                <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                                    <Cog6ToothIcon className="h-8 w-8 text-purple-600" />
+                                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-3">
+                                    <Cog6ToothIcon className="h-6 w-6 sm:h-8 sm:w-8 text-purple-600" />
                                 </div>
-                                <h5 className="font-semibold text-gray-900 mb-2">Full Customization</h5>
-                                <p className="text-sm text-gray-600">Customize colors, fonts, layout, and behavior via CSS and configuration</p>
+                                <h5 className="font-semibold text-gray-900 mb-1 sm:mb-2 text-sm sm:text-base">Full Customization</h5>
+                                <p className="text-xs sm:text-sm text-gray-600">Customize colors, fonts, layout, and behavior via CSS and configuration</p>
                             </div>
 
                             <div className="text-center">
-                                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                                    <CodeBracketIcon className="h-8 w-8 text-green-600" />
+                                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-3">
+                                    <CodeBracketIcon className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" />
                                 </div>
-                                <h5 className="font-semibold text-gray-900 mb-2">Easy Integration</h5>
-                                <p className="text-sm text-gray-600">Works with all platforms - just copy, paste, and customize</p>
+                                <h5 className="font-semibold text-gray-900 mb-1 sm:mb-2 text-sm sm:text-base">Easy Integration</h5>
+                                <p className="text-xs sm:text-sm text-gray-600">Works with all platforms - just copy, paste, and customize</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 {/* Configuration Options */}
-                <div className="mt-16">
-                    <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
-                        <h3 className="text-2xl font-bold text-gray-900 mb-8">Complete Configuration Options</h3>
+                <div className="mt-8 sm:mt-16">
+                    <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 shadow-sm border border-gray-100">
+                        <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6 sm:mb-8">Complete Configuration Options</h3>
 
                         {/* Layout & Appearance */}
-                        <div className="mb-8">
-                            <h4 className="text-lg font-semibold text-gray-900 mb-4">Layout & Appearance</h4>
-                            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                <div className="p-4 bg-gray-50 rounded-xl">
-                                    <h5 className="font-semibold text-gray-900 mb-2">theme</h5>
-                                    <p className="text-sm text-gray-600 mb-2">Visual appearance</p>
-                                    <code className="text-xs bg-white px-2 py-1 rounded">auto | light | dark | custom</code>
+                        <div className="mb-6 sm:mb-8">
+                            <h4 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Layout & Appearance</h4>
+                            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                                <div className="p-3 sm:p-4 bg-gray-50 rounded-lg sm:rounded-xl">
+                                    <h5 className="font-semibold text-gray-900 mb-1 sm:mb-2 text-sm sm:text-base">theme</h5>
+                                    <p className="text-xs sm:text-sm text-gray-600 mb-1 sm:mb-2">Visual appearance</p>
+                                    <code className="text-xs bg-white px-1.5 sm:px-2 py-0.5 sm:py-1 rounded">auto | light | dark | custom</code>
                                 </div>
 
                                 <div className="p-4 bg-gray-50 rounded-xl">
                                     <h5 className="font-semibold text-gray-900 mb-2">width / height</h5>
                                     <p className="text-sm text-gray-600 mb-2">Widget dimensions</p>
-                                    <code className="text-xs bg-white px-2 py-1 rounded">CSS values (px, %, vh, etc.)</code>
+                                    <code className="text-xs bg-white px-2 py-1 rounded">CSS values (px, %, vh, auto)</code>
+                                </div>
+
+                                <div className="p-4 bg-green-50 rounded-xl border border-green-200">
+                                    <h5 className="font-semibold text-green-900 mb-2">🆕 autoResize</h5>
+                                    <p className="text-sm text-green-700 mb-2">Smart height detection</p>
+                                    <code className="text-xs bg-white px-2 py-1 rounded">true (default) | false</code>
+                                </div>
+
+                                <div className="p-4 bg-green-50 rounded-xl border border-green-200">
+                                    <h5 className="font-semibold text-green-900 mb-2">🆕 smartHeight</h5>
+                                    <p className="text-sm text-green-700 mb-2">Container-aware sizing</p>
+                                    <code className="text-xs bg-white px-2 py-1 rounded">true (default) | false</code>
+                                </div>
+
+                                <div className="p-4 bg-green-50 rounded-xl border border-green-200">
+                                    <h5 className="font-semibold text-green-900 mb-2">🆕 responsiveHeight</h5>
+                                    <p className="text-sm text-green-700 mb-2">Device-specific heights</p>
+                                    <code className="text-xs bg-white px-2 py-1 rounded">true (default) | false</code>
                                 </div>
 
                                 <div className="p-4 bg-gray-50 rounded-xl">
@@ -1106,6 +1282,37 @@ export class AppComponent {
                                     <h5 className="font-semibold text-gray-900 mb-2">fallbackLanguage</h5>
                                     <p className="text-sm text-gray-600 mb-2">Default language</p>
                                     <code className="text-xs bg-white px-2 py-1 rounded">Language code (e.g., &apos;en&apos;)</code>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Enhanced Height Detection */}
+                        <div className="mb-8">
+                            <div className="bg-gradient-to-r from-green-50 to-blue-50 p-6 rounded-2xl border border-green-200 mb-6">
+                                <h4 className="text-lg font-semibold text-green-900 mb-3">🆕 Enhanced Height Detection</h4>
+                                <p className="text-green-700 mb-4">
+                                    Automatically adapts to any website layout. The widget intelligently detects your site&apos;s structure
+                                    and adjusts its height to ensure the input field is always visible and properly positioned.
+                                </p>
+                                <div className="grid md:grid-cols-2 gap-4">
+                                    <div>
+                                        <h5 className="font-semibold text-green-900 mb-2">✨ Smart Features:</h5>
+                                        <ul className="text-sm text-green-700 space-y-1">
+                                            <li>• Detects headers and footers</li>
+                                            <li>• Responsive breakpoints (mobile/tablet/desktop)</li>
+                                            <li>• Parent container awareness</li>
+                                            <li>• Virtual keyboard handling on mobile</li>
+                                        </ul>
+                                    </div>
+                                    <div>
+                                        <h5 className="font-semibold text-green-900 mb-2">🎯 Benefits:</h5>
+                                        <ul className="text-sm text-green-700 space-y-1">
+                                            <li>• Input always above the fold</li>
+                                            <li>• Perfect fit on any website</li>
+                                            <li>• No manual height adjustments needed</li>
+                                            <li>• Works with dynamic layouts</li>
+                                        </ul>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1302,6 +1509,48 @@ window.AlHayatGPT.createWidget({
                                 />
                             </div>
 
+                            {/* Enhanced Height Detection Example */}
+                            <div className="mb-6 p-6 bg-gradient-to-r from-green-50 to-blue-50 rounded-2xl border border-green-100">
+                                <h5 className="font-semibold text-gray-900 mb-3">🆕 Enhanced Height Detection</h5>
+                                <CodeBlock
+                                    language="javascript"
+                                    code={`// Example: Smart height detection (enabled by default)
+window.AlHayatGPT.createWidget({
+    containerId: 'chat-widget',
+    clerkPublishableKey: 'YOUR_KEY',
+    
+    // Height Detection Features (all enabled by default)
+    autoResize: true,           // Auto-adjust to page changes
+    smartHeight: true,          // Detect parent containers
+    responsiveHeight: true,     // Device-specific sizing
+    minHeight: 400,            // Minimum height (px)
+    maxHeight: 800,            // Maximum height (px)
+    
+    // Manual override (if needed)
+    height: 'auto',            // Let system decide
+    // height: '100vh',        // Full viewport
+    // height: 'calc(100vh - 120px)', // Viewport minus header/footer
+    
+    // Event handler for height changes
+    onResize: function(dimensions) {
+        console.log('Widget resized:', dimensions);
+        console.log('Breakpoint:', dimensions.breakpoint);
+        console.log('Is embedded:', dimensions.isEmbedded);
+    }
+});`}
+                                />
+                                <div className="mt-4 p-4 bg-white rounded-lg border border-green-200">
+                                    <h6 className="font-medium text-green-900 mb-2">✨ Automatic Features:</h6>
+                                    <ul className="text-sm text-green-700 space-y-1">
+                                        <li>• Detects website headers and footers</li>
+                                        <li>• Adjusts for mobile virtual keyboards</li>
+                                        <li>• Handles responsive breakpoints (mobile/tablet/desktop)</li>
+                                        <li>• Ensures input field is always visible above the fold</li>
+                                        <li>• Works with dynamic layouts and SPA navigation</li>
+                                    </ul>
+                                </div>
+                            </div>
+
                             {/* Multi-language Example */}
                             <div className="mb-6 p-6 bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl border border-amber-100">
                                 <h5 className="font-semibold text-gray-900 mb-3">Multi-language Configuration</h5>
@@ -1390,18 +1639,18 @@ widget.on('themeChanged', (theme) => console.log('Theme:', theme));`}
                 </div>
 
                 {/* Support Section */}
-                <div className="mt-16 text-center">
-                    <div className="bg-blue-50 rounded-3xl p-8">
-                        <h3 className="text-2xl font-bold text-gray-900 mb-4">Need Help?</h3>
-                        <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
+                <div className="mt-8 sm:mt-16 text-center">
+                    <div className="bg-blue-50 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8">
+                        <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3 sm:mb-4">Need Help?</h3>
+                        <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6 max-w-2xl mx-auto px-2">
                             If you encounter any issues during integration or need custom implementation support,
                             we&apos;re here to help you get Al Hayat GPT running on your website.
                         </p>
-                        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                            <button className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors">
+                        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
+                            <button className="px-4 sm:px-6 py-2.5 sm:py-3 bg-blue-600 text-white rounded-lg sm:rounded-xl hover:bg-blue-700 transition-colors text-sm sm:text-base">
                                 Contact Support
                             </button>
-                            <button className="px-6 py-3 bg-white text-blue-600 border border-blue-600 rounded-xl hover:bg-blue-50 transition-colors">
+                            <button className="px-4 sm:px-6 py-2.5 sm:py-3 bg-white text-blue-600 border border-blue-600 rounded-lg sm:rounded-xl hover:bg-blue-50 transition-colors text-sm sm:text-base">
                                 View Documentation
                             </button>
                         </div>

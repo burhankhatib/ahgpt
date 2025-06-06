@@ -5,6 +5,7 @@ import { ArrowPathIcon, Bars3Icon, SparklesIcon } from '@heroicons/react/24/soli
 import React, { useState, useEffect } from 'react'
 import { trackChatEvent } from '@/utils/analytics'
 import LanguageToggle from './LanguageToggle'
+import Link from 'next/link'
 
 interface HeaderChatProps {
     onMenuClick: () => void;
@@ -64,12 +65,14 @@ export default function HeaderChat({ onMenuClick }: HeaderChatProps) {
 
                             {/* Logo/Brand */}
                             <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                                    <SparklesIcon className="w-4 h-4 text-white" />
-                                </div>
-                                <h1 className="text-xl font-semibold text-gray-800 hidden sm:block">
-                                    AHGPT
-                                </h1>
+                                <Link href="/" className="flex items-center gap-2">
+                                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                                        <SparklesIcon className="w-4 h-4 text-white" />
+                                    </div>
+                                    <h1 className="text-xl font-semibold text-gray-800 hidden sm:block hover:text-purple-800 transition-all duration-200">
+                                        Al Hayat GPT
+                                    </h1>
+                                </Link>
                             </div>
                         </div>
 

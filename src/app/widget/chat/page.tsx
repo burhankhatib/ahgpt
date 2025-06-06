@@ -1,7 +1,7 @@
 "use client";
 import { useRef, useEffect, useState } from "react";
 import { PaperAirplaneIcon } from '@heroicons/react/24/solid';
-import { ExclamationTriangleIcon, InformationCircleIcon, DocumentDuplicateIcon, CheckIcon } from '@heroicons/react/24/outline';
+import { ExclamationTriangleIcon, InformationCircleIcon, DocumentDuplicateIcon, CheckIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
 import { ClerkProvider, SignInButton, useUser } from '@clerk/nextjs';
 import { trackChatEvent } from '@/utils/analytics';
 import { useChat as useChatContext } from '@/contexts/ChatContext';
@@ -13,11 +13,15 @@ import { isSanityPermissionError } from '@/utils/sanity-permissions';
 import { Button } from "@/components/ui/button";
 import { redirectToProperDomain, isValidDomain, getApiEndpoint, getClerkConfig } from '@/utils/domain-config';
 import { useUserLocation } from '@/hooks/useUserLocation';
-import { detectUserGeolocation, GeolocationData, getCountryFlag } from '@/utils/geolocationDetection';
+import { detectUserLocation, VisitorApiData, getCountryFlag } from '@/utils/visitorApiDetection';
+import Link from "next/link";
+import { useChat, Message as VercelMessage } from 'ai/react';
+
+// Removed broken streaming component - using simple HTML rendering instead
 
 // Widget-specific message types
 interface WidgetMessage {
-    type: 'WIDGET_READY' | 'USER_SIGNED_IN' | 'USER_SIGNED_OUT' | 'RESIZE' | 'ERROR' | 'UPDATE_CONFIG' | 'AUTH_SUCCESS';
+    type: 'WIDGET_READY' | 'USER_SIGNED_IN' | 'USER_SIGNED_OUT' | 'RESIZE' | 'ERROR' | 'UPDATE_CONFIG';
     payload?: Record<string, unknown>;
 }
 
@@ -86,60 +90,21 @@ function getToken() {
     return localStorage.getItem('ahgpt_token');
 }
 
-function showSignInButton(containerId: string, signInText = 'Sign in to save your chats') {
-    const container = document.getElementById(containerId);
-    if (!container) return;
+// Sign-in functionality removed for widget SDK
 
-    // Create a more complete sign-in interface
-    const signInDiv = document.createElement('div');
-    signInDiv.className = 'flex flex-col items-center justify-center p-6 bg-blue-50 rounded-lg border border-blue-200';
-    signInDiv.innerHTML = `
-        <div class="text-center mb-4">
-            <h3 class="text-lg font-semibold text-gray-800 mb-2">Sign In to Al Hayat GPT</h3>
-            <p class="text-sm text-gray-600">${signInText}</p>
-        </div>
-        <button id="widget-signin-btn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-            Sign In
-        </button>
-    `;
-
-    const signInBtn = signInDiv.querySelector('#widget-signin-btn') as HTMLButtonElement;
-    if (signInBtn) {
-        signInBtn.onclick = () => {
-            // Open authentication in a popup instead of redirect
-            const authUrl = `${window.location.origin}/sign-in?widget=true&return_to=${encodeURIComponent(window.location.href)}`;
-            const popup = window.open(authUrl, 'auth-popup', 'width=500,height=600,scrollbars=yes,resizable=yes');
-
-            if (!popup) return;
-
-            // Listen for auth completion
-            const messageHandler = (event: MessageEvent) => {
-                if (event.origin !== window.location.origin) return;
-
-                if (event.data.type === 'AUTH_SUCCESS' && event.data.token) {
-                    localStorage.setItem('ahgpt_token', event.data.token);
-                    popup.close();
-                    window.location.reload(); // Refresh to show authenticated state
-                    window.removeEventListener('message', messageHandler);
-                }
-            };
-
-            window.addEventListener('message', messageHandler);
-
-            // Clean up if popup is closed manually
-            const checkClosed = setInterval(() => {
-                if (popup && popup.closed) {
-                    clearInterval(checkClosed);
-                    window.removeEventListener('message', messageHandler);
-                }
-            }, 1000);
-        };
-    }
-
-    container.appendChild(signInDiv);
-}
+// Global singleton guard to prevent multiple widget instances across the entire page
+let globalWidgetInstance: string | null = null;
+let globalWidgetInitialized = false;
 
 function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] }) {
+    // Unique instance ID for this widget
+    const instanceId = useRef<string>(`widget_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+    const isActiveInstance = useRef<boolean>(false);
+
+    // Component mounting guard to prevent multiple instances
+    const [isMounted, setIsMounted] = useState(false);
+    const [isWidgetReady, setIsWidgetReady] = useState(false);
+
     const { currentChat, addConversationTurn, createNewChat } = useChatContext();
     const { getFontClass, isRTL, getPlaceholderText, detectInputLanguageChange, autoDetect } = useLanguage();
     const [input, setInput] = useState("");
@@ -154,6 +119,39 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
         allowGuests: true
     });
     const [isGuestMode, setIsGuestMode] = useState(false);
+
+    // Global singleton mounting guard - ensures only ONE widget exists across the entire page
+    useEffect(() => {
+        // Check if another widget instance is already active
+        if (globalWidgetInitialized && globalWidgetInstance && globalWidgetInstance !== instanceId.current) {
+            console.log(`[Widget ${instanceId.current}] Another widget instance is already active (${globalWidgetInstance}). Preventing duplicate.`);
+            return; // Don't mount this instance
+        }
+
+        // Claim this instance as the active one
+        if (!globalWidgetInitialized) {
+            globalWidgetInstance = instanceId.current;
+            globalWidgetInitialized = true;
+            isActiveInstance.current = true;
+
+            console.log(`[Widget ${instanceId.current}] Claimed as the active widget instance.`);
+
+            setIsMounted(true);
+            setIsWidgetReady(true);
+        }
+
+        return () => {
+            // Only cleanup if this was the active instance
+            if (isActiveInstance.current && globalWidgetInstance === instanceId.current) {
+                globalWidgetInstance = null;
+                globalWidgetInitialized = false;
+                isActiveInstance.current = false;
+                console.log(`[Widget ${instanceId.current}] Released as the active widget instance.`);
+            }
+            setIsMounted(false);
+            setIsWidgetReady(false);
+        };
+    }, []); // No dependencies - run only once
 
     // Location detection for SDK
     const { location, isLoading: locationLoading } = useUserLocation();
@@ -178,8 +176,8 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
             const userKey = user?.id || currentChat?.user?.clerkId || `guest_${Date.now()}`;
             const existingLocation = localStorage.getItem(`userLocation_${userKey}`);
 
-            // Only detect if we don't have recent GEOLOCATION data (or it's older than 24 hours)
-            // Force re-detection for old data that wasn't from geolocation
+            // Only detect if we don't have recent VisitorAPI data (or it's older than 24 hours)
+            // Force re-detection for old data that wasn't from VisitorAPI
             let shouldDetect = true;
             if (existingLocation) {
                 try {
@@ -188,17 +186,17 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
                     const now = new Date();
                     const hoursSinceDetection = (now.getTime() - detectedAt.getTime()) / (1000 * 60 * 60);
 
-                    // Only skip if we have recent geolocation data (not old language-based detection)
+                    // Only skip if we have recent VisitorAPI data (not old detection methods)
                     if (hoursSinceDetection < 24 &&
                         parsed.country !== 'Unknown' &&
-                        parsed.detectionMethod === 'geolocation') {
+                        parsed.detectionMethod === 'visitorapi') {
                         shouldDetect = false;
                         setUserLocationDetected(true);
-                        console.log(`📋 [Widget] User ${userKey} has recent geolocation data:`, parsed);
+                        console.log(`📋 [Widget] User ${userKey} has recent VisitorAPI data:`, parsed);
                     } else {
-                        // Clear old non-geolocation data to force new detection
+                        // Clear old non-VisitorAPI data to force new detection
                         localStorage.removeItem(`userLocation_${userKey}`);
-                        console.log(`🔄 [Widget] Clearing old location data for user ${userKey} to force geolocation`);
+                        console.log(`🔄 [Widget] Clearing old location data for user ${userKey} to force VisitorAPI detection`);
                     }
                 } catch (error) {
                     console.error('[Widget] Error parsing existing location data:', error);
@@ -208,10 +206,10 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
 
             if (shouldDetect) {
                 try {
-                    console.log(`🌍 [Widget] Requesting geolocation for user ${userKey}...`);
+                    console.log(`🌍 [Widget] Detecting location with VisitorAPI for user ${userKey}...`);
 
-                    // For widget, be less intrusive - just request directly without confirmation
-                    const locationData: GeolocationData | null = await detectUserGeolocation();
+                    // VisitorAPI doesn't require user permission - works with IP address
+                    const locationData: VisitorApiData | null = await detectUserLocation();
 
                     if (locationData && locationData.country !== 'Unknown') {
                         const locationToStore = {
@@ -222,7 +220,7 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
                         };
 
                         localStorage.setItem(`userLocation_${userKey}`, JSON.stringify(locationToStore));
-                        console.log(`✅ [Widget] Geolocation stored for user ${userKey}:`, locationData);
+                        console.log(`✅ [Widget] VisitorAPI location stored for user ${userKey}:`, locationData);
                         setUserLocationDetected(true);
 
                         // Also notify parent frame about user location if in widget mode
@@ -255,138 +253,105 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
         return () => clearTimeout(timer);
     }, [user?.id, currentChat?.user?.clerkId, userLocationDetected, parentOrigin]);
 
-    // Widget communication setup
+    // Consolidated widget initialization - SINGLE useEffect to prevent multiple mounting
     useEffect(() => {
-        // Check domain validity and redirect if necessary
-        if (!isValidDomain()) {
-            redirectToProperDomain();
+        // Only run if this is the active instance and properly mounted
+        if (!isMounted || !isWidgetReady || !isActiveInstance.current) {
             return;
         }
 
-        // Get configuration from URL parameters
-        const urlParams = new URLSearchParams(window.location.search);
-        const theme = urlParams.get('theme') || 'auto';
-        const allowGuests = urlParams.get('allowGuests') !== 'false';
-        const origin = urlParams.get('parentOrigin');
-
-        if (origin) {
-            setParentOrigin(origin);
+        // Additional check to ensure we're still the active instance
+        if (globalWidgetInstance !== instanceId.current) {
+            console.log(`[Widget ${instanceId.current}] No longer the active instance. Skipping initialization.`);
+            return;
         }
 
-        setWidgetConfig({ theme, allowGuests });
+        // Prevent multiple initialization attempts
+        let isInitialized = false;
 
-        // Send ready message to parent
-        const sendMessage = (message: WidgetMessage) => {
-            if (window.parent && window.parent !== window) {
-                window.parent.postMessage(message, origin || '*');
-            }
-        };
+        const initializeWidget = () => {
+            if (isInitialized) return;
+            isInitialized = true;
 
-        // Listen for messages from parent and authentication updates
-        const handleMessage = (event: MessageEvent) => {
-            if (origin && event.origin !== origin) {
-                return; // Security check
+            // Check domain validity and redirect if necessary
+            if (!isValidDomain()) {
+                redirectToProperDomain();
+                return;
             }
 
-            const message: WidgetMessage = event.data;
+            // Get configuration from URL parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            const theme = urlParams.get('theme') || 'auto';
+            const allowGuests = urlParams.get('allowGuests') !== 'false';
+            const origin = urlParams.get('parentOrigin');
 
-            switch (message.type) {
-                case 'UPDATE_CONFIG':
-                    if (message.payload) {
-                        setWidgetConfig(prev => ({ ...prev, ...message.payload }));
-                    }
-                    break;
-                case 'AUTH_SUCCESS':
-                    // Handle authentication success from popup
-                    if (message.payload?.token && typeof message.payload.token === 'string') {
-                        localStorage.setItem('ahgpt_token', message.payload.token);
-                        window.location.reload(); // Refresh to update authentication state
-                    }
-                    break;
+            if (origin) {
+                setParentOrigin(origin);
             }
-        };
 
-        // Also listen for authentication messages from popup windows
-        const handleAuthMessage = (event: MessageEvent) => {
-            if (event.origin !== window.location.origin) return;
+            setWidgetConfig({ theme, allowGuests });
 
-            if (event.data.type === 'AUTH_SUCCESS' && event.data.token) {
-                localStorage.setItem('ahgpt_token', event.data.token);
-                setIsGuestMode(false);
-                // Force re-render without full page reload
-                window.location.reload();
-            }
-        };
-
-        window.addEventListener('message', handleMessage);
-        window.addEventListener('message', handleAuthMessage);
-
-        // Send ready message
-        sendMessage({ type: 'WIDGET_READY' });
-
-        return () => {
-            window.removeEventListener('message', handleMessage);
-            window.removeEventListener('message', handleAuthMessage);
-        };
-    }, []);
-
-    // Send user authentication status to parent
-    useEffect(() => {
-        const sendMessage = (message: WidgetMessage) => {
-            if (window.parent && window.parent !== window) {
-                window.parent.postMessage(message, parentOrigin);
-            }
-        };
-
-        const token = getToken();
-        const isAuthenticated = !!token || !!user;
-
-        if (user || token) {
-            sendMessage({
-                type: 'USER_SIGNED_IN',
-                payload: {
-                    id: user?.id || 'token-user',
-                    firstName: user?.firstName || 'User',
-                    lastName: user?.lastName || '',
-                    email: user?.emailAddresses?.[0]?.emailAddress || ''
+            // Send messages to parent
+            const sendMessage = (message: WidgetMessage) => {
+                if (window.parent && window.parent !== window) {
+                    window.parent.postMessage(message, origin || '*');
                 }
-            });
-            setIsGuestMode(false);
-        } else {
-            sendMessage({ type: 'USER_SIGNED_OUT' });
-            setIsGuestMode(true);
-        }
-    }, [user, parentOrigin]);
+            };
 
-    // Send resize messages to parent when content changes
-    useEffect(() => {
-        const sendResize = () => {
-            if (window.parent && window.parent !== window) {
-                // Use full viewport height for the widget
-                const height = window.innerHeight;
-                window.parent.postMessage({
-                    type: 'RESIZE',
-                    payload: { height }
-                }, parentOrigin);
+            // Send ready message
+            sendMessage({ type: 'WIDGET_READY' });
+
+            // Send authentication status
+            const token = getToken();
+            const isAuthenticated = !!token || !!user;
+
+            if (user || token) {
+                sendMessage({
+                    type: 'USER_SIGNED_IN',
+                    payload: {
+                        id: user?.id || 'token-user',
+                        firstName: user?.firstName || 'User',
+                        lastName: user?.lastName || '',
+                        email: user?.emailAddresses?.[0]?.emailAddress || ''
+                    }
+                });
+                setIsGuestMode(false);
+            } else {
+                sendMessage({ type: 'USER_SIGNED_OUT' });
+                setIsGuestMode(true);
             }
+
+            // Listen for messages from parent (only once)
+            const handleMessage = (event: MessageEvent) => {
+                if (origin && event.origin !== origin) {
+                    return; // Security check
+                }
+
+                const message: WidgetMessage = event.data;
+
+                switch (message.type) {
+                    case 'UPDATE_CONFIG':
+                        if (message.payload) {
+                            setWidgetConfig(prev => ({ ...prev, ...message.payload }));
+                        }
+                        break;
+                }
+            };
+
+            window.addEventListener('message', handleMessage);
+
+            // Return cleanup function
+            return () => {
+                window.removeEventListener('message', handleMessage);
+            };
         };
 
-        const resizeObserver = new ResizeObserver(sendResize);
-        if (chatRef.current) {
-            resizeObserver.observe(chatRef.current);
-        }
+        const cleanup = initializeWidget();
 
-        // Also listen for window resize events
-        window.addEventListener('resize', sendResize);
+        return cleanup;
+    }, [isMounted, isWidgetReady]); // Only depend on mounting and ready state
 
-        // Send initial size
-        sendResize();
-
-        return () => {
-            resizeObserver.disconnect();
-            window.removeEventListener('resize', sendResize);
-        };
-    }, [parentOrigin, displayMessages]);
+    // Height-related effects removed as requested
 
     // Rest of the chat functionality (similar to main chat page but simplified)
     const AVATARS = {
@@ -415,7 +380,7 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
             const messagesWithDates = currentChat.messages.map((msg, index) => ({
                 ...msg,
                 timestamp: typeof msg.timestamp === 'string' ? new Date(msg.timestamp) : msg.timestamp,
-                uniqueKey: msg.uniqueKey || `msg_${index}_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`,
+                uniqueKey: msg.uniqueKey || `msg_${currentChat._id}_${index}`,
             }));
 
             setDisplayMessages(messagesWithDates);
@@ -456,7 +421,7 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
                         role: 'user',
                         content: questionText,
                         timestamp: new Date(),
-                        uniqueKey: `msg_user_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`,
+                        uniqueKey: `msg_user_question_${Date.now()}`,
                         firstName,
                         lastName,
                         email,
@@ -550,7 +515,7 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
                             role: 'assistant',
                             content: aiResponseContent,
                             timestamp: new Date(),
-                            uniqueKey: `msg_ai_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`
+                            uniqueKey: `msg_ai_question_${Date.now()}`
                         };
 
                         setDisplayMessages(prev => [...prev, aiMessage]);
@@ -573,9 +538,9 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
 
                         const errorMessage: Message = {
                             role: 'assistant',
-                            content: 'Sorry, I encountered an error. Please try again.',
+                            content: 'Sorry, I encountered an error. Please try again. If you are an Admin then please contact alhayatgpt.com to white-list your domain.',
                             timestamp: new Date(),
-                            uniqueKey: `msg_error_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`
+                            uniqueKey: `msg_error_question_${Date.now()}`
                         };
 
                         setDisplayMessages(prev => [...prev, errorMessage]);
@@ -613,7 +578,7 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
             role: 'user',
             content: input.trim(),
             timestamp: new Date(),
-            uniqueKey: `msg_user_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`,
+            uniqueKey: `msg_user_${Date.now()}`,
             firstName,
             lastName,
             email,
@@ -646,12 +611,14 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
                     })),
                     isWidget: true,
                     isGuest: isGuestMode,
+                    parentOrigin: parentOrigin !== '*' ? parentOrigin : undefined,
                     userLocation: location ? {
                         country: location.country,
                         countryCode: location.countryCode,
                         city: location.city,
                         region: location.region,
-                        timezone: location.timezone
+                        detectionMethod: location.detectionMethod,
+                        confidence: location.confidence
                     } : undefined
                 }),
             });
@@ -714,7 +681,7 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
                 role: 'assistant',
                 content: aiResponseContent,
                 timestamp: new Date(),
-                uniqueKey: `msg_ai_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`
+                uniqueKey: `msg_ai_${Date.now()}`
             };
 
             setDisplayMessages(prev => [...prev, aiMessage]);
@@ -738,9 +705,9 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
 
             const errorMessage: Message = {
                 role: 'assistant',
-                content: 'Sorry, I encountered an error. Please try again.',
+                content: 'Sorry, I encountered an error. Please try again. If you are an Admin then please contact alhayatgpt.com to white-list your domain.',
                 timestamp: new Date(),
-                uniqueKey: `msg_error_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`
+                uniqueKey: `msg_error_${Date.now()}`
             };
 
             setDisplayMessages(prev => [...prev, errorMessage]);
@@ -812,31 +779,20 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
         setIsGuestMode(!isAuthenticated);
     }, [isAuthenticated]);
 
+    // Don't render until component is properly mounted AND this is the active instance
+    if (!isMounted || !isWidgetReady || !isActiveInstance.current) {
+        return <div className="flex items-center justify-center h-96">Loading...</div>;
+    }
+
+    // Final check to ensure we're still the active instance
+    if (globalWidgetInstance !== instanceId.current) {
+        return null; // Don't render anything if another instance is active
+    }
+
     // Show full chat interface for both authenticated and guest users
     return (
-        <div className={`flex flex-col h-screen bg-gray-50/30 ${getFontClass()}`}>
-            {/* Authentication Status Banner - Hidden for widget users */}
-            {false && isGuestMode && widgetConfig.allowGuests && (
-                <div className="mx-2 mt-2">
-                    <div className="bg-blue-50/80 backdrop-blur-sm border border-blue-200 rounded-xl p-3 shadow-sm">
-                        <div className="flex items-start gap-2">
-                            <InformationCircleIcon className="h-4 w-4 text-blue-500 mt-0.5" />
-                            <div className="flex-1">
-                                <p className="text-xs font-medium text-blue-800">Guest Mode</p>
-                                <p className="text-xs text-blue-700">Your conversation won&apos;t be saved.
-                                    <button
-                                        onClick={() => showSignInButton('temp-signin', 'Sign in to save your chats')}
-                                        className="ml-1 underline hover:no-underline"
-                                    >
-                                        Sign in to save chats
-                                    </button>
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                    <div id="temp-signin"></div>
-                </div>
-            )}
+        <div className="flex flex-col bg-gray-50 widget-chat-container" style={{ minHeight: '100vh', position: 'relative' }}>
+            {/* Authentication Status Banner - Completely hidden for widget users */}
 
             {/* Permission Issues Banner */}
             {hasPermissionIssue && (
@@ -856,13 +812,15 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
             {/* Chat Messages Container */}
             <div
                 ref={chatRef}
-                className="flex-1 overflow-y-auto px-3 md:px-6 lg:px-8 py-4 space-y-4 min-h-0"
+                className="flex-1 px-3 md:px-6 lg:px-8 py-4 space-y-4 widget-messages-container"
             >
                 {allMessages.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-8">
                         <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-gray-200/50 max-w-sm md:max-w-md lg:max-w-lg text-center">
-                            <div className="w-fit px-3 py-1 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-                                <span className="text-white text-lg font-bold">Al Hayat GPT</span>
+                            <div className="w-fit px-3 py-1 bg-gradient-to-br from-blue-500 to-purple-600 hover:from-purple-600 hover:to-blue-500 hover:shadow-md transition-all duration-200 hover:scale-105 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                                <Link href={`https://alhayatgpt.com`} target="_blank">
+                                    <span className="text-white text-lg font-bold">Al Hayat GPT</span>
+                                </Link>
                             </div>
                             <div className="mb-4">
                                 <MultilingualWelcome />
@@ -882,14 +840,14 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
                     </div>
                 )}
 
-                {allMessages.map((m) => {
+                {allMessages.map((m, index) => {
                     const timestamp = formatTime(m.timestamp);
-                    const isStreaming = m.uniqueKey?.includes('streaming') && streamingMessage && m.role === 'assistant';
+                    const isStreamingThisMessage = m.uniqueKey?.includes('streaming') && streamingMessage && m.role === 'assistant';
 
                     return (
                         <div
                             key={m.uniqueKey || `fallback_${m.role}_${m.timestamp.getTime()}`}
-                            className={`flex items-start gap-3 ${m.role === "user"
+                            className={`widget-message flex items-start gap-3 ${m.role === "user"
                                 ? isRTL ? "justify-start" : "justify-end"
                                 : isRTL ? "justify-end" : "justify-start"
                                 }`}
@@ -897,10 +855,10 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
                             {m.role === "assistant" && !isRTL && AVATARS.ai}
 
                             <div
-                                className={`max-w-xs md:max-w-md lg:max-w-lg ${m.role === "user"
-                                    ? "bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg"
-                                    : "bg-white/80 backdrop-blur-sm text-gray-800 shadow-lg border border-gray-200/50"
-                                    } rounded-2xl px-4 py-3 transition-all duration-300`}
+                                className={`${m.role === "user" ? "max-w-xs md:max-w-md lg:max-w-lg chat-bubble-user" : "max-w-sm md:max-w-4xl lg:max-w-6xl chat-bubble-assistant"} ${m.role === "user"
+                                    ? "text-white"
+                                    : "text-gray-800"
+                                    } rounded-2xl px-4 py-3 transition-all duration-300 widget-message-hover`}
                             >
                                 <div className={`flex items-center gap-2 mb-1 ${isRTL ? 'justify-end' : 'justify-start'}`}>
                                     <span className={`text-xs font-medium ${m.role === "user" ? "text-blue-100" : "text-gray-500"}`}>
@@ -914,7 +872,7 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
                                     <span className={`text-xs ${m.role === "user" ? "text-blue-200" : "text-gray-400"}`}>
                                         {timestamp}
                                     </span>
-                                    {m.role === "assistant" && m.content && !isStreaming && (
+                                    {m.role === "assistant" && m.content && !isStreamingThisMessage && (
                                         <button
                                             onClick={() => copyMessage(m.content, m.uniqueKey || `msg_${m.timestamp.getTime()}`)}
                                             className={`${isRTL ? 'mr-auto' : 'ml-auto'} p-1 rounded-lg hover:bg-gray-100 transition-all duration-200`}
@@ -934,13 +892,13 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
                                         <div>
                                             {m.content ? (
                                                 <div
+                                                    className="assistant-content prose prose-sm max-w-none prose-headings:font-semibold prose-headings:text-gray-800 prose-p:text-gray-700 prose-p:leading-relaxed prose-a:text-blue-600 prose-a:underline hover:prose-a:text-blue-800 prose-strong:text-gray-800 prose-em:text-gray-700 prose-code:bg-gray-100 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-gray-800 prose-pre:bg-gray-100 prose-pre:p-3 prose-pre:rounded-lg prose-ul:list-disc prose-ol:list-decimal prose-li:text-gray-700 prose-blockquote:border-l-4 prose-blockquote:border-blue-200 prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-gray-600 prose-table:border-collapse prose-table:table-auto prose-table:w-full prose-table:text-sm prose-thead:bg-gray-50 prose-th:border prose-th:border-gray-300 prose-th:px-4 prose-th:py-2 prose-th:text-left prose-th:font-semibold prose-th:text-gray-900 prose-tbody:divide-y prose-tbody:divide-gray-200 prose-tr:border-b prose-tr:border-gray-200 prose-td:border prose-td:border-gray-300 prose-td:px-4 prose-td:py-2 prose-td:text-gray-700 prose-tr:hover:bg-gray-50"
                                                     dangerouslySetInnerHTML={{ __html: m.content }}
-                                                    className="widget-assistant-content"
                                                 />
                                             ) : (
                                                 <div className="text-gray-500 italic">No response received</div>
                                             )}
-                                            {isStreaming && (
+                                            {isStreamingThisMessage && (
                                                 <span className={`inline-block w-1 h-4 bg-blue-500 rounded-sm animate-pulse ${isRTL ? 'mr-1' : 'ml-1'}`}></span>
                                             )}
                                         </div>
@@ -952,21 +910,24 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
                                 </div>
                             </div>
 
-                            {m.role === "user" && !isRTL && AVATARS.user}
-                            {m.role === "assistant" && isRTL && AVATARS.ai}
-                            {m.role === "user" && isRTL && AVATARS.user}
+                            <Link href={`https://alhayatgpt.com`} target="_blank" className="flex items-center gap-2">
+                                {m.role === "user" && !isRTL && AVATARS.user}
+                                {m.role === "assistant" && isRTL && AVATARS.ai}
+                                {m.role === "user" && isRTL && AVATARS.user}
+                            </Link>
+
                         </div>
                     );
                 })}
 
                 {isLoading && !streamingMessage && (
-                    <div className={`flex items-start gap-3 ${isRTL ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`widget-message flex items-start gap-3 ${isRTL ? 'justify-end' : 'justify-start'}`}>
                         {!isRTL && AVATARS.ai}
-                        <div className="bg-white/80 backdrop-blur-sm rounded-2xl px-4 py-3 shadow-lg border border-gray-200/50 flex items-center gap-2">
-                            <div className="flex items-center gap-1">
-                                <span className="w-1 h-1 bg-gray-400 rounded-full animate-pulse"></span>
-                                <span className="w-1 h-1 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></span>
-                                <span className="w-1 h-1 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></span>
+                        <div className="chat-bubble-assistant rounded-2xl px-4 py-3 flex items-center gap-2">
+                            <div className="widget-typing">
+                                <span></span>
+                                <span></span>
+                                <span></span>
                             </div>
                             <span className="text-xs text-gray-500">Thinking...</span>
                         </div>
@@ -976,13 +937,13 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
             </div>
 
             {/* Input Form */}
-            <div className="flex-shrink-0 p-3 md:p-4 lg:p-6 bg-white/50 backdrop-blur-sm border-t border-gray-200/50">
+            <div className="widget-footer flex-shrink-0 p-3 md:p-4 lg:p-6" style={{ position: 'sticky', bottom: 0, zIndex: 1000, backgroundColor: 'rgb(249 250 251)' }}>
                 <form onSubmit={handleSubmit}>
                     <div className="relative flex items-center gap-2">
                         <div className="flex-1 relative">
                             <input
                                 ref={inputRef}
-                                className={`w-full px-4 py-3 pr-12 rounded-xl bg-white/80 backdrop-blur-sm border border-gray-200/50 text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200 shadow-lg text-sm ${getFontClass()}`}
+                                className={`widget-input w-full pr-12 text-sm ${getFontClass()}`}
                                 value={input}
                                 onChange={handleInputChange}
                                 placeholder={getPlaceholderText()}
@@ -992,8 +953,9 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
                             <button
                                 type="submit"
                                 disabled={isLoading || !input.trim()}
-                                className={`absolute ${isRTL ? 'left-2' : 'right-2'} top-1/2 -translate-y-1/2 p-2 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg`}
+                                className={`absolute ${isRTL ? 'left-2' : 'right-2'} top-1/2 -translate-y-1/2 p-2 rounded-lg widget-button disabled:opacity-50 disabled:cursor-not-allowed`}
                                 title="Send Message"
+                                style={{ padding: '8px', minWidth: 'auto', width: 'auto', height: 'auto' }}
                             >
                                 <PaperAirplaneIcon className="w-4 h-4" />
                             </button>
