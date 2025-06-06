@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Widget Test - Console Output</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 1200px; 
+            margin: 20px auto; 
+            padding: 20px; 
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .widget-container { 
+            border: 2px solid #ddd; 
+            height: 600px; 
+            margin: 20px 0; 
+            border-radius: 8px;
+        }
+        .status { 
+            padding: 10px; 
+            margin: 10px 0; 
+            border-radius: 5px; 
+            font-weight: bold;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .loading { background: #fff3cd; color: #856404; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        .console-output {
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 20px;
+            border-radius: 8px;
+            height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+        .step {
+            padding: 10px;
+            margin: 5px 0;
+            border-left: 4px solid #007bff;
+            background: #f8f9fa;
+        }
+        .debug-controls {
+            margin: 10px 0;
+        }
+        .btn {
+            padding: 8px 16px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Widget Debug Test</h1>
+        <p><strong>Origin:</strong> <span id="origin"></span></p>
+        <p><strong>SDK Version:</strong> <span id="sdk-version">Loading...</span></p>
+        <div id="status" class="status loading">⏳ Initializing debug test...</div>
+        
+        <div class="debug-controls">
+            <button class="btn btn-primary" onclick="runTest()">🔄 Run Widget Test</button>
+            <button class="btn btn-secondary" onclick="clearConsole()">🗑️ Clear Console</button>
+            <button class="btn btn-danger" onclick="destroyWidget()">💥 Destroy Widget</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>🔧 Debug Steps</h2>
+        <div class="step" id="step1">1. Loading SDK...</div>
+        <div class="step" id="step2">2. Waiting for SDK Ready event...</div>
+        <div class="step" id="step3">3. Creating widget instance...</div>
+        <div class="step" id="step4">4. Setting up iframe...</div>
+        <div class="step" id="step5">5. Waiting for WIDGET_READY message...</div>
+        <div class="step" id="step6">6. Widget fully loaded!</div>
+    </div>
+
+    <div class="container">
+        <h2>📺 Console Output</h2>
+        <div class="console-output" id="console-output">Console logs will appear here...\n</div>
+    </div>
+
+    <div class="container">
+        <h2>🎯 Widget Test Area</h2>
+        <div class="widget-container">
+            <div id="chat-widget" style="width: 100%; height: 100%;"></div>
+        </div>
+    </div>
+
+    <script src="https://www.alhayatgpt.com/widget-sdk-v2.min.js"></script>
+    <script>
+        // Debug state
+        let widget = null;
+        let testRunning = false;
+        
+        // Console capturing
+        const consoleOutput = document.getElementById('console-output');
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        function addToConsole(type, ...args) {
+            const timestamp = new Date().toLocaleTimeString();
+            const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)).join(' ');
+            consoleOutput.textContent += `[${timestamp}] ${type.toUpperCase()}: ${message}\n`;
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addToConsole('log', ...args);
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addToConsole('error', ...args);
+        };
+        
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            addToConsole('warn', ...args);
+        };
+        
+        // UI helpers
+        function updateStep(stepNum, text, success = false) {
+            const step = document.getElementById(`step${stepNum}`);
+            if (step) {
+                step.textContent = `${stepNum}. ${text}`;
+                step.style.borderLeftColor = success ? '#28a745' : '#007bff';
+                step.style.background = success ? '#d4edda' : '#f8f9fa';
+            }
+        }
+        
+        function updateStatus(text, type = 'info') {
+            const status = document.getElementById('status');
+            status.textContent = text;
+            status.className = `status ${type}`;
+        }
+        
+        function clearConsole() {
+            consoleOutput.textContent = 'Console cleared...\n';
+        }
+        
+        function destroyWidget() {
+            if (widget) {
+                console.log('Destroying widget...');
+                widget.destroy();
+                widget = null;
+                updateStatus('Widget destroyed', 'info');
+            }
+        }
+        
+        // Initialize page
+        document.getElementById('origin').textContent = window.location.origin;
+        console.log('Debug test page loaded from:', window.location.origin);
+        updateStep(1, 'Loading SDK...', true);
+        
+        // Listen for SDK ready
+        window.addEventListener('AlHayatGPTSDKReady', function(event) {
+            console.log('AlHayatGPTSDKReady event received:', event.detail);
+            document.getElementById('sdk-version').textContent = event.detail.version;
+            updateStep(2, 'SDK Ready event received!', true);
+            updateStatus('SDK loaded successfully - ready to test!', 'success');
+            
+            // Auto-run test
+            setTimeout(runTest, 1000);
+        });
+        
+        // Test function
+        function runTest() {
+            if (testRunning) {
+                console.log('Test already running, please wait...');
+                return;
+            }
+            
+            testRunning = true;
+            console.log('=== Starting Widget Test ===');
+            updateStatus('Running widget test...', 'loading');
+            updateStep(3, 'Creating widget instance...');
+            
+            try {
+                // Destroy previous widget if exists
+                if (widget) {
+                    widget.destroy();
+                }
+                
+                console.log('Creating widget with config:', {
+                    containerId: 'chat-widget',
+                    height: '600px',
+                    debug: true
+                });
+                
+                widget = window.AlHayatGPT.createWidget({
+                    containerId: 'chat-widget',
+                    height: '600px',
+                    debug: true,
+                    
+                    onReady: function() {
+                        console.log('🎉 onReady callback fired!');
+                        updateStep(6, 'Widget fully loaded!', true);
+                        updateStatus('✅ Widget test completed successfully!', 'success');
+                        testRunning = false;
+                    },
+                    
+                    onError: function(error) {
+                        console.error('❌ Widget error:', error);
+                        updateStatus('❌ Widget error: ' + error.message, 'error');
+                        testRunning = false;
+                    },
+                    
+                    onLanguageDetected: function(detection) {
+                        console.log('🌍 Language detected:', detection);
+                    }
+                });
+                
+                updateStep(3, 'Widget instance created', true);
+                updateStep(4, 'Setting up iframe...');
+                console.log('Widget creation call completed');
+                
+                // Timeout check
+                setTimeout(() => {
+                    if (testRunning) {
+                        console.error('⏰ Widget test timed out after 30 seconds');
+                        updateStatus('⏰ Test timed out - check console for details', 'error');
+                        testRunning = false;
+                    }
+                }, 30000);
+                
+            } catch (error) {
+                console.error('❌ Exception during widget creation:', error);
+                updateStatus('❌ Exception: ' + error.message, 'error');
+                testRunning = false;
+            }
+        }
+        
+        // Auto-start when SDK is ready
+        console.log('Waiting for AlHayatGPTSDKReady event...');
+    </script>
+</body>
+</html> 
