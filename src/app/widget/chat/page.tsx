@@ -98,7 +98,7 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
     const [isWidgetReady, setIsWidgetReady] = useState(false);
 
     const { currentChat, addConversationTurn, createNewChat } = useChatContext();
-    const { getFontClass, isRTL, getPlaceholderText, detectInputLanguageChange, autoDetect } = useLanguage();
+    const { getFontClass, isRTL, getPlaceholderText, detectInputLanguageChange, autoDetect, checkLanguageSwitch } = useLanguage();
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [streamingMessage, setStreamingMessage] = useState("");
@@ -193,8 +193,11 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
     const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     // Always use guest info for external widgets
+    // Use source website as lastName for tracking
+    const urlParams = new URLSearchParams(window.location.search);
+    const sourceWebsite = urlParams.get('source') || 'unknown-source';
     const firstName = 'Guest';
-    const lastName = '';
+    const lastName = sourceWebsite; // Track source website
     const fullNameInitials = 'G';
     const email = '';
 
@@ -606,6 +609,21 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
 
         trackChatEvent('SEND_MESSAGE', `Widget message length: ${currentInput.length}`);
 
+        // Notify parent SDK about message being sent
+        if (window.parent && window.parent !== window) {
+            try {
+                window.parent.postMessage({
+                    type: 'MESSAGE_SENT',
+                    payload: {
+                        content: currentInput,
+                        source: sourceWebsite
+                    }
+                }, parentOrigin);
+            } catch (error) {
+                console.log('Could not notify parent about message sent:', error);
+            }
+        }
+
         try {
             const response = await fetch('/api/chat', {
                 method: 'POST',
@@ -751,7 +769,25 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
                     role: msg.role
                 }));
 
+                // Detect language and notify parent
                 detectInputLanguageChange(newValue, recentMessages);
+
+                // Check for language switch to notify parent SDK
+                const languageSwitchResult = checkLanguageSwitch(newValue, recentMessages);
+                if (languageSwitchResult.shouldSwitch && window.parent && window.parent !== window) {
+                    try {
+                        window.parent.postMessage({
+                            type: 'LANGUAGE_DETECTED',
+                            payload: {
+                                language: languageSwitchResult.newLanguage || 'en',
+                                direction: isRTL ? 'rtl' : 'ltr',
+                                confidence: languageSwitchResult.confidence
+                            }
+                        }, parentOrigin);
+                    } catch (error) {
+                        console.log('Could not notify parent about language detection:', error);
+                    }
+                }
             }, 800);
         }
     };

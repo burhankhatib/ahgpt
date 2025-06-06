@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Al Hayat GPT Widget SDK v2.0 Test</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f9fafb;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .widget-container {
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+        .status.loading {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        .status.ready {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        .status.error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        code {
+            background: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Al Hayat GPT Widget SDK v2.0 Test</h1>
+        <p><strong>Version:</strong> 2.0.0 (Guest-Only Mode)</p>
+        
+        <div id="status" class="status loading">
+            📡 Loading SDK...
+        </div>
+        
+        <h2>Features Tested:</h2>
+        <ul>
+            <li>✅ Guest-only mode (no authentication)</li>
+            <li>✅ Source website tracking (<code>localhost</code>)</li>
+            <li>✅ Auto language detection</li>
+            <li>✅ Fixed height configuration</li>
+            <li>✅ Error handling</li>
+        </ul>
+    </div>
+
+    <div class="container">
+        <h2>Widget Demo</h2>
+        <div class="widget-container">
+            <div id="chat-widget"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Integration Code</h2>
+        <pre><code>&lt;script src="https://alhayatgpt.com/widget-sdk-v2.min.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+window.addEventListener('AlHayatGPTSDKReady', function() {
+    const widget = window.AlHayatGPT.createWidget({
+        containerId: 'chat-widget',
+        height: '600px',
+        theme: 'auto',
+        debug: true,
+        onReady: function() {
+            console.log('Widget ready!');
+        },
+        onLanguageDetected: function(detection) {
+            console.log('Language detected:', detection);
+        },
+        onError: function(error) {
+            console.error('Widget error:', error);
+        }
+    });
+});
+&lt;/script&gt;</code></pre>
+    </div>
+
+    <script src="./widget-sdk-v2.min.js"></script>
+    <script>
+        const statusEl = document.getElementById('status');
+        
+        window.addEventListener('AlHayatGPTSDKReady', function(event) {
+            statusEl.className = 'status ready';
+            statusEl.innerHTML = '✅ SDK v' + event.detail.version + ' loaded successfully!';
+            
+            console.log('SDK Features:', event.detail.features);
+            
+            // Create widget
+            setTimeout(() => {
+                try {
+                    const widget = window.AlHayatGPT.createWidget({
+                        containerId: 'chat-widget',
+                        height: '600px',
+                        theme: 'auto',
+                        debug: true,
+                        
+                        onReady: function() {
+                            console.log('✅ Widget ready!');
+                            statusEl.innerHTML += '<br>🚀 Widget initialized successfully!';
+                        },
+                        
+                        onLanguageDetected: function(detection) {
+                            console.log('🌍 Language detected:', detection);
+                            statusEl.innerHTML += '<br>🌍 Language: ' + detection.language + ' (' + detection.direction + ')';
+                        },
+                        
+                        onError: function(error) {
+                            console.error('❌ Widget error:', error);
+                            statusEl.className = 'status error';
+                            statusEl.innerHTML = '❌ Error: ' + error.message + ' (Code: ' + error.code + ')';
+                        }
+                    });
+                    
+                    console.log('Widget instance:', widget);
+                    console.log('Source website:', widget.getSourceWebsite());
+                    
+                } catch (error) {
+                    console.error('Failed to create widget:', error);
+                    statusEl.className = 'status error';
+                    statusEl.innerHTML = '❌ Failed to create widget: ' + error.message;
+                }
+            }, 500);
+        });
+        
+        // Set timeout for loading failure
+        setTimeout(() => {
+            if (statusEl.className.includes('loading')) {
+                statusEl.className = 'status error';
+                statusEl.innerHTML = '❌ SDK failed to load within 10 seconds';
+            }
+        }, 10000);
+    </script>
+</body>
+</html>
