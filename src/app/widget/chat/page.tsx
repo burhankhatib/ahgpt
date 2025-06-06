@@ -2,7 +2,7 @@
 import { useRef, useEffect, useState } from "react";
 import { PaperAirplaneIcon } from '@heroicons/react/24/solid';
 import { ExclamationTriangleIcon, InformationCircleIcon, DocumentDuplicateIcon, CheckIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
-import { ClerkProvider, useUser } from '@clerk/nextjs';
+// Removed Clerk dependencies - widget operates in guest-only mode
 import { trackChatEvent } from '@/utils/analytics';
 import { useChat as useChatContext } from '@/contexts/ChatContext';
 import { ChatProvider } from '@/contexts/ChatContext';
@@ -85,7 +85,7 @@ let globalWidgetInitialized = false;
 // Prevent widget nesting inside iframes
 const isEmbeddedWidget = typeof window !== 'undefined' && window.parent !== window;
 
-function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] }) {
+function WidgetChatPage() {
     // Prevent infinite nesting if widget is loaded inside another widget
     const [isNested, setIsNested] = useState(false);
 
@@ -1026,29 +1026,12 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
     );
 }
 
-// Clerk-wrapped version that uses useUser hook
-function ClerkWrappedChatPage() {
-    const { user } = useUser();
-    return (
-        <LanguageProvider>
-            <ChatProvider>
-                <WidgetChatPage user={user} />
-            </ChatProvider>
-        </LanguageProvider>
-    );
-}
-
-// Widget wrapper with Clerk provider
+// Pure guest-only widget - no authentication required
 export default function WidgetPage() {
-    const [clerkKey, setClerkKey] = useState<string | null>(null);
     const [isClient, setIsClient] = useState(false);
 
     useEffect(() => {
         setIsClient(true);
-        const urlParams = new URLSearchParams(window.location.search);
-        const key = urlParams.get('clerkKey');
-        // Use provided key or fall back to default environment key
-        setClerkKey(key || process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || null);
     }, []);
 
     // Don't render anything during SSR to avoid hydration issues
@@ -1056,29 +1039,11 @@ export default function WidgetPage() {
         return <div className="flex items-center justify-center h-96">Loading...</div>;
     }
 
-    // Always use ClerkProvider since ChatProvider depends on useUser hook
-    const finalClerkKey = clerkKey || process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
-
-    if (!finalClerkKey) {
-        return <div className="text-red-500 p-4">Error: No Clerk publishable key available</div>;
-    }
-
-    const clerkConfig = getClerkConfig();
     return (
-        <ClerkProvider
-            publishableKey={finalClerkKey}
-            appearance={{
-                baseTheme: undefined,
-                variables: {
-                    colorPrimary: '#3b82f6',
-                },
-            }}
-            signInUrl={clerkConfig.signInUrl}
-            signUpUrl={clerkConfig.signUpUrl}
-            afterSignInUrl={clerkConfig.afterSignInUrl}
-            afterSignUpUrl={clerkConfig.afterSignUpUrl}
-        >
-            <ClerkWrappedChatPage />
-        </ClerkProvider>
+        <LanguageProvider>
+            <ChatProvider>
+                <WidgetChatPage />
+            </ChatProvider>
+        </LanguageProvider>
     );
 } 

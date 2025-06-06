@@ -152,11 +152,11 @@ export default function InstructionsPage() {
                                     </div>
                                     <div className="text-left">
                                         <h3 className="text-lg font-semibold text-blue-900 mb-2">
-                                            🚀 Guest-Only Widget - Zero Authentication Required
+                                            🚀 SDK v2.0 - Complete Rebuild with Guest-Only Mode
                                         </h3>
                                         <p className="text-blue-800 mb-3">
-                                            <strong>New approach:</strong> The widget now operates in guest-only mode for external websites.
-                                            No login prompts, no 404 errors, no popup blockers - just seamless integration that works instantly.
+                                            <strong>Brand new SDK v2.0:</strong> Completely rebuilt from scratch with guest-only mode, source tracking,
+                                            language detection, and 32% smaller bundle size. Zero authentication required - just works instantly.
                                         </p>
                                         <div className="flex flex-col sm:flex-row gap-3">
                                             <Link
@@ -192,8 +192,8 @@ export default function InstructionsPage() {
                 {/* Key Changes Summary */}
                 <div className="mb-12 bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
                     <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-100 p-6">
-                        <h3 className="text-xl font-bold text-gray-900 mb-2">🆕 What&apos;s New in v2.0.0-Optimized</h3>
-                        <p className="text-gray-600">Major improvements for better performance and user experience</p>
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">🆕 What&apos;s New in SDK v2.0</h3>
+                        <p className="text-gray-600">Complete rebuild from scratch with guest-only focus and advanced features</p>
                     </div>
                     <div className="p-6">
                         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -201,8 +201,8 @@ export default function InstructionsPage() {
                                 <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-3">
                                     <span className="text-2xl">🚀</span>
                                 </div>
-                                <h4 className="font-semibold text-gray-900 mb-2">47% Smaller</h4>
-                                <p className="text-sm text-gray-600">Bundle size reduced from 38KB to 20KB for faster loading</p>
+                                <h4 className="font-semibold text-gray-900 mb-2">32% Smaller</h4>
+                                <p className="text-sm text-gray-600">Bundle size reduced to 13.5KB for ultra-fast loading</p>
                             </div>
                             <div className="text-center">
                                 <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-3">
@@ -220,20 +220,20 @@ export default function InstructionsPage() {
                             </div>
                             <div className="text-center">
                                 <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-                                    <span className="text-2xl">🔄</span>
+                                    <span className="text-2xl">🌍</span>
                                 </div>
-                                <h4 className="font-semibold text-gray-900 mb-2">Auto Retry</h4>
-                                <p className="text-sm text-gray-600">Automatic retry mechanism with exponential backoff</p>
+                                <h4 className="font-semibold text-gray-900 mb-2">Language Detection</h4>
+                                <p className="text-sm text-gray-600">Auto-detects user language with RTL support</p>
                             </div>
                         </div>
                         <div className="mt-6 p-4 bg-yellow-50 rounded-xl border border-yellow-200">
                             <h5 className="font-semibold text-yellow-800 mb-2">⚠️ Breaking Changes for Existing Users</h5>
                             <ul className="text-sm text-yellow-700 space-y-1">
-                                <li>• <strong>Remove</strong> <code className="bg-white px-1 py-0.5 rounded">usePopupAuth: true</code> configuration</li>
-                                <li>• <strong>Remove</strong> <code className="bg-white px-1 py-0.5 rounded">clerkPublishableKey</code> (widgets are guest-only now)</li>
-                                <li>• <strong>Replace</strong> <code className="bg-white px-1 py-0.5 rounded">fallbackToGuest</code> with <code className="bg-white px-1 py-0.5 rounded">allowGuests</code></li>
-                                <li>• <strong>Update</strong> error handling to use new error codes</li>
-                                <li>• <strong>See migration guide</strong> for complete upgrade instructions</li>
+                                <li>• <strong>Update SDK URL:</strong> <code className="bg-white px-1 py-0.5 rounded">widget-sdk-v2.min.js</code> (new URL)</li>
+                                <li>• <strong>Add required height:</strong> <code className="bg-white px-1 py-0.5 rounded">height: &quot;600px&quot;</code> parameter</li>
+                                <li>• <strong>Remove</strong> <code className="bg-white px-1 py-0.5 rounded">clerkPublishableKey</code> (pure guest-only mode)</li>
+                                <li>• <strong>New language events:</strong> <code className="bg-white px-1 py-0.5 rounded">onLanguageDetected</code> callback</li>
+                                <li>• <strong>Source tracking:</strong> Guest lastName now tracks website origin</li>
                             </ul>
                         </div>
                     </div>
@@ -325,18 +325,16 @@ export default function InstructionsPage() {
                                     </p>
                                     <CodeBlock
                                         language="html"
-                                        code={`<!-- Al Hayat GPT Widget for WordPress -->
+                                        code={`<!-- Al Hayat GPT Widget v2.0 for WordPress -->
 <div id="ahgpt-widget-wp" style="width: 100%; height: 600px; margin: 20px 0;"></div>
 
-<script src="https://www.alhayatgpt.com/widget-sdk.min.js" async></script>
+<script src="https://www.alhayatgpt.com/widget-sdk-v2.min.js" async></script>
 <script>
 function initAlHayatGPTWordPress() {
     if (window.AlHayatGPT) {
         window.AlHayatGPT.createWidget({
             containerId: 'ahgpt-widget-wp',
-            height: '600px', // Change height here (e.g., '400px', '800px')
-            allowGuests: true,
-            autoDetectLanguage: true,
+            height: '600px', // Required height parameter
             
             onReady: function() {
                 console.log('Al Hayat GPT widget loaded in WordPress');
@@ -378,7 +376,7 @@ function ahgpt_widget_shortcode($atts) {
     (function() {
         if (!window.AlHayatGPTSDKLoaded) {
             var script = document.createElement('script');
-            script.src = 'https://www.alhayatgpt.com/widget-sdk.min.js';
+            script.src = 'https://www.alhayatgpt.com/widget-sdk-v2.min.js';
             script.async = true;
             document.head.appendChild(script);
             window.AlHayatGPTSDKLoaded = true;
@@ -388,9 +386,7 @@ function ahgpt_widget_shortcode($atts) {
             if (window.AlHayatGPT) {
                 window.AlHayatGPT.createWidget({
                     containerId: '<?php echo esc_js($container_id); ?>',
-                                height: '<?php echo esc_js($atts['height']); ?>px',
-            allowGuests: true,
-                    autoDetectLanguage: true,
+                    height: '<?php echo esc_js($atts['height']); ?>px',
                     
                     onReady: function() {
                         console.log('Al Hayat GPT widget ready in WordPress');
@@ -546,7 +542,7 @@ export default function AlHayatGPTWidget({ height = '600px' }: Props): React.Rea
         }
 
         // Check if script is already being loaded or exists
-        const existingScript = document.querySelector('script[src="https://www.alhayatgpt.com/widget-sdk.min.js"]');
+        const existingScript = document.querySelector('script[src="https://www.alhayatgpt.com/widget-sdk-v2.min.js"]');
         if (existingScript) {
             // Script exists, wait for it to load or try initializing if already loaded
             if (window.AlHayatGPT) {

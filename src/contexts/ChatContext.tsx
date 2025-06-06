@@ -1,7 +1,6 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { useUser } from '@clerk/nextjs';
 import { Chat, Message } from '@/types/chat';
 import * as chatService from '@/sanity/chat';
 import { showNotification } from '@/utils/notifications';
@@ -28,8 +27,9 @@ interface ChatContextType {
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
+// Widget-only ChatProvider that doesn't use Clerk
 export function ChatProvider({ children }: { children: React.ReactNode }) {
-    const { user } = useUser();
+    const user: any = null; // Always null for widgets - pure guest mode
     const [currentChat, setCurrentChat] = useState<Chat | null>(null);
     const [chats, setChats] = useState<Chat[]>([]);
     const [hiddenChatIds, setHiddenChatIds] = useState<Set<string>>(new Set());
