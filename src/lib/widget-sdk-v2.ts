@@ -157,9 +157,14 @@ export class AlHayatGPTWidget {
   private currentDirection: 'ltr' | 'rtl' = 'ltr';
   
   constructor(config: WidgetConfig) {
+    console.log('[Widget Debug] Constructor called with config:', config);
     this.config = config;
     this.sourceWebsite = this.extractSourceWebsite();
-    this.initialize();
+    console.log('[Widget Debug] Source website:', this.sourceWebsite);
+    this.initialize().catch(error => {
+      console.error('[Widget Debug] Constructor initialization failed:', error);
+      this.handleError(error);
+    });
   }
   
   private extractSourceWebsite(): string {
@@ -173,41 +178,55 @@ export class AlHayatGPTWidget {
   
   private async initialize(): Promise<void> {
     try {
+      console.log('[Widget Debug] Starting initialization...');
+      
       // Find container
+      console.log('[Widget Debug] Looking for container:', this.config.containerId);
       const container = document.getElementById(this.config.containerId);
       if (!container) {
+        console.error('[Widget Debug] Container not found:', this.config.containerId);
         throw new WidgetError(
           `Container with id "${this.config.containerId}" not found`,
           ErrorCodes.CONTAINER_NOT_FOUND
         );
       }
       
+      console.log('[Widget Debug] Container found:', container);
       this.container = container;
       
       // Create and setup iframe
+      console.log('[Widget Debug] Creating iframe...');
       await this.createIframe();
+      console.log('[Widget Debug] Iframe created successfully');
       
       // Detect user location
+      console.log('[Widget Debug] Detecting user location...');
       this.userLocation = await LocationDetector.detectUserLocation();
+      console.log('[Widget Debug] User location detected:', this.userLocation);
       
-      // Notify ready
-      if (this.config.onReady) {
-        this.config.onReady();
-      }
+      // NOTE: onReady will be called when we receive WIDGET_READY message from iframe
+      console.log('[Widget Debug] Waiting for WIDGET_READY message from iframe...');
       
-      this.log('Widget initialized successfully');
+      this.log('Widget iframe setup completed, waiting for ready signal');
       
     } catch (error) {
+      console.error('[Widget Debug] Initialization failed:', error);
       this.handleError(error);
     }
   }
   
   private async createIframe(): Promise<void> {
-    if (!this.container) return;
+    if (!this.container) {
+      console.error('[Widget Debug] No container available for iframe');
+      return;
+    }
     
     return new Promise((resolve, reject) => {
       const iframe = document.createElement('iframe');
-      iframe.src = this.buildIframeUrl();
+      const iframeUrl = this.buildIframeUrl();
+      
+      console.log('[Widget Debug] Building iframe with URL:', iframeUrl);
+      iframe.src = iframeUrl;
       iframe.style.width = '100%';
       iframe.style.height = this.config.height;
       iframe.style.border = 'none';
@@ -216,32 +235,40 @@ export class AlHayatGPTWidget {
       iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms');
       iframe.setAttribute('loading', 'lazy');
       
+      console.log('[Widget Debug] Iframe element created, setting up event handlers...');
+      
       const timeout = setTimeout(() => {
+        console.error('[Widget Debug] Iframe load timeout after 15 seconds');
         reject(new WidgetError(
           'Widget iframe failed to load within timeout',
           ErrorCodes.IFRAME_LOAD_FAILED
         ));
       }, 15000);
       
-             iframe.onload = () => {
-         clearTimeout(timeout);
-         this.iframe = iframe;
-         this.setupMessageHandling();
-         resolve(undefined);
-       };
+      iframe.onload = () => {
+        console.log('[Widget Debug] Iframe onload event fired');
+        clearTimeout(timeout);
+        this.iframe = iframe;
+        this.setupMessageHandling();
+        console.log('[Widget Debug] Message handling setup complete');
+        resolve(undefined);
+      };
        
-       iframe.onerror = () => {
-         clearTimeout(timeout);
-         reject(new WidgetError(
-           'Widget iframe failed to load',
-           ErrorCodes.IFRAME_LOAD_FAILED
-         ));
-       };
+      iframe.onerror = (error) => {
+        console.error('[Widget Debug] Iframe onerror event fired:', error);
+        clearTimeout(timeout);
+        reject(new WidgetError(
+          'Widget iframe failed to load',
+          ErrorCodes.IFRAME_LOAD_FAILED
+        ));
+      };
       
       // Clear container and add iframe
+      console.log('[Widget Debug] Adding iframe to container...');
       if (this.container) {
         this.container.innerHTML = '';
         this.container.appendChild(iframe);
+        console.log('[Widget Debug] Iframe added to DOM');
       }
     });
   }
@@ -265,38 +292,57 @@ export class AlHayatGPTWidget {
   }
   
   private setupMessageHandling(): void {
+    console.log('[Widget Debug] Setting up message handling...');
     window.addEventListener('message', (event) => {
-      if (this.isDestroyed || !this.iframe) return;
+      if (this.isDestroyed || !this.iframe) {
+        console.log('[Widget Debug] Ignoring message - widget destroyed or no iframe');
+        return;
+      }
       
       // Verify origin for security
       const iframe = this.iframe;
-      if (event.source !== iframe.contentWindow) return;
+      if (event.source !== iframe.contentWindow) {
+        console.log('[Widget Debug] Ignoring message - not from our iframe. Source:', event.source);
+        return;
+      }
       
+      console.log('[Widget Debug] Received message from iframe:', event.data);
       this.handleIframeMessage(event.data);
     });
+    console.log('[Widget Debug] Message listener registered');
   }
   
   private handleIframeMessage(data: any): void {
     try {
+      console.log('[Widget Debug] Processing iframe message:', data);
       const { type, payload } = data;
+      console.log('[Widget Debug] Message type:', type, 'Payload:', payload);
       
       switch (type) {
         case 'WIDGET_READY':
+          console.log('[Widget Debug] WIDGET_READY received! Calling onReady callback...');
           this.log('Widget iframe ready');
           if (this.config.onReady) {
+            console.log('[Widget Debug] Executing onReady callback');
             this.config.onReady();
+            console.log('[Widget Debug] onReady callback executed successfully');
+          } else {
+            console.log('[Widget Debug] No onReady callback configured');
           }
           break;
           
         case 'LANGUAGE_DETECTED':
+          console.log('[Widget Debug] Language detected:', payload);
           this.handleLanguageDetection(payload);
           break;
           
         case 'MESSAGE_SENT':
+          console.log('[Widget Debug] Message sent:', payload);
           this.handleMessageSent(payload);
           break;
           
         case 'ERROR':
+          console.log('[Widget Debug] Error received from iframe:', payload);
           this.handleError(new WidgetError(
             payload.message || 'Unknown error',
             payload.code || ErrorCodes.CHAT_ERROR,
@@ -306,9 +352,11 @@ export class AlHayatGPTWidget {
           break;
           
         default:
+          console.log('[Widget Debug] Unknown message type received:', type);
           this.log('Unknown message type:', type);
       }
     } catch (error) {
+      console.error('[Widget Debug] Error handling iframe message:', error);
       this.log('Error handling iframe message:', error);
     }
   }
@@ -454,13 +502,20 @@ export const AlHayatGPTSDK = {
 
 // Auto-attach to window for browser usage
 if (typeof window !== 'undefined') {
+  console.log('[Widget Debug] Attaching AlHayatGPT SDK to window...');
   (window as any).AlHayatGPT = AlHayatGPTSDK;
+  console.log('[Widget Debug] SDK attached successfully');
   
   // Dispatch ready event
+  console.log('[Widget Debug] Dispatching AlHayatGPTSDKReady event...');
   const event = new CustomEvent('AlHayatGPTSDKReady', {
-    detail: { version: AlHayatGPTSDK.version }
+    detail: { 
+      version: AlHayatGPTSDK.version,
+      features: ['guest-only', 'language-detection', 'source-tracking', 'html-rendering']
+    }
   });
   window.dispatchEvent(event);
+  console.log('[Widget Debug] AlHayatGPTSDKReady event dispatched with version:', AlHayatGPTSDK.version);
 }
 
 export default AlHayatGPTSDK; 
