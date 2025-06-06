@@ -504,6 +504,9 @@ export default function WidgetLayout({
                             formFieldInput: "widget-input",
                         },
                     }}
+                    // Prevent authentication redirects by making URLs empty
+                    signInUrl=""
+                    signUpUrl=""
                 >
                     <div className="widget-container">
                         {children}
