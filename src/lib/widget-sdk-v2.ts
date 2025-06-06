@@ -283,6 +283,9 @@ export class AlHayatGPTWidget {
       switch (type) {
         case 'WIDGET_READY':
           this.log('Widget iframe ready');
+          if (this.config.onReady) {
+            this.config.onReady();
+          }
           break;
           
         case 'LANGUAGE_DETECTED':
