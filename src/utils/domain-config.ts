@@ -69,13 +69,21 @@ export function getApiEndpoint(): string {
 export function getClerkConfig() {
   const config = getDomainConfig();
   
+  // For widgets embedded on external domains, always use the main Al Hayat GPT domain
+  const isExternal = typeof window !== 'undefined' && 
+                    window.location.hostname !== 'www.alhayatgpt.com' && 
+                    window.location.hostname !== 'alhayatgpt.com' &&
+                    window.location.hostname !== 'localhost';
+                    
+  const baseUrl = isExternal ? 'https://www.alhayatgpt.com' : config.main;
+  
   return {
     publishableKey: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
     domain: config.clerk.replace('https://', '').replace('http://', ''),
-    signInUrl: `${config.main}/sign-in`,
-    signUpUrl: `${config.main}/sign-up`,
-    afterSignInUrl: `${config.main}/chat`,
-    afterSignUpUrl: `${config.main}/chat`,
+    signInUrl: `${baseUrl}/sign-in`,
+    signUpUrl: `${baseUrl}/sign-up`,
+    afterSignInUrl: `${baseUrl}/chat`,
+    afterSignUpUrl: `${baseUrl}/chat`,
   };
 }
 

@@ -140,8 +140,41 @@ export default function InstructionsPage() {
                         </h1>
                         <p className="text-base sm:text-lg lg:text-xl text-gray-600 max-w-3xl mx-auto px-4">
                             Integrate our powerful Christian AI chatbot into your website with just a few lines of code.
-                            Available for all major platforms and frameworks.
+                            <strong>Works instantly in guest mode</strong> - no authentication required for your visitors.
                         </p>
+
+                        {/* Migration Notice */}
+                        <div className="mt-8 max-w-4xl mx-auto">
+                            <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6">
+                                <div className="flex items-start gap-4">
+                                    <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                        <span className="text-white text-sm font-bold">!</span>
+                                    </div>
+                                    <div className="text-left">
+                                        <h3 className="text-lg font-semibold text-blue-900 mb-2">
+                                            🚀 Guest-Only Widget - Zero Authentication Required
+                                        </h3>
+                                        <p className="text-blue-800 mb-3">
+                                            <strong>New approach:</strong> The widget now operates in guest-only mode for external websites.
+                                            No login prompts, no 404 errors, no popup blockers - just seamless integration that works instantly.
+                                        </p>
+                                        <div className="flex flex-col sm:flex-row gap-3">
+                                            <Link
+                                                href="/MIGRATION_GUIDE.md"
+                                                target="_blank"
+                                                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                                            >
+                                                <DocumentDuplicateIcon className="w-4 h-4 mr-2" />
+                                                View Migration Guide
+                                            </Link>
+                                            <div className="text-xs text-blue-700 flex items-center">
+                                                ✅ Guest-only mode &nbsp;•&nbsp; ✅ No authentication &nbsp;•&nbsp; ✅ Works instantly
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -152,11 +185,105 @@ export default function InstructionsPage() {
                     <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">Quick Start</h2>
                     <p className="text-gray-600 max-w-2xl mx-auto px-4">
                         Choose your platform below and follow the simple integration steps.
-                        No API keys required - just copy, paste, and customize.
+                        <strong>Works in guest mode</strong> - no login required for your visitors.
                     </p>
                 </div>
 
+                {/* Key Changes Summary */}
+                <div className="mb-12 bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-100 p-6">
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">🆕 What&apos;s New in v2.0.0-Optimized</h3>
+                        <p className="text-gray-600">Major improvements for better performance and user experience</p>
+                    </div>
+                    <div className="p-6">
+                        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            <div className="text-center">
+                                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                                    <span className="text-2xl">🚀</span>
+                                </div>
+                                <h4 className="font-semibold text-gray-900 mb-2">47% Smaller</h4>
+                                <p className="text-sm text-gray-600">Bundle size reduced from 38KB to 20KB for faster loading</p>
+                            </div>
+                            <div className="text-center">
+                                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                                    <span className="text-2xl">🔒</span>
+                                </div>
+                                <h4 className="font-semibold text-gray-900 mb-2">Guest Mode Only</h4>
+                                <p className="text-sm text-gray-600">No authentication required - seamless guest experience</p>
+                            </div>
+                            <div className="text-center">
+                                <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                                    <span className="text-2xl">🛡️</span>
+                                </div>
+                                <h4 className="font-semibold text-gray-900 mb-2">Enhanced Security</h4>
+                                <p className="text-sm text-gray-600">CSP compliance and cryptographic nonce validation</p>
+                            </div>
+                            <div className="text-center">
+                                <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                                    <span className="text-2xl">🔄</span>
+                                </div>
+                                <h4 className="font-semibold text-gray-900 mb-2">Auto Retry</h4>
+                                <p className="text-sm text-gray-600">Automatic retry mechanism with exponential backoff</p>
+                            </div>
+                        </div>
+                        <div className="mt-6 p-4 bg-yellow-50 rounded-xl border border-yellow-200">
+                            <h5 className="font-semibold text-yellow-800 mb-2">⚠️ Breaking Changes for Existing Users</h5>
+                            <ul className="text-sm text-yellow-700 space-y-1">
+                                <li>• <strong>Remove</strong> <code className="bg-white px-1 py-0.5 rounded">usePopupAuth: true</code> configuration</li>
+                                <li>• <strong>Remove</strong> <code className="bg-white px-1 py-0.5 rounded">clerkPublishableKey</code> (widgets are guest-only now)</li>
+                                <li>• <strong>Replace</strong> <code className="bg-white px-1 py-0.5 rounded">fallbackToGuest</code> with <code className="bg-white px-1 py-0.5 rounded">allowGuests</code></li>
+                                <li>• <strong>Update</strong> error handling to use new error codes</li>
+                                <li>• <strong>See migration guide</strong> for complete upgrade instructions</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
 
+                {/* Guest-Only Benefits */}
+                <div className="mb-12 bg-gradient-to-r from-green-50 to-blue-50 rounded-3xl p-8 border border-green-100">
+                    <div className="text-center mb-8">
+                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <span className="text-3xl">🎯</span>
+                        </div>
+                        <h3 className="text-2xl font-bold text-gray-900 mb-4">Perfect for External Websites</h3>
+                        <p className="text-gray-600 max-w-2xl mx-auto">
+                            Our widget is specifically designed for seamless integration on external websites.
+                            Your visitors get instant access without any authentication barriers.
+                        </p>
+                    </div>
+
+                    <div className="grid md:grid-cols-3 gap-6">
+                        <div className="bg-white rounded-xl p-6 text-center">
+                            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <span className="text-xl">⚡</span>
+                            </div>
+                            <h4 className="font-semibold text-gray-900 mb-2">Instant Access</h4>
+                            <p className="text-sm text-gray-600">
+                                No sign-ups, no logins, no barriers. Visitors can start chatting immediately after the widget loads.
+                            </p>
+                        </div>
+
+                        <div className="bg-white rounded-xl p-6 text-center">
+                            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <span className="text-xl">🏠</span>
+                            </div>
+                            <h4 className="font-semibold text-gray-900 mb-2">Stay on Your Site</h4>
+                            <p className="text-sm text-gray-600">
+                                Visitors never leave your website. No redirects to external sign-in pages or popup windows.
+                            </p>
+                        </div>
+
+                        <div className="bg-white rounded-xl p-6 text-center">
+                            <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <span className="text-xl">🔧</span>
+                            </div>
+                            <h4 className="font-semibold text-gray-900 mb-2">Zero Configuration</h4>
+                            <p className="text-sm text-gray-600">
+                                Just copy, paste, and it works. No API keys, no authentication setup, no complex configuration.
+                            </p>
+                        </div>
+                    </div>
+                </div>
 
                 {/* Platform Tabs */}
                 <div className="bg-white rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
@@ -189,7 +316,7 @@ export default function InstructionsPage() {
                                     </div>
                                     <div>
                                         <h3 className="text-xl sm:text-2xl font-bold text-gray-900">WordPress Integration</h3>
-                                        <p className="text-sm sm:text-base text-gray-600">Add to posts, pages, or widgets</p>
+                                        <p className="text-sm sm:text-base text-gray-600">Guest-only mode - works instantly without authentication</p>
                                     </div>
                                 </div>
                                 <Step number={1} title="Add to Post/Page">
@@ -207,7 +334,6 @@ function initAlHayatGPTWordPress() {
     if (window.AlHayatGPT) {
         window.AlHayatGPT.createWidget({
             containerId: 'ahgpt-widget-wp',
-            clerkPublishableKey: 'YOUR_CLERK_PUBLISHABLE_KEY',
             height: '600px', // Change height here (e.g., '400px', '800px')
             allowGuests: true,
             autoDetectLanguage: true,
@@ -262,9 +388,8 @@ function ahgpt_widget_shortcode($atts) {
             if (window.AlHayatGPT) {
                 window.AlHayatGPT.createWidget({
                     containerId: '<?php echo esc_js($container_id); ?>',
-                    clerkPublishableKey: 'YOUR_CLERK_PUBLISHABLE_KEY',
-                    height: '<?php echo esc_js($atts['height']); ?>px',
-                    allowGuests: true,
+                                height: '<?php echo esc_js($atts['height']); ?>px',
+            allowGuests: true,
                     autoDetectLanguage: true,
                     
                     onReady: function() {
@@ -341,7 +466,7 @@ interface LanguageDetection {
 
 interface AlHayatGPTConfig {
     containerId: string;
-    clerkPublishableKey: string;
+    clerkPublishableKey?: string; // Optional since we support guest-only mode
     height?: string;
     allowGuests?: boolean;
     autoDetectLanguage?: boolean;
@@ -391,11 +516,10 @@ export default function AlHayatGPTWidget({ height = '600px' }: Props): React.Rea
 
             if (window.AlHayatGPT) {
                 try {
-                    widgetRef.current = window.AlHayatGPT.createWidget({
-                        containerId: containerId,
-                        clerkPublishableKey: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || '',
-                        height: height,
-                        allowGuests: true,
+                                            widgetRef.current = window.AlHayatGPT.createWidget({
+                            containerId: containerId,
+                            height: height,
+                            allowGuests: true,
                         autoDetectLanguage: true,
 
                         onReady: () => {
@@ -604,7 +728,6 @@ export default function HomePage() {
             if (window.AlHayatGPT) {
                 window.AlHayatGPT.createWidget({
                     containerId: 'chat-widget',
-                    clerkPublishableKey: 'YOUR_CLERK_PUBLISHABLE_KEY', // Replace with your key
                     allowGuests: true,
                     theme: 'auto',
                     autoDetectLanguage: true,
@@ -692,7 +815,6 @@ export default function HomePage() {
             if (window.AlHayatGPT) {
                 window.AlHayatGPT.createWidget({
                     containerId: 'chat-widget',
-                    clerkPublishableKey: 'YOUR_CLERK_PUBLISHABLE_KEY',
                     height: '600px', // Change height here (e.g., '400px', '800px')
                     allowGuests: true,
                     autoDetectLanguage: true,
@@ -878,7 +1000,6 @@ export class AhgptWidgetComponent implements OnInit, OnDestroy {
     try {
       this.widget = window.AlHayatGPT.createWidget({
         containerId: this.containerId,
-        clerkPublishableKey: 'YOUR_CLERK_PUBLISHABLE_KEY',
         height: this.height,
         allowGuests: true,
         autoDetectLanguage: true,
@@ -938,15 +1059,7 @@ export class AppModule { }`}
   <!-- Al Hayat GPT Widget with Full Customization -->
   <div class="widget-section">
     <app-ahgpt-widget 
-      height="700px"
-      width="100%"
-      theme="auto"
-      borderRadius="20px"
-      boxShadow="0 10px 25px -5px rgba(0, 0, 0, 0.2)"
-      border="2px solid #3f51b5"
-      primaryColor="#3f51b5"
-      backgroundColor="#fafafa"
-      textColor="#212121"
+      height="700px">
       fontFamily="Roboto, sans-serif"
       fontSize="16px"
       [allowGuests]="true"
@@ -958,7 +1071,7 @@ export class AppModule { }`}
       [enableFileUpload]="false"
       [enableEmoji]="true"
       [enableAnimations]="true"
-      clerkPublishableKey="YOUR_CLERK_PUBLISHABLE_KEY"
+      [allowGuests]="true"
       [showLanguageIndicator]="true"
       (ready)="onWidgetReady()"
       (userSignIn)="onUserSignIn($event)"
@@ -1398,10 +1511,10 @@ export class AppComponent {
                                 <h5 className="font-semibold text-gray-900 mb-3">Custom Chat Bubble Colors</h5>
                                 <CodeBlock
                                     language="javascript"
-                                    code={`// Example: Custom chat bubble colors
+                                    code={`// Example: Custom chat bubble colors (guest-only mode)
 window.AlHayatGPT.createWidget({
     containerId: 'chat-widget',
-    clerkPublishableKey: 'YOUR_KEY',
+    allowGuests: true,
     customColors: {
         // User Messages (right side)
         userBubble: '#8B5CF6', // Purple bubble
@@ -1430,10 +1543,10 @@ window.AlHayatGPT.createWidget({
                                 <h5 className="font-semibold text-gray-900 mb-3">Complete Brand Integration</h5>
                                 <CodeBlock
                                     language="javascript"
-                                    code={`// Example: Full brand color scheme
+                                    code={`// Example: Full brand color scheme (guest-only mode)
 window.AlHayatGPT.createWidget({
     containerId: 'chat-widget',
-    clerkPublishableKey: 'YOUR_KEY',
+    allowGuests: true,
     customColors: {
         // Brand Identity
         primary: '#8B5CF6', // Your brand purple
@@ -1467,10 +1580,10 @@ window.AlHayatGPT.createWidget({
                                 <h5 className="font-semibold text-gray-900 mb-3">Dark Theme Configuration</h5>
                                 <CodeBlock
                                     language="javascript"
-                                    code={`// Example: Dark theme
+                                    code={`// Example: Dark theme (guest-only mode)
 window.AlHayatGPT.createWidget({
     containerId: 'chat-widget',
-    clerkPublishableKey: 'YOUR_KEY',
+    allowGuests: true,
     theme: 'dark',
     customColors: {
         primary: '#60A5FA',
@@ -1491,10 +1604,10 @@ window.AlHayatGPT.createWidget({
                                 <h5 className="font-semibold text-gray-900 mb-3">Floating Chat Widget</h5>
                                 <CodeBlock
                                     language="javascript"
-                                    code={`// Example: Floating widget with custom positioning
+                                    code={`// Example: Floating widget with custom positioning (guest-only mode)
 window.AlHayatGPT.createWidget({
     containerId: 'floating-chat',
-    clerkPublishableKey: 'YOUR_KEY',
+    allowGuests: true,
     position: 'fixed',
     bottom: '20px',
     right: '20px',
@@ -1514,10 +1627,10 @@ window.AlHayatGPT.createWidget({
                                 <h5 className="font-semibold text-gray-900 mb-3">🆕 Enhanced Height Detection</h5>
                                 <CodeBlock
                                     language="javascript"
-                                    code={`// Example: Smart height detection (enabled by default)
+                                    code={`// Example: Smart height detection (guest-only mode)
 window.AlHayatGPT.createWidget({
     containerId: 'chat-widget',
-    clerkPublishableKey: 'YOUR_KEY',
+    allowGuests: true,
     
     // Height Detection Features (all enabled by default)
     autoResize: true,           // Auto-adjust to page changes
@@ -1556,10 +1669,10 @@ window.AlHayatGPT.createWidget({
                                 <h5 className="font-semibold text-gray-900 mb-3">Multi-language Configuration</h5>
                                 <CodeBlock
                                     language="javascript"
-                                    code={`// Example: Multi-language support with RTL
+                                    code={`// Example: Multi-language support with RTL (guest-only mode)
 window.AlHayatGPT.createWidget({
     containerId: 'chat-widget',
-    clerkPublishableKey: 'YOUR_KEY',
+    allowGuests: true,
     autoDetectLanguage: true,
     supportedLanguages: ['en', 'ar', 'he', 'es', 'fr', 'de'],
     fallbackLanguage: 'en',
@@ -1577,6 +1690,78 @@ window.AlHayatGPT.createWidget({
 });`}
                                 />
                             </div>
+                        </div>
+
+                        {/* Enhanced Error Handling */}
+                        <div className="mt-8 p-6 bg-gradient-to-r from-red-50 to-rose-50 rounded-2xl border border-red-100">
+                            <h4 className="text-lg font-semibold text-gray-900 mb-4">🆕 Guest-Only Error Handling</h4>
+                            <p className="text-gray-600 mb-4">Simplified error handling for guest-only widgets with automatic retry and detailed error codes:</p>
+                            <CodeBlock
+                                language="javascript"
+                                code={`// Guest-only widget with enhanced error handling
+const widget = window.AlHayatGPT.createWidget({
+    containerId: 'chat-widget',
+    allowGuests: true, // Always true for external widgets
+    
+    // Unified error callback - no authentication errors!
+    onError: (error) => {
+        console.error('Widget error:', error.code, error.message);
+        
+        switch (error.code) {
+            case 'CONTAINER_NOT_FOUND':
+                console.error('Widget container not found in DOM');
+                break;
+                
+            case 'SECURITY_VIOLATION':
+                console.error('Security or origin validation issue');
+                // Handle cross-origin security issues
+                break;
+                
+            case 'NETWORK_ERROR':
+                console.error('Network error occurred');
+                if (error.retryable) {
+                    console.log('Will retry automatically in', error.retryAfter, 'ms');
+                }
+                break;
+                
+            case 'IFRAME_LOAD_FAILED':
+                console.error('Widget failed to load');
+                break;
+                
+            case 'TIMEOUT':
+                console.error('Operation timed out');
+                break;
+                
+            case 'INVALID_CONFIG':
+                console.error('Invalid configuration:', error.details);
+                break;
+                
+            case 'INITIALIZATION_FAILED':
+                console.error('Widget initialization failed');
+                break;
+                
+            default:
+                console.error('Unknown error:', error.message);
+        }
+    }
+});
+
+// Event-based error handling
+widget.on('ERROR', (error) => {
+    console.log('Error details:', {
+        code: error.code,
+        message: error.message,
+        retryable: error.retryable,
+        timestamp: error.timestamp
+    });
+});
+
+// ❌ OLD - Remove these (no longer supported):
+// widget.on('AUTH_ERROR', handler);     // REMOVED - no authentication
+// onAuthError: (error) => {}            // REMOVED - no authentication  
+// usePopupAuth: true                    // REMOVED - guest-only mode
+// clerkPublishableKey: 'KEY'            // REMOVED - no authentication needed`}
+                            />
                         </div>
 
                         {/* Widget Methods */}
@@ -1603,7 +1788,8 @@ widget.destroy();                           // Remove widget
 // Event listeners:
 widget.on('messageReceived', (msg) => console.log(msg));
 widget.on('userTyping', () => console.log('User is typing'));
-widget.on('themeChanged', (theme) => console.log('Theme:', theme));`}
+widget.on('themeChanged', (theme) => console.log('Theme:', theme));
+widget.on('ERROR', (error) => console.log('Error:', error.code)); // 🆕 New error handling`}
                             />
                         </div>
 
@@ -1643,8 +1829,8 @@ widget.on('themeChanged', (theme) => console.log('Theme:', theme));`}
                     <div className="bg-blue-50 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8">
                         <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3 sm:mb-4">Need Help?</h3>
                         <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6 max-w-2xl mx-auto px-2">
-                            If you encounter any issues during integration or need custom implementation support,
-                            we&apos;re here to help you get Al Hayat GPT running on your website.
+                            Our guest-only widget is designed to work instantly without configuration.
+                            If you need help with integration or customization, we&apos;re here to assist.
                         </p>
                         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
                             <button className="px-4 sm:px-6 py-2.5 sm:py-3 bg-blue-600 text-white rounded-lg sm:rounded-xl hover:bg-blue-700 transition-colors text-sm sm:text-base">

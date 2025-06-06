@@ -76,27 +76,19 @@ function MultilingualWelcome() {
     );
 }
 
-// Centralized Auth Helper
-function getToken() {
-    const urlToken = new URLSearchParams(window.location.search).get('token');
-    if (urlToken) {
-        localStorage.setItem('ahgpt_token', urlToken);
-        // Remove token from URL for cleanliness
-        const url = new URL(window.location.href);
-        url.searchParams.delete('token');
-        window.history.replaceState({}, document.title, url.toString());
-        return urlToken;
-    }
-    return localStorage.getItem('ahgpt_token');
-}
-
-// Sign-in functionality removed for widget SDK
+// All authentication functionality removed - widgets operate in guest-only mode
 
 // Global singleton guard to prevent multiple widget instances across the entire page
 let globalWidgetInstance: string | null = null;
 let globalWidgetInitialized = false;
 
+// Prevent widget nesting inside iframes
+const isEmbeddedWidget = typeof window !== 'undefined' && window.parent !== window;
+
 function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] }) {
+    // Prevent infinite nesting if widget is loaded inside another widget
+    const [isNested, setIsNested] = useState(false);
+
     // Unique instance ID for this widget
     const instanceId = useRef<string>(`widget_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
     const isActiveInstance = useRef<boolean>(false);
@@ -118,10 +110,49 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
         theme: 'auto',
         allowGuests: true
     });
-    const [isGuestMode, setIsGuestMode] = useState(false);
+    const [isGuestMode, setIsGuestMode] = useState(true); // Always guest mode for external widgets
 
-    // Global singleton mounting guard - ensures only ONE widget exists across the entire page
+    // Check for infinite nesting - prevent widget from loading inside itself
     useEffect(() => {
+        const checkNesting = () => {
+            if (typeof window === 'undefined') return false;
+
+            try {
+                // Check if we're in an iframe that contains a widget
+                let currentWindow: Window = window;
+                let depth = 0;
+                const maxDepth = 5; // Prevent infinite loops
+
+                while (currentWindow !== currentWindow.parent && depth < maxDepth) {
+                    currentWindow = currentWindow.parent as Window;
+                    depth++;
+
+                    // Check if parent window has Al Hayat GPT widget elements
+                    try {
+                        const hasWidget = currentWindow.document.querySelector('[id*="chat-widget"], [id*="ahgpt-widget"], iframe[src*="widget/chat"]');
+                        if (hasWidget) {
+                            console.warn('[Widget] Detected widget nesting - preventing infinite loop');
+                            return true;
+                        }
+                    } catch (e) {
+                        // Cross-origin access blocked - this is normal for embedded widgets
+                        break;
+                    }
+                }
+
+                return false;
+            } catch (error) {
+                console.warn('[Widget] Error checking for nesting:', error);
+                return false;
+            }
+        };
+
+        if (checkNesting()) {
+            setIsNested(true);
+            return;
+        }
+
+        // Global singleton mounting guard - ensures only ONE widget exists across the entire page
         // Check if another widget instance is already active
         if (globalWidgetInitialized && globalWidgetInstance && globalWidgetInstance !== instanceId.current) {
             console.log(`[Widget ${instanceId.current}] Another widget instance is already active (${globalWidgetInstance}). Preventing duplicate.`);
@@ -161,19 +192,19 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
     const inputRef = useRef<HTMLInputElement>(null);
     const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Get user info from current chat context
-    const firstName = currentChat?.user?.firstName || user?.firstName || 'Guest';
-    const lastName = currentChat?.user?.lastName || user?.lastName || '';
-    const fullNameInitials = `${firstName[0] || 'G'}${lastName[0] || ''}`;
-    const email = currentChat?.user?.email || user?.emailAddresses?.[0]?.emailAddress || '';
+    // Always use guest info for external widgets
+    const firstName = 'Guest';
+    const lastName = '';
+    const fullNameInitials = 'G';
+    const email = '';
 
     // Detect and store user location using HTML5 Geolocation API (Widget)
     useEffect(() => {
         const detectAndStoreUserLocation = async () => {
             if (userLocationDetected) return;
 
-            // For widget users, use a combination of user ID or generate a session-based ID
-            const userKey = user?.id || currentChat?.user?.clerkId || `guest_${Date.now()}`;
+            // For external widget users, always use session-based guest ID
+            const userKey = `guest_${Date.now()}`;
             const existingLocation = localStorage.getItem(`userLocation_${userKey}`);
 
             // Only detect if we don't have recent VisitorAPI data (or it's older than 24 hours)
@@ -251,7 +282,7 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
         // Delay the location request slightly so the widget loads first
         const timer = setTimeout(detectAndStoreUserLocation, 1000);
         return () => clearTimeout(timer);
-    }, [user?.id, currentChat?.user?.clerkId, userLocationDetected, parentOrigin]);
+    }, [userLocationDetected, parentOrigin]);
 
     // Consolidated widget initialization - SINGLE useEffect to prevent multiple mounting
     useEffect(() => {
@@ -301,25 +332,9 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
             // Send ready message
             sendMessage({ type: 'WIDGET_READY' });
 
-            // Send authentication status
-            const token = getToken();
-            const isAuthenticated = !!token || !!user;
-
-            if (user || token) {
-                sendMessage({
-                    type: 'USER_SIGNED_IN',
-                    payload: {
-                        id: user?.id || 'token-user',
-                        firstName: user?.firstName || 'User',
-                        lastName: user?.lastName || '',
-                        email: user?.emailAddresses?.[0]?.emailAddress || ''
-                    }
-                });
-                setIsGuestMode(false);
-            } else {
-                sendMessage({ type: 'USER_SIGNED_OUT' });
-                setIsGuestMode(true);
-            }
+            // Always operate in guest mode for external widgets
+            sendMessage({ type: 'USER_SIGNED_OUT' });
+            setIsGuestMode(true);
 
             // Listen for messages from parent (only once)
             const handleMessage = (event: MessageEvent) => {
@@ -437,12 +452,10 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
 
                     // Submit the question automatically
                     try {
-                        const token = getToken();
                         const response = await fetch('/api/chat', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
-                                ...(token && { Authorization: `Bearer ${token}` }),
                             },
                             body: JSON.stringify({
                                 messages: [...(currentChat?.messages || []), userMessage].map(msg => ({
@@ -594,12 +607,10 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
         trackChatEvent('SEND_MESSAGE', `Widget message length: ${currentInput.length}`);
 
         try {
-            const token = getToken();
             const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    ...(token && { Authorization: `Bearer ${token}` }),
                 },
                 body: JSON.stringify({
                     messages: [...(currentChat?.messages || []), userMessage].map(msg => ({
@@ -771,13 +782,30 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
         });
     }
 
-    const token = getToken();
-    const isAuthenticated = !!token || !!user;
-
-    // Update guest mode based on authentication status
+    // Always remain in guest mode for external widgets
     useEffect(() => {
-        setIsGuestMode(!isAuthenticated);
-    }, [isAuthenticated]);
+        setIsGuestMode(true);
+    }, []);
+
+    // Handle nested widget detection
+    if (isNested) {
+        return (
+            <div className="flex items-center justify-center h-96 p-6">
+                <div className="text-center max-w-sm">
+                    <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span className="text-2xl">⚠️</span>
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Widget Nesting Detected</h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                        This widget is already embedded on this page. Multiple instances have been prevented to avoid conflicts.
+                    </p>
+                    <p className="text-xs text-gray-500">
+                        If you need help with widget integration, contact support at alhayatgpt.com
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
     // Don't render until component is properly mounted AND this is the active instance
     if (!isMounted || !isWidgetReady || !isActiveInstance.current) {
@@ -831,11 +859,6 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
                             <p className="text-xs text-gray-600 leading-relaxed">
                                 Start a conversation by typing your message below.
                             </p>
-                            {false && isGuestMode && (
-                                <p className="text-xs text-blue-600 mt-2 italic">
-                                    Currently in guest mode - conversations won&apos;t be saved.
-                                </p>
-                            )}
                         </div>
                     </div>
                 )}
@@ -862,7 +885,7 @@ function WidgetChatPage({ user }: { user?: ReturnType<typeof useUser>['user'] })
                             >
                                 <div className={`flex items-center gap-2 mb-1 ${isRTL ? 'justify-end' : 'justify-start'}`}>
                                     <span className={`text-xs font-medium ${m.role === "user" ? "text-blue-100" : "text-gray-500"}`}>
-                                        {m.role === "user" ? (isGuestMode ? "Guest" : "You") : "Assistant"}
+                                        {m.role === "user" ? "Guest" : "Assistant"}
                                     </span>
                                     {m.role === "user" && location && location.country !== 'Unknown' && location.countryCode && (
                                         <span className="text-xs" title={`From ${location.country}`}>

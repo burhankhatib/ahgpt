@@ -330,9 +330,10 @@ export class AlHayatGPTWidget {
     widgetUrl.searchParams.set('allowGuests', this.config.allowGuests.toString());
     widgetUrl.searchParams.set('nonce', this.nonce);
     
-    if (this.config.clerkPublishableKey) {
-      widgetUrl.searchParams.set('clerkKey', this.config.clerkPublishableKey);
-    }
+    // Remove clerk key for external widgets - they should remain guest-only
+    // if (this.config.clerkPublishableKey) {
+    //   widgetUrl.searchParams.set('clerkKey', this.config.clerkPublishableKey);
+    // }
 
     // Enhanced security
     widgetUrl.searchParams.set('parentOrigin', window.location.origin);
