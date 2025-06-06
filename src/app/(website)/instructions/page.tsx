@@ -152,11 +152,12 @@ export default function InstructionsPage() {
                                     </div>
                                     <div className="text-left">
                                         <h3 className="text-lg font-semibold text-blue-900 mb-2">
-                                            🚀 SDK v2.0 - Complete Rebuild with Guest-Only Mode
+                                            🚨 FIXED: 404 Error Issue Resolved
                                         </h3>
                                         <p className="text-blue-800 mb-3">
-                                            <strong>Brand new SDK v2.0:</strong> Completely rebuilt from scratch with guest-only mode, source tracking,
-                                            language detection, and 32% smaller bundle size. Zero authentication required - just works instantly.
+                                            <strong>Issue resolved:</strong> The 404 errors on external websites have been fixed!
+                                            SDK v2.0 now operates in pure guest-only mode with zero authentication dependencies.
+                                            Simply update your SDK URL to start working immediately.
                                         </p>
                                         <div className="flex flex-col sm:flex-row gap-3">
                                             <Link
@@ -282,6 +283,51 @@ export default function InstructionsPage() {
                                 Just copy, paste, and it works. No API keys, no authentication setup, no complex configuration.
                             </p>
                         </div>
+                    </div>
+                </div>
+
+                {/* 404 Error Fix */}
+                <div className="mb-12 bg-red-50 rounded-3xl p-8 border border-red-200">
+                    <div className="text-center mb-8">
+                        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <span className="text-3xl">🚨</span>
+                        </div>
+                        <h3 className="text-2xl font-bold text-gray-900 mb-4">Experiencing 404 Errors? Fixed!</h3>
+                        <p className="text-gray-600 max-w-2xl mx-auto">
+                            The 404 error issue has been completely resolved. Update to SDK v2.0 for instant fixes.
+                        </p>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-6">
+                        <div className="bg-white rounded-xl p-6">
+                            <h4 className="font-semibold text-red-900 mb-3">❌ Old Version (Causes 404s)</h4>
+                            <code className="text-sm bg-gray-100 px-2 py-1 rounded block mb-2 text-red-600">
+                                widget-sdk.min.js
+                            </code>
+                            <p className="text-sm text-gray-600">
+                                The old SDK had authentication dependencies that caused 404 errors on external websites.
+                            </p>
+                        </div>
+
+                        <div className="bg-white rounded-xl p-6">
+                            <h4 className="font-semibold text-green-900 mb-3">✅ New Version (Works Perfectly)</h4>
+                            <code className="text-sm bg-gray-100 px-2 py-1 rounded block mb-2 text-green-600">
+                                widget-sdk-v2.min.js
+                            </code>
+                            <p className="text-sm text-gray-600">
+                                SDK v2.0 operates in pure guest-only mode with zero authentication dependencies.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="mt-6 p-4 bg-green-100 rounded-xl border border-green-200">
+                        <h5 className="font-semibold text-green-800 mb-2">🎯 Quick Fix Instructions</h5>
+                        <ol className="text-sm text-green-700 space-y-1 list-decimal list-inside">
+                            <li>Replace <code className="bg-white px-1 py-0.5 rounded">widget-sdk.min.js</code> with <code className="bg-white px-1 py-0.5 rounded">widget-sdk-v2.min.js</code></li>
+                            <li>Add required <code className="bg-white px-1 py-0.5 rounded">height</code> parameter to your config</li>
+                            <li>Remove any <code className="bg-white px-1 py-0.5 rounded">clerkPublishableKey</code> parameters</li>
+                            <li>Test - it should work instantly without 404 errors!</li>
+                        </ol>
                     </div>
                 </div>
 
@@ -560,7 +606,7 @@ export default function AlHayatGPTWidget({ height = '600px' }: Props): React.Rea
 
         // Create and load the script
         const script = document.createElement('script');
-        script.src = 'https://www.alhayatgpt.com/widget-sdk.min.js';
+        script.src = 'https://www.alhayatgpt.com/widget-sdk-v2.min.js';
         script.async = true;
         scriptRef.current = script;
 
@@ -718,16 +764,13 @@ export default function HomePage() {
         <div id="chat-widget" class="ahgpt-widget"></div>
     </div>
 
-    <script src="https://www.alhayatgpt.com/widget-sdk.min.js" async></script>
+    <script src="https://www.alhayatgpt.com/widget-sdk-v2.min.js" async></script>
     <script>
         function initAlHayatGPT() {
             if (window.AlHayatGPT) {
                 window.AlHayatGPT.createWidget({
                     containerId: 'chat-widget',
-                    allowGuests: true,
-                    theme: 'auto',
-                    autoDetectLanguage: true,
-                    defaultDirection: 'auto',
+                    height: '600px',
                     
                     onReady: function() {
                         console.log('Al Hayat GPT widget ready with language detection');
@@ -805,15 +848,13 @@ export default function HomePage() {
     <!-- Al Hayat GPT Widget -->
     <div id="chat-widget" style="width: 100%; height: 600px;"></div>
 
-    <script src="https://www.alhayatgpt.com/widget-sdk.min.js" async></script>
+    <script src="https://www.alhayatgpt.com/widget-sdk-v2.min.js" async></script>
     <script>
         function initAlHayatGPT() {
             if (window.AlHayatGPT) {
                 window.AlHayatGPT.createWidget({
                     containerId: 'chat-widget',
-                    height: '600px', // Change height here (e.g., '400px', '800px')
-                    allowGuests: true,
-                    autoDetectLanguage: true,
+                    height: '600px', // Required height parameter
                     
                     onReady: function() {
                         console.log('Widget is ready');
@@ -935,7 +976,7 @@ export class AhgptWidgetComponent implements OnInit, OnDestroy {
     }
 
     // Check if script is already being loaded or exists
-    const existingScript = document.querySelector('script[src="https://www.alhayatgpt.com/widget-sdk.min.js"]');
+    const existingScript = document.querySelector('script[src="https://www.alhayatgpt.com/widget-sdk-v2.min.js"]');
     if (existingScript) {
       // Script exists, wait for it to load or try initializing if already loaded
       if (window.AlHayatGPT) {
@@ -953,7 +994,7 @@ export class AhgptWidgetComponent implements OnInit, OnDestroy {
 
     // Create and load the script
     const script = document.createElement('script');
-    script.src = 'https://www.alhayatgpt.com/widget-sdk.min.js';
+    script.src = 'https://www.alhayatgpt.com/widget-sdk-v2.min.js';
     script.async = true;
     
     const handleScriptLoad = () => {
@@ -997,8 +1038,6 @@ export class AhgptWidgetComponent implements OnInit, OnDestroy {
       this.widget = window.AlHayatGPT.createWidget({
         containerId: this.containerId,
         height: this.height,
-        allowGuests: true,
-        autoDetectLanguage: true,
 
         onReady: () => {
           console.log('Al Hayat GPT widget ready in Angular');
