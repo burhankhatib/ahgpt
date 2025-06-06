@@ -260,21 +260,8 @@ export class AlHayatGPTWidget {
   }
   
   private getWidgetUrl(): string {
-    // Use the current domain for the widget URL
-    const protocol = window.location.protocol;
-    const hostname = window.location.hostname;
-    const port = window.location.port;
-    
-    let baseUrl;
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      // Development environment
-      baseUrl = `${protocol}//${hostname}${port ? `:${port}` : ''}`;
-    } else {
-      // Production - use the main domain
-      baseUrl = 'https://alhayatgpt.com';
-    }
-    
-    return `${baseUrl}/widget/chat`;
+    // Always use the production widget domain - never use the embedding site's domain
+    return 'https://www.alhayatgpt.com/widget/chat';
   }
   
   private setupMessageHandling(): void {
