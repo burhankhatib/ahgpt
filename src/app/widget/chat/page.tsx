@@ -46,6 +46,55 @@ function FallbackWidget() {
     const [messages, setMessages] = useState<Array<{ role: string, content: string, timestamp: Date }>>([]);
     const [isLoading, setIsLoading] = useState(false);
 
+    // Load external CSS from alhayatgpt.com
+    React.useEffect(() => {
+        const loadExternalCSS = () => {
+            const existingLink = document.querySelector('#alhayat-external-css');
+            if (existingLink) return;
+
+            try {
+                const link = document.createElement('link');
+                link.id = 'alhayat-external-css';
+                link.rel = 'stylesheet';
+                link.type = 'text/css';
+                link.href = 'https://alhayatgpt.com/api/globals.css';
+                link.crossOrigin = 'anonymous';
+
+                link.onload = () => console.log('✅ External CSS loaded in fallback widget');
+                link.onerror = () => console.warn('⚠️ Failed to load external CSS in fallback widget');
+
+                document.head.appendChild(link);
+            } catch (error) {
+                console.error('Error loading external CSS in fallback:', error);
+            }
+        };
+
+        loadExternalCSS();
+    }, []);
+
+    // Handle clickable questions in fallback widget
+    React.useEffect(() => {
+        const handleQuestionClick = (e: MouseEvent) => {
+            const button = e.target as HTMLElement;
+            if (button.dataset.question === "true") {
+                const questionText = button.textContent;
+                if (questionText && !isLoading) {
+                    setInput(questionText);
+                    setTimeout(() => {
+                        const form = document.querySelector('form');
+                        if (form) {
+                            const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
+                            form.dispatchEvent(submitEvent);
+                        }
+                    }, 100);
+                }
+            }
+        };
+
+        document.addEventListener('click', handleQuestionClick);
+        return () => document.removeEventListener('click', handleQuestionClick);
+    }, [setInput, isLoading]);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!input.trim() || isLoading) return;
@@ -156,7 +205,12 @@ function FallbackWidget() {
                             </div>
                             <div className="text-sm">
                                 {m.role === "assistant" ? (
-                                    <div dangerouslySetInnerHTML={{ __html: m.content }} />
+                                    <div className="chat-message-content">
+                                        <div
+                                            className="prose-sm max-w-none"
+                                            dangerouslySetInnerHTML={{ __html: m.content }}
+                                        />
+                                    </div>
                                 ) : (
                                     <div className="whitespace-pre-line break-words">{m.content}</div>
                                 )}
@@ -256,6 +310,66 @@ function WidgetChatPage() {
             </div>
         ),
     };
+
+    // Load external CSS from alhayatgpt.com
+    useEffect(() => {
+        const loadExternalCSS = () => {
+            // Check if CSS is already loaded
+            const existingLink = document.querySelector('#alhayat-external-css');
+            if (existingLink) return;
+
+            try {
+                const link = document.createElement('link');
+                link.id = 'alhayat-external-css';
+                link.rel = 'stylesheet';
+                link.type = 'text/css';
+                link.href = 'https://alhayatgpt.com/api/globals.css';
+                link.crossOrigin = 'anonymous';
+
+                link.onload = () => {
+                    console.log('✅ External CSS loaded successfully from alhayatgpt.com');
+                };
+
+                link.onerror = () => {
+                    console.warn('⚠️ Failed to load external CSS from alhayatgpt.com');
+                };
+
+                document.head.appendChild(link);
+                console.log('🎨 Loading external CSS from alhayatgpt.com...');
+            } catch (error) {
+                console.error('Error loading external CSS:', error);
+            }
+        };
+
+        loadExternalCSS();
+    }, []);
+
+    // Handle clicking on AI-generated messageButton elements (clickable questions)
+    useEffect(() => {
+        const handleQuestionClick = (e: MouseEvent) => {
+            const button = e.target as HTMLElement;
+            if (button.dataset.question === "true") {
+                const questionText = button.textContent;
+                if (questionText && !isLoading) {
+                    console.log('🔵 Clicked on AI-generated question:', questionText);
+                    setInput(questionText);
+
+                    // Submit the form after a short delay
+                    setTimeout(() => {
+                        const form = document.querySelector('form');
+                        if (form) {
+                            const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
+                            form.dispatchEvent(submitEvent);
+                            console.log('✅ Auto-submitted question as user input');
+                        }
+                    }, 100);
+                }
+            }
+        };
+
+        document.addEventListener('click', handleQuestionClick);
+        return () => document.removeEventListener('click', handleQuestionClick);
+    }, [setInput, isLoading]);
 
     // Simplified initialization
     useEffect(() => {
@@ -462,6 +576,30 @@ function WidgetChatPage() {
         }
     };
 
+    // Sanitize HTML content to protect against XSS
+    const sanitizeHtml = (html: string) => {
+        // Simple HTML sanitization - remove script tags and dangerous attributes
+        return html
+            .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+            .replace(/on\w+="[^"]*"/g, '')
+            .replace(/javascript:/gi, '');
+    };
+
+    // Process message content for proper styling and clickable questions
+    const processMessageContent = (content: string) => {
+        // Remove any markdown code blocks that might slip through
+        let processedContent = content
+            .replace(/```html\s*/g, '')
+            .replace(/```\s*/g, '')
+            .replace(/`{3,}/g, '');
+
+        // Sanitize the HTML content
+        processedContent = sanitizeHtml(processedContent);
+
+        console.log('📝 Processed and sanitized AI message content');
+        return processedContent;
+    };
+
     // Simple copy function
     const copyMessage = async (messageContent: string, messageId: string) => {
         try {
@@ -593,9 +731,12 @@ function WidgetChatPage() {
 
                                 <div className={`text-sm ${getFontClass ? getFontClass() : ''}`}>
                                     {m.role === "assistant" ? (
-                                        <div>
+                                        <div className="chat-message-content">
                                             {m.content ? (
-                                                <div dangerouslySetInnerHTML={{ __html: m.content }} />
+                                                <div
+                                                    className="prose-sm max-w-none"
+                                                    dangerouslySetInnerHTML={{ __html: processMessageContent(m.content) }}
+                                                />
                                             ) : (
                                                 <div className="text-gray-500 italic">No response received</div>
                                             )}
