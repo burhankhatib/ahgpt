@@ -273,10 +273,12 @@ export default function StatsDashboard() {
             totalChats: filteredChats.length,
             totalMessages: 0,
             chatsWithLocation: 0,
+            uniqueCountries: 0,
             websiteUsers: 0,
             sdkUsers: 0,
             languages: {} as Record<string, number>,
             countries: {} as Record<string, number>,
+            uniqueCountriesSet: new Set<string>(),
             websites: {} as Record<string, number>,
             recentChats: [] as {
                 question: string;
@@ -338,6 +340,8 @@ export default function StatsDashboard() {
             // Only count countries from chats with valid Sanity location data (grouped by normalized country name)
             if (hasValidLocation) {
                 stats.countries[normalizedCountry] = (stats.countries[normalizedCountry] || 0) + 1;
+                // Track unique countries
+                stats.uniqueCountriesSet.add(normalizedCountry);
             }
 
             // Collect recent chats (user messages) with language and location data
@@ -396,6 +400,9 @@ export default function StatsDashboard() {
         // Sort recent chats by timestamp (most recent first) and take top 5
         stats.recentChats.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
         stats.recentChats = stats.recentChats.slice(0, 5);
+
+        // Calculate final unique countries count
+        stats.uniqueCountries = stats.uniqueCountriesSet.size;
 
         return stats;
     }, [filteredChats, detectedLanguages]);
@@ -477,10 +484,10 @@ export default function StatsDashboard() {
                         icon="📝"
                     />
                     <StatCard
-                        title="With Location Data"
-                        value={(statistics?.chatsWithLocation || 0).toLocaleString()}
-                        subtitle={`${statistics?.totalChats > 0 ? Math.round((statistics.chatsWithLocation / statistics.totalChats) * 100) : 0}% of total`}
-                        icon="📍"
+                        title="Unique Countries"
+                        value={(statistics?.uniqueCountries || 0).toLocaleString()}
+                        subtitle={`${statistics?.chatsWithLocation || 0} chats with location data`}
+                        icon="🌍"
                     />
 
                     {/* Second Row */}
@@ -586,8 +593,8 @@ export default function StatsDashboard() {
                     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                             <span className="mr-2">🗺️</span>
-                            Top Countries
-                            <span className="ml-2 text-sm text-gray-500">(Grouped by Country)</span>
+                            Chat Distribution by Country
+                            <span className="ml-2 text-sm text-gray-500">(Chat Counts)</span>
                         </h3>
                         <div className="space-y-3">
                             {topCountries.length > 0 ? (
@@ -678,11 +685,11 @@ export default function StatsDashboard() {
                         <div className="text-center">
                             <div className="bg-green-50 rounded-lg p-6">
                                 <div className="text-3xl font-bold text-green-600 mb-2">
-                                    {statistics.chatsWithLocation.toLocaleString()}
+                                    {statistics.uniqueCountries.toLocaleString()}
                                 </div>
-                                <div className="text-gray-600 font-medium">With Location Data</div>
+                                <div className="text-gray-600 font-medium">Unique Countries</div>
                                 <div className="text-sm text-gray-500 mt-1">
-                                    Auto-detected from Sanity
+                                    From {statistics.chatsWithLocation.toLocaleString()} located chats
                                 </div>
                             </div>
                         </div>
