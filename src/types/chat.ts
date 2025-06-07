@@ -1,6 +1,6 @@
 export interface User {
     firstName: string;
-    lastName: string;
+    lastName?: string;
     email: string;
     clerkId: string;
     // Location data
@@ -16,7 +16,7 @@ export interface Message {
     role: 'user' | 'assistant';
     content: string;
     timestamp: Date;
-    uniqueKey?: string;
+    uniqueKey: string;
     // Optional user context for messages (mainly for API calls)
     firstName?: string;
     lastName?: string;
@@ -32,16 +32,31 @@ export interface SanityMessage {
 }
 
 export interface Analytics {
-    viewCount: number;
-    exportCount: number;
+    viewCount?: number;
+    exportCount?: number;
     lastViewedAt?: Date;
 }
 
 export interface SanityAnalytics {
-    viewCount: number;
-    exportCount: number;
+    viewCount?: number;
+    exportCount?: number;
     lastViewedAt?: string;
 }
+
+// User location interface based on UserLocation component
+export interface UserLocation {
+    latitude?: number;
+    longitude?: number;
+    city?: string;
+    region?: string;
+    country?: string;
+    timezone?: string;
+    ip?: string;
+    source: 'geolocation' | 'ip' | 'unknown';
+}
+
+// Supported languages type for auto-detection
+export type DetectedLanguage = 'en' | 'zh' | 'hi' | 'es' | 'ar' | 'fr' | 'bn' | 'pt' | 'ru' | 'id' | 'ur' | 'de' | 'ja' | 'tr' | 'ko' | 'vi' | 'te' | 'mr' | 'ta' | 'th' | 'he' | 'bal' | 'ms' | 'fi' | 'sv' | 'no' | 'da';
 
 export interface Chat {
     _id?: string;
@@ -53,7 +68,8 @@ export interface Chat {
     createdAt: Date;
     updatedAt: Date;
     tags?: string[];
-    language?: 'en' | 'ar' | 'he';
+    detectedLanguage?: DetectedLanguage;
+    location?: UserLocation;
 }
 
 export interface SanityChat {
@@ -67,7 +83,8 @@ export interface SanityChat {
     createdAt: string;
     updatedAt: string;
     tags?: string[];
-    language?: 'en' | 'ar' | 'he';
+    detectedLanguage?: DetectedLanguage;
+    location?: UserLocation;
 }
 
 export function convertSanityChatToChat(sanityChat: SanityChat): Chat {
@@ -86,6 +103,7 @@ export function convertSanityChatToChat(sanityChat: SanityChat): Chat {
         createdAt: new Date(sanityChat.createdAt),
         updatedAt: new Date(sanityChat.updatedAt),
         tags: sanityChat.tags,
-        language: sanityChat.language
+        detectedLanguage: sanityChat.detectedLanguage,
+        location: sanityChat.location
     };
 } 

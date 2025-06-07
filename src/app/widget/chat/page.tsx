@@ -12,8 +12,8 @@ import { Message } from '@/types/chat';
 import { isSanityPermissionError } from '@/utils/sanity-permissions';
 import { Button } from "@/components/ui/button";
 import { redirectToProperDomain, isValidDomain, getApiEndpoint } from '@/utils/domain-config';
-import { useUserLocation } from '@/hooks/useUserLocation';
-import { detectUserLocation, VisitorApiData, getCountryFlag } from '@/utils/visitorApiDetection';
+
+import { detectUserLocation } from '@/utils/chatLocationDetection';
 
 import Link from "next/link";
 import { useChat, Message as VercelMessage } from 'ai/react';
@@ -186,8 +186,7 @@ function WidgetChatPage() {
         };
     }, []); // No dependencies - run only once
 
-    // Location detection for SDK
-    const { location, isLoading: locationLoading } = useUserLocation();
+    // Location detection now handled via VisitorAPI in useEffect below
     const [userLocationDetected, setUserLocationDetected] = useState(false);
 
     const chatRef = useRef<HTMLDivElement>(null);
@@ -208,17 +207,29 @@ function WidgetChatPage() {
         setIsWidgetReady(true);
     }, []);
 
-    // Detect and store user location using HTML5 Geolocation API (Widget)
+    // Detect and store user location using Enhanced Detection with Sanity Sync (Widget)
     useEffect(() => {
         const detectAndStoreUserLocation = async () => {
             if (userLocationDetected) return;
 
-            // For external widget users, always use session-based guest ID
-            const userKey = `guest_${Date.now()}`;
+            // Use the same persistent guest ID that chat creation uses
+            const getGuestId = () => {
+                if (typeof window !== 'undefined') {
+                    let guestId = localStorage.getItem('ahgpt_guest_id');
+                    if (!guestId) {
+                        guestId = `guest_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+                        localStorage.setItem('ahgpt_guest_id', guestId);
+                    }
+                    return guestId;
+                }
+                return `guest_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+            };
+
+            const userKey = getGuestId();
             const existingLocation = localStorage.getItem(`userLocation_${userKey}`);
 
-            // Only detect if we don't have recent VisitorAPI data (or it's older than 24 hours)
-            // Force re-detection for old data that wasn't from VisitorAPI
+            // Only detect if we don't have recent enhanced detection data (or it's older than 24 hours)
+            // Force re-detection for old data that wasn't from enhanced detection
             let shouldDetect = true;
             if (existingLocation) {
                 try {
@@ -227,17 +238,17 @@ function WidgetChatPage() {
                     const now = new Date();
                     const hoursSinceDetection = (now.getTime() - detectedAt.getTime()) / (1000 * 60 * 60);
 
-                    // Only skip if we have recent VisitorAPI data (not old detection methods)
+                    // Only skip if we have recent enhanced detection data (not old detection methods)
                     if (hoursSinceDetection < 24 &&
                         parsed.country !== 'Unknown' &&
-                        parsed.detectionMethod === 'visitorapi') {
+                        (parsed.source === 'widget-enhanced' || parsed.detectionMethod === 'visitorapi')) {
                         shouldDetect = false;
                         setUserLocationDetected(true);
-                        console.log(`📋 [Widget] User ${userKey} has recent VisitorAPI data:`, parsed);
+                        console.log(`📋 [Widget] User ${userKey} has recent enhanced detection data:`, parsed);
                     } else {
-                        // Clear old non-VisitorAPI data to force new detection
+                        // Clear old non-enhanced data to force new detection
                         localStorage.removeItem(`userLocation_${userKey}`);
-                        console.log(`🔄 [Widget] Clearing old location data for user ${userKey} to force VisitorAPI detection`);
+                        console.log(`🔄 [Widget] Clearing old location data for user ${userKey} to force enhanced detection`);
                     }
                 } catch (error) {
                     console.error('[Widget] Error parsing existing location data:', error);
@@ -247,21 +258,21 @@ function WidgetChatPage() {
 
             if (shouldDetect) {
                 try {
-                    console.log(`🌍 [Widget] Detecting location with VisitorAPI for user ${userKey}...`);
+                    console.log(`🌍 [Widget] Detecting location with enhanced detection for user ${userKey}...`);
 
-                    // VisitorAPI doesn't require user permission - works with IP address
-                    const locationData: VisitorApiData | null = await detectUserLocation();
+                    // Primary method: Enhanced location detection with Sanity sync
+                    const locationResult = await detectUserLocation();
 
-                    if (locationData && locationData.country !== 'Unknown') {
+                    if (locationResult.location && locationResult.location.country && locationResult.location.country !== 'Unknown') {
                         const locationToStore = {
-                            ...locationData,
+                            ...locationResult.location,
                             detectedAt: new Date().toISOString(),
                             userKey: userKey,
-                            source: 'widget'
+                            source: 'widget-enhanced'
                         };
 
                         localStorage.setItem(`userLocation_${userKey}`, JSON.stringify(locationToStore));
-                        console.log(`✅ [Widget] VisitorAPI location stored for user ${userKey}:`, locationData);
+                        console.log(`✅ [Widget] Enhanced location stored for user ${userKey}:`, locationResult.location);
                         setUserLocationDetected(true);
 
                         // Also notify parent frame about user location if in widget mode
@@ -271,7 +282,7 @@ function WidgetChatPage() {
                                     type: 'USER_LOCATION_DETECTED',
                                     payload: {
                                         userKey,
-                                        location: locationData
+                                        location: locationResult.location
                                     }
                                 }, parentOrigin);
                             } catch (error) {
@@ -279,7 +290,7 @@ function WidgetChatPage() {
                             }
                         }
                     } else {
-                        console.log(`❌ [Widget] Could not detect location for user ${userKey}`);
+                        console.error(`❌ [Widget] Enhanced location detection failed for user ${userKey}:`, locationResult.error);
                         setUserLocationDetected(true);
                     }
                 } catch (error) {
@@ -772,46 +783,109 @@ function WidgetChatPage() {
         try {
             console.log('Copy button clicked for message:', messageId);
             console.log('Message content:', messageContent);
+            console.log('Current URL protocol:', window.location.protocol);
+            console.log('Is in iframe:', window !== window.top);
 
             const textContent = messageContent.replace(/<[^>]*>/g, '');
             console.log('Cleaned text content:', textContent);
 
-            // Check if clipboard API is available
-            if (!navigator.clipboard) {
-                console.warn('Clipboard API not available, using fallback method');
-                // Fallback for non-HTTPS environments or older browsers
-                const textArea = document.createElement('textarea');
-                textArea.value = textContent;
-                document.body.appendChild(textArea);
-                textArea.select();
+            // Method 1: Try modern Clipboard API first
+            if (navigator.clipboard && window.isSecureContext) {
+                try {
+                    console.log('Attempting copy with Clipboard API...');
+                    await navigator.clipboard.writeText(textContent);
+                    console.log('Copy successful using Clipboard API');
+                    setCopiedMessageId(messageId);
+                    setTimeout(() => setCopiedMessageId(null), 2000);
+                    trackChatEvent('SEND_MESSAGE', `Copy message - length: ${textContent.length}`);
+                    return;
+                } catch (clipboardError) {
+                    console.warn('Clipboard API failed:', clipboardError);
+                    // Fall through to next method
+                }
+            } else {
+                console.warn('Clipboard API not available or not in secure context');
+            }
+
+            // Method 2: Try execCommand fallback
+            console.log('Attempting copy with execCommand fallback...');
+            const textArea = document.createElement('textarea');
+            textArea.value = textContent;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            textArea.style.top = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+
+            try {
                 const successful = document.execCommand('copy');
                 document.body.removeChild(textArea);
 
                 if (successful) {
-                    console.log('Fallback copy successful');
+                    console.log('Fallback copy successful with execCommand');
                     setCopiedMessageId(messageId);
-                    setTimeout(() => {
-                        setCopiedMessageId(null);
-                    }, 2000);
+                    setTimeout(() => setCopiedMessageId(null), 2000);
+                    trackChatEvent('SEND_MESSAGE', `Copy message (fallback) - length: ${textContent.length}`);
+                    return;
                 } else {
-                    throw new Error('Fallback copy failed');
+                    console.warn('execCommand copy returned false');
                 }
-                return;
+            } catch (execError) {
+                console.warn('execCommand copy failed:', execError);
+                document.body.removeChild(textArea);
             }
 
-            await navigator.clipboard.writeText(textContent);
-            console.log('Copy successful using Clipboard API');
-            setCopiedMessageId(messageId);
+            // Method 3: Manual selection fallback
+            console.log('Attempting manual selection fallback...');
+            try {
+                const range = document.createRange();
+                const selection = window.getSelection();
+                const tempDiv = document.createElement('div');
+                tempDiv.style.position = 'fixed';
+                tempDiv.style.left = '-999999px';
+                tempDiv.innerHTML = textContent;
+                document.body.appendChild(tempDiv);
 
-            setTimeout(() => {
-                setCopiedMessageId(null);
-            }, 2000);
+                range.selectNodeContents(tempDiv);
+                selection?.removeAllRanges();
+                selection?.addRange(range);
 
-            trackChatEvent('SEND_MESSAGE', `Copy message - length: ${textContent.length}`);
+                const manualSuccess = document.execCommand('copy');
+                document.body.removeChild(tempDiv);
+                selection?.removeAllRanges();
+
+                if (manualSuccess) {
+                    console.log('Manual selection copy successful');
+                    setCopiedMessageId(messageId);
+                    setTimeout(() => setCopiedMessageId(null), 2000);
+                    trackChatEvent('SEND_MESSAGE', `Copy message (manual) - length: ${textContent.length}`);
+                    return;
+                }
+            } catch (manualError) {
+                console.warn('Manual selection copy failed:', manualError);
+            }
+
+            // All methods failed
+            throw new Error('All copy methods failed');
+
         } catch (error) {
-            console.error('Failed to copy message:', error);
-            // Show user-friendly error message
-            alert('Unable to copy message. Please try selecting and copying the text manually.');
+            console.error('All copy methods failed:', error);
+            console.log('Environment info:', {
+                protocol: window.location.protocol,
+                isSecureContext: window.isSecureContext,
+                hasClipboard: !!navigator.clipboard,
+                isIframe: window !== window.top,
+                userAgent: navigator.userAgent
+            });
+
+            // Show a more helpful error with instructions
+            const isHttps = window.location.protocol === 'https:';
+            const errorMsg = !isHttps
+                ? 'Copy requires HTTPS. Please try manually selecting and copying the text, or visit the HTTPS version of this site.'
+                : 'Copy failed due to browser security restrictions. Please manually select and copy the text above.';
+
+            alert(errorMsg);
         }
     };
 
@@ -930,11 +1004,7 @@ function WidgetChatPage() {
                                     <span className={`text-xs font-medium ${m.role === "user" ? "text-blue-100" : "text-gray-500"}`}>
                                         {m.role === "user" ? "Guest" : "Assistant"}
                                     </span>
-                                    {m.role === "user" && location && location.country !== 'Unknown' && location.countryCode && (
-                                        <span className="text-xs" title={`From ${location.country}`}>
-                                            {getCountryFlag(location.countryCode)}
-                                        </span>
-                                    )}
+
                                     <span className={`text-xs ${m.role === "user" ? "text-blue-200" : "text-gray-400"}`}>
                                         {timestamp}
                                     </span>
@@ -1010,6 +1080,7 @@ function WidgetChatPage() {
                             <input
                                 ref={inputRef}
                                 className={`widget-input w-full pr-12 text-sm ${getFontClass()}`}
+                                style={{ color: '#1f2937 !important', backgroundColor: '#ffffff !important' }}
                                 value={input}
                                 onChange={handleInputChange}
                                 placeholder={getPlaceholderText()}
@@ -1048,7 +1119,7 @@ export default function WidgetPage() {
 
     return (
         <LanguageProvider>
-            <ChatProvider>
+            <ChatProvider forceGuestMode={true}>
                 <WidgetChatPage />
             </ChatProvider>
         </LanguageProvider>

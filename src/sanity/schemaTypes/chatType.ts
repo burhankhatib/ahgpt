@@ -134,16 +134,105 @@ export const chatType = defineType({
           of: [{ type: 'string' }]
       },
       {
-          name: 'language',
-          title: 'Language',
+          name: 'detectedLanguage',
+          title: 'Detected Language',
           type: 'string',
+          description: 'Auto-detected language using Franc from user messages',
+          readOnly: true,
           options: {
               list: [
                   { title: 'English', value: 'en' },
                   { title: 'Arabic', value: 'ar' },
-                  { title: 'Hebrew', value: 'he' }
+                  { title: 'Hebrew', value: 'he' },
+                  { title: 'Chinese', value: 'zh' },
+                  { title: 'Hindi', value: 'hi' },
+                  { title: 'Spanish', value: 'es' },
+                  { title: 'French', value: 'fr' },
+                  { title: 'Bengali', value: 'bn' },
+                  { title: 'Portuguese', value: 'pt' },
+                  { title: 'Russian', value: 'ru' },
+                  { title: 'Indonesian', value: 'id' },
+                  { title: 'Urdu', value: 'ur' },
+                  { title: 'German', value: 'de' },
+                  { title: 'Japanese', value: 'ja' },
+                  { title: 'Turkish', value: 'tr' },
+                  { title: 'Korean', value: 'ko' },
+                  { title: 'Vietnamese', value: 'vi' },
+                  { title: 'Telugu', value: 'te' },
+                  { title: 'Marathi', value: 'mr' },
+                  { title: 'Tamil', value: 'ta' },
+                  { title: 'Thai', value: 'th' },
+                  { title: 'Balochi', value: 'bal' },
+                  { title: 'Malay', value: 'ms' },
+                  { title: 'Finnish', value: 'fi' },
+                  { title: 'Swedish', value: 'sv' },
+                  { title: 'Norwegian', value: 'no' },
+                  { title: 'Danish', value: 'da' }
               ]
           }
+      },
+      {
+          name: 'location',
+          title: 'User Location',
+          type: 'object',
+          description: 'Auto-detected user location information',
+          fields: [
+              {
+                  name: 'latitude',
+                  title: 'Latitude',
+                  type: 'number',
+                  description: 'Geographic latitude coordinate'
+              },
+              {
+                  name: 'longitude',
+                  title: 'Longitude',
+                  type: 'number',
+                  description: 'Geographic longitude coordinate'
+              },
+              {
+                  name: 'city',
+                  title: 'City',
+                  type: 'string',
+                  description: 'City name'
+              },
+              {
+                  name: 'region',
+                  title: 'Region/State',
+                  type: 'string',
+                  description: 'Region or state name'
+              },
+              {
+                  name: 'country',
+                  title: 'Country',
+                  type: 'string',
+                  description: 'Country name'
+              },
+              {
+                  name: 'timezone',
+                  title: 'Timezone',
+                  type: 'string',
+                  description: 'User timezone identifier'
+              },
+              {
+                  name: 'ip',
+                  title: 'IP Address',
+                  type: 'string',
+                  description: 'User IP address'
+              },
+              {
+                  name: 'source',
+                  title: 'Location Source',
+                  type: 'string',
+                  description: 'How the location was detected',
+                  options: {
+                      list: [
+                          { title: 'Browser Geolocation', value: 'geolocation' },
+                          { title: 'IP Address', value: 'ip' },
+                          { title: 'Unknown', value: 'unknown' }
+                      ]
+                  }
+              }
+          ]
       }
   ],
   preview: {

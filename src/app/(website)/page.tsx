@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { ArrowRight, MessageCircle, Heart, Book, Users, Shield, Sparkles } from 'lucide-react';
 
+
 export default function Home() {
   const router = useRouter();
 
@@ -12,6 +13,8 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-white" dir="ltr" style={{ textAlign: 'left', direction: 'ltr' }}>
+
+
       {/* Hero Section */}
       <section className="relative pt-20 pb-32 px-6">
         <div className="max-w-6xl mx-auto text-center">

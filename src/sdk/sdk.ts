@@ -121,7 +121,7 @@ if ((window as any).AlHayatGPT) {
         iframe.style.width = options.width || '100%';
         iframe.style.height = options.height || '100%';
         iframe.style.display = 'block'; // Ensure proper display
-        iframe.setAttribute('allow', 'geolocation'); // Request permission for geolocation if needed.
+        // Note: Widget uses VisitorAPI for automatic location detection - no permissions needed
 
         // Apply additional custom styles if provided
         if (options.style) {

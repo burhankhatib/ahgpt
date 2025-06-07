@@ -5,6 +5,7 @@ import { Chat, Message } from '@/types/chat';
 import * as chatService from '@/sanity/chat';
 import { showNotification } from '@/utils/notifications';
 import { getSanityPermissionError, isSanityPermissionError } from '@/utils/sanity-permissions';
+import { useUser } from '@clerk/nextjs';
 
 interface ChatContextType {
     currentChat: Chat | null;
@@ -27,9 +28,37 @@ interface ChatContextType {
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
-// Widget-only ChatProvider that doesn't use Clerk
-export function ChatProvider({ children }: { children: React.ReactNode }) {
-    const user: any = null; // Always null for widgets - pure guest mode
+interface ChatProviderProps {
+    children: React.ReactNode;
+    forceGuestMode?: boolean; // Optional prop to force guest mode (for widgets)
+}
+
+export function ChatProvider({ children, forceGuestMode = false }: ChatProviderProps) {
+    // Conditionally use Clerk authentication based on context
+    const clerkUser = useUser();
+
+    // Determine if we should use Clerk auth or force guest mode
+    const isMainWebsite = typeof window !== 'undefined' &&
+        (window.location.hostname === 'alhayatgpt.com' ||
+            window.location.hostname === 'www.alhayatgpt.com' ||
+            window.location.hostname === 'localhost');
+
+    // Use Clerk user if on main website and not forcing guest mode, otherwise null for guest mode
+    const user = (isMainWebsite && !forceGuestMode) ? clerkUser.user : null;
+
+    console.log('ChatProvider context detection:', {
+        isMainWebsite,
+        forceGuestMode,
+        hostname: typeof window !== 'undefined' ? window.location.hostname : 'server',
+        hasClerkUser: !!clerkUser.user,
+        finalUserState: !!user,
+        userInfo: user ? {
+            id: user.id,
+            firstName: user.firstName,
+            email: user.primaryEmailAddress?.emailAddress
+        } : 'guest'
+    });
+
     const [currentChat, setCurrentChat] = useState<Chat | null>(null);
     const [chats, setChats] = useState<Chat[]>([]);
     const [hiddenChatIds, setHiddenChatIds] = useState<Set<string>>(new Set());
@@ -309,9 +338,25 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
             // Update with the saved version (which might have a proper _id)
             setCurrentChat(savedChat);
-            // Only reload chats if this is a new chat (no _id yet) and user is authenticated
-            if ((!currentChat._id || currentChat._id === currentChat.uniqueKey) && user) {
-                await loadChats();
+
+            // Always reload chats after saving a new chat (both authenticated and guest users)
+            // BUT respect invisible mode - if invisible mode is ON, don't show in sidebar
+            const isNewChat = !currentChat._id || currentChat._id === currentChat.uniqueKey;
+
+            if (isNewChat) {
+                console.log('New chat detected in addMessage, checking if should update sidebar:', {
+                    isNewChat,
+                    isInvisibleMode,
+                    shouldShowInSidebar: !isInvisibleMode
+                });
+
+                if (!isInvisibleMode) {
+                    // Only reload sidebar if invisible mode is OFF
+                    console.log('Invisible mode is OFF, reloading chats for sidebar update (addMessage)');
+                    await loadChats();
+                } else {
+                    console.log('Invisible mode is ON, chat saved to Sanity but not shown in sidebar (addMessage)');
+                }
             }
         } catch (error) {
             console.error('Error saving chat:', error);
@@ -395,9 +440,25 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
             // Update with the saved version (which might have a proper _id)
             setCurrentChat(savedChat);
-            // Only reload chats if this is a new chat (no _id yet) and user is authenticated
-            if ((!currentChat._id || currentChat._id === currentChat.uniqueKey) && user) {
-                await loadChats();
+
+            // Always reload chats after saving a new chat (both authenticated and guest users)
+            // BUT respect invisible mode - if invisible mode is ON, don't show in sidebar
+            const isNewChat = !currentChat._id || currentChat._id === currentChat.uniqueKey;
+
+            if (isNewChat) {
+                console.log('New chat detected in addMessages, checking if should update sidebar:', {
+                    isNewChat,
+                    isInvisibleMode,
+                    shouldShowInSidebar: !isInvisibleMode
+                });
+
+                if (!isInvisibleMode) {
+                    // Only reload sidebar if invisible mode is OFF
+                    console.log('Invisible mode is OFF, reloading chats for sidebar update (addMessages)');
+                    await loadChats();
+                } else {
+                    console.log('Invisible mode is ON, chat saved to Sanity but not shown in sidebar (addMessages)');
+                }
             }
         } catch (error) {
             console.error('Error saving chat with multiple messages:', error);
@@ -422,22 +483,27 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     };
 
     const addConversationTurn = async (userMessage: Message, assistantMessage: Message) => {
-        if (!currentChat) return;
+        if (!currentChat) {
+            console.error('No current chat available for adding conversation turn');
+            return;
+        }
 
-        const userMessageWithKey = {
-            ...userMessage,
-            uniqueKey: userMessage.uniqueKey || `msg_user_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`
-        };
-
-        const assistantMessageWithKey = {
-            ...assistantMessage,
-            uniqueKey: assistantMessage.uniqueKey || `msg_ai_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`
-        };
+        // Add both messages to the current chat
+        const messagesWithKeys = [
+            {
+                ...userMessage,
+                uniqueKey: userMessage.uniqueKey || `msg_user_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`
+            },
+            {
+                ...assistantMessage,
+                uniqueKey: assistantMessage.uniqueKey || `msg_ai_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`
+            }
+        ];
 
         const updatedChat = {
             ...currentChat,
-            messages: [...currentChat.messages, userMessageWithKey, assistantMessageWithKey],
-            title: currentChat.messages.length === 0
+            messages: [...currentChat.messages, ...messagesWithKeys],
+            title: currentChat.messages.length === 0 && userMessage.role === 'user'
                 ? userMessage.content.slice(0, 100).trim() + (userMessage.content.length > 100 ? '...' : '')
                 : currentChat.title,
             updatedAt: new Date()
@@ -446,7 +512,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         // Update local state immediately for responsive UI
         setCurrentChat(updatedChat);
 
-        // Save to Sanity for all users (authenticated and guests)
+        // Save to Sanity for all users (authenticated and guests) - always sync regardless of invisible mode
         try {
             const guestDomain = getGuestDomain();
 
@@ -468,51 +534,51 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 user: freshUserData
             };
 
-            console.log('Saving complete conversation turn to Sanity:', {
+            console.log('Saving conversation turn to Sanity:', {
                 chatId: currentChat._id,
-                chatUniqueKey: currentChat.uniqueKey,
-                userMessage: {
-                    role: userMessage.role,
-                    content: userMessage.content.slice(0, 100) + '...',
-                    uniqueKey: userMessageWithKey.uniqueKey
-                },
-                assistantMessage: {
-                    role: assistantMessage.role,
-                    content: assistantMessage.content.slice(0, 100) + '...',
-                    uniqueKey: assistantMessageWithKey.uniqueKey
-                },
+                messageCount: messagesWithKeys.length,
+                messageTypes: messagesWithKeys.map(m => m.role),
                 totalMessages: chatWithFreshUserData.messages.length,
-                messageTypes: chatWithFreshUserData.messages.map(m => m.role),
+                allMessageTypes: chatWithFreshUserData.messages.map(m => m.role),
                 chatUser: freshUserData,
                 guestDomain,
-                isNewChat: !currentChat._id || currentChat._id === currentChat.uniqueKey
+                isInvisibleMode: isInvisibleMode
             });
 
             const savedChat = await chatService.saveChat(chatWithFreshUserData);
-            console.log('Complete conversation turn saved successfully to Sanity:', {
+
+            console.log('Chat saved successfully to Sanity:', {
                 chatId: savedChat._id,
                 messageCount: savedChat.messages.length,
                 messageTypes: savedChat.messages.map(m => m.role),
-                lastTwoMessages: savedChat.messages.slice(-2).map(m => ({
-                    role: m.role,
-                    content: m.content.slice(0, 50) + '...'
-                })),
-                isNewChat: !currentChat._id || currentChat._id === currentChat.uniqueKey
+                isAuthenticated: !!user,
+                isInvisibleMode: isInvisibleMode
             });
 
             // Update with the saved version (which might have a proper _id)
             setCurrentChat(savedChat);
-            // Only reload chats if this is a new chat (no _id yet) and user is authenticated and not in invisible mode
-            if ((!currentChat._id || currentChat._id === currentChat.uniqueKey) && user && !isInvisibleMode) {
-                await loadChats();
-            } else if (isInvisibleMode) {
-                // In invisible mode, add the chat to hidden list immediately
-                if (savedChat._id) {
-                    setHiddenChatIds(prev => new Set([...prev, savedChat._id!]));
+
+            // Always reload chats after saving a new chat (both authenticated and guest users)
+            // BUT respect invisible mode - if invisible mode is ON, don't show in sidebar
+            const isNewChat = !currentChat._id || currentChat._id === currentChat.uniqueKey;
+
+            if (isNewChat) {
+                console.log('New chat detected, checking if should update sidebar:', {
+                    isNewChat,
+                    isInvisibleMode,
+                    shouldShowInSidebar: !isInvisibleMode
+                });
+
+                if (!isInvisibleMode) {
+                    // Only reload sidebar if invisible mode is OFF
+                    console.log('Invisible mode is OFF, reloading chats for sidebar update');
+                    await loadChats();
+                } else {
+                    console.log('Invisible mode is ON, chat saved to Sanity but not shown in sidebar');
                 }
             }
         } catch (error) {
-            console.error('Error saving conversation turn:', error);
+            console.error('Error saving chat:', error);
 
             // Check if it's a permissions error
             if (isSanityPermissionError(error)) {
@@ -526,7 +592,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             } else {
                 showNotification({
                     title: 'Error',
-                    message: 'Failed to save conversation to history',
+                    message: 'Failed to save message to history',
                     type: 'error'
                 });
             }

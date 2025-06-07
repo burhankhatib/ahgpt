@@ -4,7 +4,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { Chat, Message } from '@/types/chat';
 import { getAllChats } from '@/sanity/lib/data/getAllChats';
 import { detectLanguage } from '@/utils/languageDetection';
-import { getCountryFlag } from '@/utils/visitorApiDetection';
+import { getCountryFlag } from '@/utils/browserLocationDetection';
 import { format, isWithinInterval, subDays, parseISO } from 'date-fns';
 
 interface StatCard {
@@ -40,131 +40,62 @@ export default function StatsDashboard() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [detectedLanguages, setDetectedLanguages] = useState<Record<string, string>>({});
-    const [userLocations, setUserLocations] = useState<Record<string, {
-        country: string;
-        countryCode: string;
-        city?: string;
-        region?: string;
-        confidence: 'high' | 'medium' | 'low';
-        detectionMethod: 'geolocation' | 'content-analysis' | 'language-based' | 'hash-based';
-    }>>({});
 
     useEffect(() => {
         const loadChats = async () => {
             try {
                 setLoading(true);
+                console.log('🔄 [StatsDashboard] Loading chats from Sanity...');
+
                 const chats = await getAllChats();
+                console.log(`📊 [StatsDashboard] Loaded ${chats.length} chats`);
                 setAllChats(chats);
 
-                // Detect language for each chat
+                // Language detection using Franc
                 const languages: Record<string, string> = {};
-
-                chats.forEach(chat => {
-                    if (chat && chat._id && chat.messages && Array.isArray(chat.messages) && chat.messages.length > 0) {
-                        try {
-                            // Use the last few messages to detect language
-                            const recentMessages = chat.messages.slice(-3);
-                            const combinedText = recentMessages.map(msg => msg?.content || '').join(' ');
-                            if (combinedText.trim()) {
-                                const detectedLang = detectLanguage(combinedText);
-                                if (detectedLang) {
-                                    languages[chat._id] = detectedLang;
-                                }
-                            }
-                        } catch (error) {
-                            console.warn('Error detecting language for chat:', chat._id, error);
-                        }
-                    }
-                });
-
-                // Detect location for each user using multiple methods (same as AllChats)
-                const userLocationData: Record<string, {
-                    country: string;
-                    countryCode: string;
-                    city?: string;
-                    region?: string;
-                    confidence: 'high' | 'medium' | 'low';
-                    detectionMethod: 'geolocation' | 'content-analysis' | 'language-based' | 'hash-based';
-                }> = {};
+                console.log('🗣️ [StatsDashboard] Processing language detection...');
 
                 for (const chat of chats) {
-                    const userKey = chat.user.clerkId;
+                    if (chat._id) {
+                        // Use Sanity-stored detected language first, fallback to detection
+                        if (chat.detectedLanguage) {
+                            languages[chat._id] = chat.detectedLanguage;
+                            console.log(`✅ [StatsDashboard] Using Sanity language for chat ${chat._id}: ${chat.detectedLanguage}`);
+                        } else if (chat.messages && chat.messages.length > 0) {
+                            // Fallback to local detection for old chats
+                            const userMessages = chat.messages.filter(msg => msg?.role === 'user');
+                            const recentUserMessages = userMessages.slice(-3);
+                            const combinedText = recentUserMessages.map(msg => msg?.content || '').join(' ');
 
-                    // Method 1: Check if this user has stored location data from their browser sessions (highest priority)
-                    if (typeof window !== 'undefined') {
-                        const storedLocation = localStorage.getItem(`userLocation_${userKey}`);
-                        if (storedLocation) {
-                            try {
-                                const parsed = JSON.parse(storedLocation);
-                                if (parsed.country && parsed.country !== 'Unknown') {
-                                    userLocationData[userKey] = {
-                                        country: parsed.country,
-                                        countryCode: parsed.countryCode || '',
-                                        city: parsed.city,
-                                        region: parsed.region,
-                                        confidence: parsed.confidence || 'high',
-                                        detectionMethod: parsed.detectionMethod || 'geolocation'
-                                    };
-                                    console.log(`📋 Loaded stored location for ${userKey}:`, parsed);
-                                    continue;
-                                }
-                            } catch (error) {
-                                console.error(`❌ Error parsing stored location for ${userKey}:`, error);
-                                if (typeof window !== 'undefined') {
-                                    localStorage.removeItem(`userLocation_${userKey}`);
+                            if (combinedText.trim()) {
+                                try {
+                                    const detectedLang = detectLanguage(combinedText);
+                                    languages[chat._id] = detectedLang;
+                                    console.log(`🔄 [StatsDashboard] Fallback language detected for chat ${chat._id}: ${detectedLang}`);
+                                } catch (error) {
+                                    console.error(`❌ [StatsDashboard] Language detection failed for chat ${chat._id}:`, error);
                                 }
                             }
                         }
                     }
-
-                    // Method 2: Analyze message content for cultural/linguistic indicators (high accuracy)
-                    const contentAnalysis = analyzeMessageContentForLocation(chat.messages);
-                    if (contentAnalysis) {
-                        userLocationData[userKey] = {
-                            country: contentAnalysis.country,
-                            countryCode: contentAnalysis.countryCode,
-                            city: contentAnalysis.city,
-                            confidence: contentAnalysis.confidence,
-                            detectionMethod: contentAnalysis.detectionMethod
-                        };
-                        console.log(`🔍 Detected location from content analysis for ${userKey}:`, contentAnalysis);
-                        continue;
-                    }
-
-                    // Method 3: Detect from chat language using automated language detection
-                    const chatLanguage = languages[chat._id!] || 'en';
-                    const locationFromLanguage = detectLocationFromLanguage(chatLanguage);
-                    if (locationFromLanguage) {
-                        userLocationData[userKey] = {
-                            country: locationFromLanguage.country,
-                            countryCode: locationFromLanguage.countryCode,
-                            city: locationFromLanguage.city,
-                            confidence: locationFromLanguage.confidence,
-                            detectionMethod: 'language-based'
-                        };
-                        console.log(`🗣️ Detected location from language for ${userKey}:`, locationFromLanguage);
-                        continue;
-                    }
-
-                    // Method 4: Generate diverse fallback location based on user ID hash (ensures variety)
-                    const diverseLocation = generateDiverseLocation(userKey);
-                    userLocationData[userKey] = {
-                        country: diverseLocation.country,
-                        countryCode: diverseLocation.countryCode,
-                        city: diverseLocation.city,
-                        confidence: diverseLocation.confidence,
-                        detectionMethod: diverseLocation.detectionMethod
-                    };
-                    console.log(`🎲 Generated diverse location for ${userKey}:`, diverseLocation);
                 }
 
                 setDetectedLanguages(languages);
-                setUserLocations(userLocationData);
-                console.log('📊 StatsDashboard - Detected languages:', languages);
-                console.log('🌍 StatsDashboard - User locations:', userLocationData);
-            } catch (err) {
-                setError('Failed to load chat data');
-                console.error('Error loading chats:', err);
+                console.log(`🎯 [StatsDashboard] Language processing completed. Found ${Object.keys(languages).length} languages`);
+
+                // Count chats with Sanity location data
+                const chatsWithLocation = chats.filter(chat =>
+                    chat.location &&
+                    chat.location.country &&
+                    chat.location.country !== 'Unknown' &&
+                    chat.location.source !== 'unknown'
+                );
+
+                console.log(`🗺️ [StatsDashboard] Found ${chatsWithLocation.length}/${chats.length} chats with valid Sanity location data`);
+
+            } catch (error) {
+                console.error('❌ [StatsDashboard] Error loading chats:', error);
+                setError(error instanceof Error ? error.message : 'Failed to load data');
             } finally {
                 setLoading(false);
             }
@@ -220,224 +151,13 @@ export default function StatsDashboard() {
         return languages[code] || code.toUpperCase();
     };
 
-    // Location detection methods (same as AllChats)
-    const detectLocationFromLanguage = (language: string): {
-        country: string;
-        countryCode: string;
-        city?: string;
-        confidence: 'high' | 'medium' | 'low'
-    } | null => {
-        const languageMap: Record<string, { country: string; countryCode: string; city?: string; confidence: 'high' | 'medium' | 'low' }> = {
-            // High confidence - unique/characteristic languages
-            'he': { country: 'Israel', countryCode: 'IL', city: 'Tel Aviv', confidence: 'high' },
-            'ar': { country: 'Palestine', countryCode: 'PS', city: 'Ramallah', confidence: 'medium' }, // Generic Arabic - could be many countries
-            'fa': { country: 'Iran', countryCode: 'IR', city: 'Tehran', confidence: 'high' },
-            'persian': { country: 'Iran', countryCode: 'IR', city: 'Tehran', confidence: 'high' },
-            'ja': { country: 'Japan', countryCode: 'JP', city: 'Tokyo', confidence: 'high' },
-            'ko': { country: 'South Korea', countryCode: 'KR', city: 'Seoul', confidence: 'high' },
-            'th': { country: 'Thailand', countryCode: 'TH', city: 'Bangkok', confidence: 'high' },
-            'vi': { country: 'Vietnam', countryCode: 'VN', city: 'Ho Chi Minh City', confidence: 'high' },
-            'tr': { country: 'Turkey', countryCode: 'TR', city: 'Istanbul', confidence: 'high' },
-            'hi': { country: 'India', countryCode: 'IN', city: 'Mumbai', confidence: 'medium' },
-            'zh': { country: 'China', countryCode: 'CN', city: 'Beijing', confidence: 'medium' },
-            'ru': { country: 'Russia', countryCode: 'RU', city: 'Moscow', confidence: 'medium' },
-            'es': { country: 'Spain', countryCode: 'ES', city: 'Madrid', confidence: 'low' }, // Could be many Spanish-speaking countries
-            'fr': { country: 'France', countryCode: 'FR', city: 'Paris', confidence: 'low' }, // Could be many French-speaking countries
-            'de': { country: 'Germany', countryCode: 'DE', city: 'Berlin', confidence: 'medium' },
-            'it': { country: 'Italy', countryCode: 'IT', city: 'Rome', confidence: 'medium' },
-            'pt': { country: 'Brazil', countryCode: 'BR', city: 'São Paulo', confidence: 'low' },
-            'nl': { country: 'Netherlands', countryCode: 'NL', city: 'Amsterdam', confidence: 'medium' },
-            'sv': { country: 'Sweden', countryCode: 'SE', city: 'Stockholm', confidence: 'high' },
-            'no': { country: 'Norway', countryCode: 'NO', city: 'Oslo', confidence: 'high' },
-            'da': { country: 'Denmark', countryCode: 'DK', city: 'Copenhagen', confidence: 'high' },
-            'fi': { country: 'Finland', countryCode: 'FI', city: 'Helsinki', confidence: 'high' },
-            'pl': { country: 'Poland', countryCode: 'PL', city: 'Warsaw', confidence: 'medium' },
-            'uk': { country: 'Ukraine', countryCode: 'UA', city: 'Kyiv', confidence: 'high' },
-            'bg': { country: 'Bulgaria', countryCode: 'BG', city: 'Sofia', confidence: 'high' },
-            'ro': { country: 'Romania', countryCode: 'RO', city: 'Bucharest', confidence: 'high' },
-            'hr': { country: 'Croatia', countryCode: 'HR', city: 'Zagreb', confidence: 'high' },
-            'sr': { country: 'Serbia', countryCode: 'RS', city: 'Belgrade', confidence: 'high' },
-            'sk': { country: 'Slovakia', countryCode: 'SK', city: 'Bratislava', confidence: 'high' },
-            'cs': { country: 'Czech Republic', countryCode: 'CZ', city: 'Prague', confidence: 'high' },
-            'hu': { country: 'Hungary', countryCode: 'HU', city: 'Budapest', confidence: 'high' },
-            'et': { country: 'Estonia', countryCode: 'EE', city: 'Tallinn', confidence: 'high' },
-            'lv': { country: 'Latvia', countryCode: 'LV', city: 'Riga', confidence: 'high' },
-            'lt': { country: 'Lithuania', countryCode: 'LT', city: 'Vilnius', confidence: 'high' },
-            'sl': { country: 'Slovenia', countryCode: 'SI', city: 'Ljubljana', confidence: 'high' },
-            'mk': { country: 'North Macedonia', countryCode: 'MK', city: 'Skopje', confidence: 'high' },
-            'mt': { country: 'Malta', countryCode: 'MT', city: 'Valletta', confidence: 'high' },
-            'is': { country: 'Iceland', countryCode: 'IS', city: 'Reykjavik', confidence: 'high' },
-            'ga': { country: 'Ireland', countryCode: 'IE', city: 'Dublin', confidence: 'high' },
-            'cy': { country: 'Wales', countryCode: 'GB', city: 'Cardiff', confidence: 'medium' },
-            'gd': { country: 'Scotland', countryCode: 'GB', city: 'Edinburgh', confidence: 'medium' },
-            'en': { country: 'United States', countryCode: 'US', city: 'New York', confidence: 'low' } // Very generic
-        };
-
-        const result = languageMap[language.toLowerCase()];
-        if (result) {
-            return result;
-        }
-
-        // Default fallback - don't assume location for unknown languages
-        return null;
-    };
-
-    // Enhanced function to analyze message content for better location detection
-    const analyzeMessageContentForLocation = (messages: Message[]): {
-        country: string;
-        countryCode: string;
-        city?: string;
-        confidence: 'high' | 'medium' | 'low';
-        detectionMethod: 'content-analysis';
-    } | null => {
-        if (!messages || messages.length === 0) return null;
-
-        // Combine all user messages for analysis
-        const userMessages = messages.filter(msg => msg.role === 'user');
-        const combinedText = userMessages.map(msg => msg.content).join(' ').toLowerCase();
-
-        // Check for specific cultural/regional indicators
-        const locationIndicators = [
-            // Persian/Iranian indicators
-            {
-                patterns: [/سلام|صلح|ایران|تهران|فارسی|پرشیا|persian|iran|tehran|farsi|سپاس|درود/i],
-                country: 'Iran', countryCode: 'IR', city: 'Tehran', confidence: 'high' as const
-            },
-            // Hebrew/Israeli indicators
-            {
-                patterns: [/שלום|ישראל|תל אביב|ירושלים|hebrew|israel|shalom|torah|shabat/i],
-                country: 'Israel', countryCode: 'IL', city: 'Tel Aviv', confidence: 'high' as const
-            },
-            // Arabic/Palestinian indicators
-            {
-                patterns: [/فلسطين|رام الله|القدس|palestine|ramallah|jerusalem|gaza|west bank/i],
-                country: 'Palestine', countryCode: 'PS', city: 'Ramallah', confidence: 'high' as const
-            },
-            // Japanese indicators
-            {
-                patterns: [/こんにちは|ありがとう|日本|東京|japan|tokyo|konnichiwa|arigatou|さようなら/i],
-                country: 'Japan', countryCode: 'JP', city: 'Tokyo', confidence: 'high' as const
-            },
-            // Korean indicators
-            {
-                patterns: [/안녕|감사|한국|서울|korea|seoul|annyeong|kamsa|saranghae/i],
-                country: 'South Korea', countryCode: 'KR', city: 'Seoul', confidence: 'high' as const
-            },
-            // Turkish indicators
-            {
-                patterns: [/merhaba|teşekkür|türkiye|istanbul|ankara|turkey|turkish/i],
-                country: 'Turkey', countryCode: 'TR', city: 'Istanbul', confidence: 'high' as const
-            },
-            // German indicators
-            {
-                patterns: [/guten tag|danke|deutschland|berlin|münchen|germany|deutsch/i],
-                country: 'Germany', countryCode: 'DE', city: 'Berlin', confidence: 'medium' as const
-            },
-            // French indicators
-            {
-                patterns: [/bonjour|merci|france|paris|lyon|français|french/i],
-                country: 'France', countryCode: 'FR', city: 'Paris', confidence: 'medium' as const
-            },
-            // Spanish indicators
-            {
-                patterns: [/hola|gracias|españa|madrid|barcelona|spanish|español/i],
-                country: 'Spain', countryCode: 'ES', city: 'Madrid', confidence: 'medium' as const
-            },
-            // Chinese indicators
-            {
-                patterns: [/你好|谢谢|中国|北京|上海|china|beijing|shanghai|ni hao/i],
-                country: 'China', countryCode: 'CN', city: 'Beijing', confidence: 'medium' as const
-            },
-            // Russian indicators
-            {
-                patterns: [/привет|спасибо|россия|москва|russia|moscow|russian|спб/i],
-                country: 'Russia', countryCode: 'RU', city: 'Moscow', confidence: 'medium' as const
-            },
-            // Indian indicators
-            {
-                patterns: [/namaste|dhanyawad|india|mumbai|delhi|hindi|भारत|नमस्ते/i],
-                country: 'India', countryCode: 'IN', city: 'Mumbai', confidence: 'medium' as const
-            }
-        ];
-
-        // Check for location indicators
-        for (const indicator of locationIndicators) {
-            for (const pattern of indicator.patterns) {
-                if (pattern.test(combinedText)) {
-                    console.log(`🎯 Found location indicator for ${indicator.country}:`, pattern);
-                    return {
-                        country: indicator.country,
-                        countryCode: indicator.countryCode,
-                        city: indicator.city,
-                        confidence: indicator.confidence,
-                        detectionMethod: 'content-analysis'
-                    };
-                }
-            }
-        }
-
-        return null;
-    };
-
-    // Function to generate diverse location based on user ID hash (fallback method)
-    const generateDiverseLocation = (userId: string): {
-        country: string;
-        countryCode: string;
-        city?: string;
-        confidence: 'low';
-        detectionMethod: 'hash-based';
-    } => {
-        // Create a simple hash from user ID
-        let hash = 0;
-        for (let i = 0; i < userId.length; i++) {
-            const char = userId.charCodeAt(i);
-            hash = ((hash << 5) - hash) + char;
-            hash = hash & hash; // Convert to 32-bit integer
-        }
-
-        // Use hash to select from diverse countries (same as AllChats)
-        const diverseCountries = [
-            { country: 'United States', countryCode: 'US', city: 'New York' },
-            { country: 'United Kingdom', countryCode: 'GB', city: 'London' },
-            { country: 'Canada', countryCode: 'CA', city: 'Toronto' },
-            { country: 'Australia', countryCode: 'AU', city: 'Sydney' },
-            { country: 'Germany', countryCode: 'DE', city: 'Berlin' },
-            { country: 'France', countryCode: 'FR', city: 'Paris' },
-            { country: 'Japan', countryCode: 'JP', city: 'Tokyo' },
-            { country: 'South Korea', countryCode: 'KR', city: 'Seoul' },
-            { country: 'Brazil', countryCode: 'BR', city: 'São Paulo' },
-            { country: 'India', countryCode: 'IN', city: 'Mumbai' },
-            { country: 'China', countryCode: 'CN', city: 'Beijing' },
-            { country: 'Russia', countryCode: 'RU', city: 'Moscow' },
-            { country: 'Turkey', countryCode: 'TR', city: 'Istanbul' },
-            { country: 'Iran', countryCode: 'IR', city: 'Tehran' },
-            { country: 'Israel', countryCode: 'IL', city: 'Tel Aviv' },
-            { country: 'Palestine', countryCode: 'PS', city: 'Ramallah' },
-            { country: 'Egypt', countryCode: 'EG', city: 'Cairo' },
-            { country: 'Saudi Arabia', countryCode: 'SA', city: 'Riyadh' },
-            { country: 'UAE', countryCode: 'AE', city: 'Dubai' },
-            { country: 'Jordan', countryCode: 'JO', city: 'Amman' }
-        ];
-
-        const index = Math.abs(hash) % diverseCountries.length;
-        const selected = diverseCountries[index];
-
-        return {
-            country: selected.country,
-            countryCode: selected.countryCode,
-            city: selected.city,
-            confidence: 'low',
-            detectionMethod: 'hash-based'
-        };
-    };
-
-    const getTop5 = (data: Record<string, number>, isCountryData: boolean = false): TopItem[] => {
+    const getTop10 = (data: Record<string, number>, isCountryData: boolean = false): TopItem[] => {
         const total = Object.values(data).reduce((a: number, b: number) => a + b, 0);
         if (total === 0) return [];
 
         return Object.entries(data)
             .sort(([, a]: [string, number], [, b]: [string, number]) => b - a)
-            .slice(0, 5)
+            .slice(0, 10)
             .map(([name, value]) => ({
                 name,
                 value,
@@ -455,24 +175,39 @@ export default function StatsDashboard() {
             'UAE': 'AE',
             'Germany': 'DE',
             'France': 'FR',
-            'United States': 'US',
-            'United Kingdom': 'GB',
-            'Canada': 'CA',
-            'Japan': 'JP',
-            'South Korea': 'KR',
-            'Turkey': 'TR',
-            'China': 'CN',
-            'Russia': 'RU',
-            'India': 'IN',
-            'Brazil': 'BR',
-            'Australia': 'AU',
-            'Spain': 'ES',
-            'Italy': 'IT',
             'Netherlands': 'NL',
             'Sweden': 'SE',
             'Norway': 'NO',
-            'Denmark': 'DK',
             'Finland': 'FI',
+            'Denmark': 'DK',
+            'United States': 'US',
+            'United Kingdom': 'GB',
+            'Canada': 'CA',
+            'Australia': 'AU',
+            'Japan': 'JP',
+            'South Korea': 'KR',
+            'China': 'CN',
+            'India': 'IN',
+            'Brazil': 'BR',
+            'Mexico': 'MX',
+            'Spain': 'ES',
+            'Italy': 'IT',
+            'Russia': 'RU',
+            'Turkey': 'TR',
+            'Egypt': 'EG',
+            'Jordan': 'JO',
+            'Pakistan': 'PK',
+            'Bangladesh': 'BD',
+            'Indonesia': 'ID',
+            'Malaysia': 'MY',
+            'Thailand': 'TH',
+            'Vietnam': 'VN',
+            'South Africa': 'ZA',
+            'Nigeria': 'NG',
+            'Kenya': 'KE',
+            'Morocco': 'MA',
+            'Argentina': 'AR',
+            'Chile': 'CL',
             'Poland': 'PL',
             'Ukraine': 'UA',
             'Bulgaria': 'BG',
@@ -491,11 +226,7 @@ export default function StatsDashboard() {
             'Iceland': 'IS',
             'Ireland': 'IE',
             'Wales': 'GB',
-            'Scotland': 'GB',
-            'Thailand': 'TH',
-            'Vietnam': 'VN',
-            'Egypt': 'EG',
-            'Jordan': 'JO'
+            'Scotland': 'GB'
         };
         return codes[countryName] || '';
     };
@@ -503,18 +234,40 @@ export default function StatsDashboard() {
     const statistics = useMemo(() => {
         const stats = {
             totalChats: filteredChats.length,
+            chatsWithLocation: 0,
             websiteUsers: 0,
             sdkUsers: 0,
             languages: {} as Record<string, number>,
             countries: {} as Record<string, number>,
             websites: {} as Record<string, number>,
-            lastQuestions: [] as { question: string; timestamp: Date; user: string }[]
+            recentChats: [] as {
+                question: string;
+                timestamp: Date;
+                user: string;
+                source: string;
+                language?: string;
+                languageName: string;
+                country: string;
+                countryCode: string;
+                countryFlag: string;
+                city?: string;
+            }[]
         };
 
         // Process each chat
         filteredChats?.forEach(chat => {
             // Safety checks
             if (!chat || !chat.user || !chat._id) return;
+
+            // Check if chat has valid Sanity location data
+            const hasValidLocation = chat.location &&
+                chat.location.country &&
+                chat.location.country !== 'Unknown' &&
+                chat.location.source !== 'unknown';
+
+            if (hasValidLocation) {
+                stats.chatsWithLocation++;
+            }
 
             // Determine user source (website vs SDK)
             const isGuestUser = chat.user?.firstName === 'Guest';
@@ -529,55 +282,86 @@ export default function StatsDashboard() {
                 stats.websiteUsers++;
             }
 
-            // Use pre-detected language from state
-            const detectedLang = detectedLanguages?.[chat._id] || chat.language;
+            // Use detected language from Sanity or state
+            const detectedLang = chat.detectedLanguage || detectedLanguages?.[chat._id];
             if (detectedLang) {
                 const langName = getLanguageName(detectedLang);
                 stats.languages[langName] = (stats.languages[langName] || 0) + 1;
             }
 
-            // Extract country information using detected location data
-            try {
-                const userKey = chat.user?.clerkId;
-                const userLocation = userLocations[userKey];
-                if (userLocation && userLocation.country && userLocation.country !== 'Unknown') {
-                    stats.countries[userLocation.country] = (stats.countries[userLocation.country] || 0) + 1;
-                }
-            } catch (error) {
-                console.warn('Error extracting country:', error);
+            // Only count countries from chats with valid Sanity location data
+            if (hasValidLocation) {
+                const country = chat.location!.country!;
+                stats.countries[country] = (stats.countries[country] || 0) + 1;
             }
 
-            // Collect last questions (user messages)
+            // Collect recent chats (user messages) with language and location data
             try {
                 if (chat.messages && Array.isArray(chat.messages)) {
                     const userMessages = chat.messages.filter(msg => msg && msg.role === 'user');
                     if (userMessages.length > 0) {
                         const lastUserMessage = userMessages[userMessages.length - 1];
                         if (lastUserMessage?.content) {
-                            stats.lastQuestions.push({
+                            const detectedLang = chat.detectedLanguage || detectedLanguages[chat._id];
+
+                            // Determine user display and source
+                            let userDisplay = '';
+                            let source = '';
+
+                            if (isSDKUser) {
+                                // For SDK users, show the source domain
+                                userDisplay = 'Guest User';
+                                source = chat.user.lastName || 'Unknown SDK';
+                            } else {
+                                // For website users, show their name
+                                userDisplay = `${chat.user?.firstName || ''} ${chat.user?.lastName || ''}`.trim();
+                                source = 'Al Hayat GPT Website';
+                            }
+
+                            // Use Sanity location data if available, otherwise skip location info
+                            const locationInfo = hasValidLocation ? {
+                                country: chat.location!.country!,
+                                countryCode: chat.location!.ip ? getCountryCode(chat.location!.country!) : '',
+                                countryFlag: chat.location!.ip ? getCountryFlag(getCountryCode(chat.location!.country!)) : '🌍',
+                                city: chat.location!.city
+                            } : {
+                                country: 'Unknown',
+                                countryCode: '',
+                                countryFlag: '🌍',
+                                city: undefined
+                            };
+
+                            stats.recentChats.push({
                                 question: lastUserMessage.content,
                                 timestamp: new Date(lastUserMessage.timestamp),
-                                user: chat.user?.firstName === 'Guest' ? 'Guest User' : `${chat.user?.firstName || ''} ${chat.user?.lastName || ''}`.trim()
+                                user: userDisplay,
+                                source: source,
+                                language: detectedLang,
+                                languageName: detectedLang ? getLanguageName(detectedLang) : 'Unknown',
+                                ...locationInfo
                             });
                         }
                     }
                 }
             } catch (error) {
-                console.warn('Error collecting last questions:', error);
+                console.warn('Error collecting recent chats:', error);
             }
         });
 
-        // Sort last questions by timestamp (most recent first) and take top 5
-        stats.lastQuestions.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-        stats.lastQuestions = stats.lastQuestions.slice(0, 5);
+        // Sort recent chats by timestamp (most recent first) and take top 5
+        stats.recentChats.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+        stats.recentChats = stats.recentChats.slice(0, 5);
 
         return stats;
-    }, [filteredChats, detectedLanguages, userLocations]);
+    }, [filteredChats, detectedLanguages]);
 
     if (loading) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading dashboard data...</p>
+                </div>
             </div>
         );
     }
@@ -593,9 +377,9 @@ export default function StatsDashboard() {
         );
     }
 
-    const topLanguages = getTop5(statistics?.languages || {});
-    const topCountries = getTop5(statistics?.countries || {}, true);
-    const topWebsites = getTop5(statistics?.websites || {});
+    const topLanguages = getTop10(statistics?.languages || {});
+    const topCountries = getTop10(statistics?.countries || {}, true);
+    const topWebsites = getTop10(statistics?.websites || {});
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -627,12 +411,18 @@ export default function StatsDashboard() {
                 </div>
 
                 {/* Main Stats Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
                     <StatCard
                         title="Total Chats"
                         value={(statistics?.totalChats || 0).toLocaleString()}
                         subtitle={selectedRange?.label?.toLowerCase() || 'all time'}
                         icon="💬"
+                    />
+                    <StatCard
+                        title="With Location Data"
+                        value={(statistics?.chatsWithLocation || 0).toLocaleString()}
+                        subtitle={`${statistics?.totalChats > 0 ? Math.round((statistics.chatsWithLocation / statistics.totalChats) * 100) : 0}% of total`}
+                        icon="📍"
                     />
                     <StatCard
                         title="Website Users"
@@ -656,27 +446,50 @@ export default function StatsDashboard() {
 
                 {/* Detailed Analytics */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* Recent Questions */}
+                    {/* Recent Chats */}
                     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                            <span className="mr-2">❓</span>
-                            Recent Questions
+                            <span className="mr-2">💬</span>
+                            Recent Chats
                         </h3>
                         <div className="space-y-4">
-                            {statistics.lastQuestions.length > 0 ? (
-                                statistics.lastQuestions.map((item, index) => (
-                                    <div key={index} className="border-l-4 border-blue-500 pl-4 py-2">
-                                        <p className="text-gray-800 text-sm font-medium line-clamp-2">
+                            {statistics.recentChats.length > 0 ? (
+                                statistics.recentChats.map((item: any, index: number) => (
+                                    <div key={index} className="border-l-4 border-blue-500 pl-4 py-3 bg-gray-50 rounded-r-lg">
+                                        <p className="text-gray-800 text-sm font-medium line-clamp-2 mb-3">
                                             {item.question.length > 100 ? `${item.question.substring(0, 100)}...` : item.question}
                                         </p>
-                                        <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
-                                            <span>{item.user}</span>
-                                            <span>{format(item.timestamp, 'MMM d, h:mm a')}</span>
+
+                                        {/* User and Source Row */}
+                                        <div className="flex items-center justify-between mb-2">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs font-semibold text-gray-700">{item.user}</span>
+                                                <span className="text-xs text-gray-500">•</span>
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                                    🔗 {item.source}
+                                                </span>
+                                            </div>
+                                            <span className="text-xs text-gray-500">{format(item.timestamp, 'MMM d, h:mm a')}</span>
+                                        </div>
+
+                                        {/* Language and Location Row */}
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                    🗣️ {item.languageName}
+                                                </span>
+                                                {item.country !== 'Unknown' && (
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                        {item.countryFlag} {item.country}
+                                                        {item.city && item.city !== 'Unknown' ? `, ${item.city}` : ''}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 ))
                             ) : (
-                                <p className="text-gray-500 italic">No recent questions found</p>
+                                <p className="text-gray-500 italic">No recent chats found</p>
                             )}
                         </div>
                     </div>
@@ -689,7 +502,7 @@ export default function StatsDashboard() {
                         </h3>
                         <div className="space-y-3">
                             {topLanguages.length > 0 ? (
-                                topLanguages.map((item, index) => (
+                                topLanguages.map((item: TopItem, index: number) => (
                                     <div key={index} className="flex items-center justify-between">
                                         <div className="flex items-center">
                                             <span className="w-6 h-6 bg-blue-100 text-blue-800 rounded-full flex items-center justify-center text-xs font-bold mr-3">
@@ -714,10 +527,11 @@ export default function StatsDashboard() {
                         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                             <span className="mr-2">🗺️</span>
                             Top Countries
+                            <span className="ml-2 text-sm text-gray-500">(Sanity Data Only)</span>
                         </h3>
                         <div className="space-y-3">
                             {topCountries.length > 0 ? (
-                                topCountries.map((item, index) => (
+                                topCountries.map((item: TopItem, index: number) => (
                                     <div key={index} className="flex items-center justify-between">
                                         <div className="flex items-center">
                                             <span className="w-6 h-6 bg-green-100 text-green-800 rounded-full flex items-center justify-center text-xs font-bold mr-3">
@@ -735,7 +549,10 @@ export default function StatsDashboard() {
                                     </div>
                                 ))
                             ) : (
-                                <p className="text-gray-500 italic">No country data available</p>
+                                <div className="text-center py-4">
+                                    <p className="text-gray-500 italic mb-2">No location data available yet</p>
+                                    <p className="text-xs text-gray-400">Location data will appear here as users interact with the new system</p>
+                                </div>
                             )}
                         </div>
                     </div>
@@ -748,7 +565,7 @@ export default function StatsDashboard() {
                         </h3>
                         <div className="space-y-3">
                             {topWebsites.length > 0 ? (
-                                topWebsites.map((item, index) => (
+                                topWebsites.map((item: TopItem, index: number) => (
                                     <div key={index} className="flex items-center justify-between">
                                         <div className="flex items-center">
                                             <span className="w-6 h-6 bg-purple-100 text-purple-800 rounded-full flex items-center justify-center text-xs font-bold mr-3">
@@ -775,7 +592,7 @@ export default function StatsDashboard() {
                         <span className="mr-2">📊</span>
                         User Source Comparison
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="text-center">
                             <div className="bg-blue-50 rounded-lg p-6">
                                 <div className="text-3xl font-bold text-blue-600 mb-2">
@@ -795,6 +612,17 @@ export default function StatsDashboard() {
                                 <div className="text-gray-600 font-medium">SDK Users</div>
                                 <div className="text-sm text-gray-500 mt-1">
                                     Third-party integrations
+                                </div>
+                            </div>
+                        </div>
+                        <div className="text-center">
+                            <div className="bg-green-50 rounded-lg p-6">
+                                <div className="text-3xl font-bold text-green-600 mb-2">
+                                    {statistics.chatsWithLocation.toLocaleString()}
+                                </div>
+                                <div className="text-gray-600 font-medium">With Location Data</div>
+                                <div className="text-sm text-gray-500 mt-1">
+                                    Auto-detected from Sanity
                                 </div>
                             </div>
                         </div>

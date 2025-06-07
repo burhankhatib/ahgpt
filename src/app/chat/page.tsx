@@ -9,7 +9,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { Message } from '@/types/chat';
 import { isSanityPermissionError } from '@/utils/sanity-permissions';
 import { Button } from "@/components/ui/button";
-import { detectUserLocation, VisitorApiData } from '@/utils/visitorApiDetection';
+import { detectUserLocation, LocationData } from '@/utils/browserLocationDetection';
+
 
 function formatTime(date: Date | string) {
     const dateObj = typeof date === 'string' ? new Date(date) : date;
@@ -105,12 +106,25 @@ export default function ChatPage() {
     const fullNameInitials = `${firstName[0] || 'U'}${lastName[0] || ''}`;
     const email = currentChat?.user?.email || '';
 
-    // Detect and store user location using VisitorAPI
+    // Detect and store user location using VisitorAPI for both authenticated and guest users
     useEffect(() => {
         const detectAndStoreUserLocation = async () => {
-            if (!user?.id || userLocationDetected) return;
+            if (userLocationDetected) return;
 
-            const userKey = user.id;
+            // Get user key - authenticated user ID or persistent guest ID
+            const getGuestId = () => {
+                if (typeof window !== 'undefined') {
+                    let guestId = localStorage.getItem('ahgpt_guest_id');
+                    if (!guestId) {
+                        guestId = `guest_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+                        localStorage.setItem('ahgpt_guest_id', guestId);
+                    }
+                    return guestId;
+                }
+                return `guest_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+            };
+
+            const userKey = user?.id || getGuestId();
             const existingLocation = localStorage.getItem(`userLocation_${userKey}`);
 
             // Only detect if we don't have recent VisitorAPI data (or it's older than 24 hours)
@@ -143,10 +157,10 @@ export default function ChatPage() {
 
             if (shouldDetect) {
                 try {
-                    console.log(`🌍 Detecting location with VisitorAPI for user ${userKey}...`);
+                    console.log(`🌍 Detecting location with browser geolocation for user ${userKey}...`);
 
-                    // VisitorAPI doesn't require user permission - it works with IP address
-                    const locationData: VisitorApiData | null = await detectUserLocation();
+                    // Primary method: Browser geolocation with IP fallback
+                    const locationData: LocationData | null = await detectUserLocation();
 
                     if (locationData && locationData.country !== 'Unknown') {
                         const locationToStore = {
@@ -156,7 +170,7 @@ export default function ChatPage() {
                         };
 
                         localStorage.setItem(`userLocation_${userKey}`, JSON.stringify(locationToStore));
-                        console.log(`✅ VisitorAPI location stored for user ${userKey}:`, locationData);
+                        console.log(`✅ Browser location stored for user ${userKey}:`, locationData);
 
                         // Show success message to user
                         setTimeout(() => {
@@ -165,7 +179,7 @@ export default function ChatPage() {
 
                         setUserLocationDetected(true);
                     } else {
-                        console.log(`❌ Could not detect location for user ${userKey}`);
+                        console.error(`❌ Location detection failed for user ${userKey}`);
                         setUserLocationDetected(true);
                     }
                 } catch (error) {
@@ -178,7 +192,7 @@ export default function ChatPage() {
         // Delay the location request slightly so the user sees the chat interface first
         const timer = setTimeout(detectAndStoreUserLocation, 1000);
         return () => clearTimeout(timer);
-    }, [user?.id, userLocationDetected]);
+    }, [user?.id, userLocationDetected]); // Will trigger for both auth users and guests
 
     // CSS styles for clickable questions and rich HTML content
     const questionStyles = `
@@ -838,6 +852,8 @@ export default function ChatPage() {
 
     return (
         <main className={`chat-main bg-gray-50/30 pt-16 ${getFontClass()}`}>
+            {/* Location Detection now handled in useEffect */}
+
             {/* Inject CSS styles for clickable questions */}
             <style dangerouslySetInnerHTML={{ __html: questionStyles }} />
 
@@ -1042,6 +1058,7 @@ export default function ChatPage() {
                             <input
                                 ref={inputRef}
                                 className={`w-full px-6 py-4 pr-14 rounded-2xl bg-white/80 backdrop-blur-sm border border-gray-200/50 text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200 shadow-lg hover:shadow-xl ${getFontClass()}`}
+                                style={{ color: '#1f2937 !important', backgroundColor: '#ffffff' }}
                                 value={input}
                                 onChange={handleInputChange}
                                 placeholder={getPlaceholderText()}

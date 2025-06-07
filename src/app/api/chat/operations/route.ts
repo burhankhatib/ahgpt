@@ -2,11 +2,31 @@ import { NextRequest, NextResponse } from 'next/server';
 import { client } from '@/sanity/lib/client';
 import { Chat, SanityChat, convertSanityChatToChat } from '@/types/chat';
 import { validateDomainAccessServer, createDomainBlockedResponse } from '@/utils/domain-validation';
+import { detectConversationLanguage } from '@/utils/languageDetection';
+import { detectLocationFromIP } from '@/utils/chatLocationDetection';
 
 // Helper function to generate unique keys
 const generateUniqueKey = (prefix: string) => {
     return `${prefix}_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
 };
+
+// Helper function to extract IP from request
+function getClientIP(request: NextRequest): string | undefined {
+    const forwarded = request.headers.get('x-forwarded-for');
+    const realIP = request.headers.get('x-real-ip');
+    const remoteAddress = request.headers.get('x-vercel-forwarded-for');
+    
+    if (forwarded) {
+        return forwarded.split(',')[0].trim();
+    }
+    if (realIP) {
+        return realIP;
+    }
+    if (remoteAddress) {
+        return remoteAddress;
+    }
+    return undefined;
+}
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -15,42 +35,47 @@ export async function POST(request: NextRequest) {
     console.log('API route hit: /api/chat/operations');
     
     try {
-        const { operation, data, isWidget, parentOrigin } = await request.json();
-        console.log('Operation:', operation);
+        const body = await request.json();
+        const { operation, data } = body;
 
-        // Always validate domain access, regardless of widget status
-        const domainValidation = await validateDomainAccessServer(request, { isWidget, parentOrigin });
-        
-        console.log('=== OPERATIONS DOMAIN VALIDATION ===');
-        console.log('Is Widget Request:', isWidget);
-        console.log('Domain detected:', domainValidation.domain);
-        console.log('Validation result:', domainValidation.allowed);
-        console.log('=== END OPERATIONS DEBUG ===');
-        
+        console.log('Processing operation:', operation);
+
+        // Domain validation for widget requests
+        const domainValidation = await validateDomainAccessServer(request);
         if (!domainValidation.allowed) {
-            console.log(`SDK operations access blocked for domain: ${domainValidation.domain}, reason: ${domainValidation.reason}`);
+            console.log('Domain blocked:', domainValidation.domain);
             return createDomainBlockedResponse(domainValidation.domain, domainValidation.reason);
         }
 
         switch (operation) {
             case 'saveChat': {
-                const chat = data as Chat;
-                console.log('Processing saveChat operation:', { 
-                    chatId: chat._id,
-                    messageCount: chat.messages.length,
-                    messageTypes: chat.messages.map(m => m.role),
-                    messages: chat.messages.map(m => ({
-                        role: m.role,
-                        content: m.content.slice(0, 100) + '...',
-                        uniqueKey: m.uniqueKey
+                const { _id, ...chatData } = data as Chat & { _id?: string };
+                console.log('Processing saveChat operation:', { chatId: _id });
+
+                // Auto-detect language from conversation
+                const detectedLanguage = detectConversationLanguage(
+                    chatData.messages.map(msg => ({
+                        content: msg.content,
+                        role: msg.role
                     }))
-                });
-                
-                const { _id, ...chatData } = chat;
+                );
+
+                // Auto-detect location if not provided
+                let location = chatData.location;
+                if (!location) {
+                    const clientIP = getClientIP(request);
+                    const locationResult = await detectLocationFromIP(clientIP);
+                    if (locationResult.location) {
+                        location = locationResult.location;
+                    }
+                }
+
                 const doc = {
                     _type: 'chat',
                     uniqueKey: chatData.uniqueKey || generateUniqueKey('chat'),
                     ...chatData,
+                    detectedLanguage,
+                    location,
                     messages: chatData.messages.map((msg, index) => ({
                         _key: msg.uniqueKey || `msg_${index}_${Date.now()}`,
                         role: msg.role,
@@ -84,7 +109,9 @@ export async function POST(request: NextRequest) {
                     
                     console.log('Successfully saved chat:', { 
                         chatId: savedChat._id,
-                        messageCount: savedChat.messages.length 
+                        messageCount: savedChat.messages.length,
+                        detectedLanguage: savedChat.detectedLanguage,
+                        location: savedChat.location?.city || 'Unknown'
                     });
                     return NextResponse.json(convertSanityChatToChat(savedChat));
                 } catch (error) {
@@ -99,11 +126,31 @@ export async function POST(request: NextRequest) {
             case 'createChat': {
                 const chat = data as Chat;
                 console.log('Processing createChat operation:', { chatId: chat._id });
+
+                // Auto-detect language from conversation
+                const detectedLanguage = detectConversationLanguage(
+                    chat.messages.map(msg => ({
+                        content: msg.content,
+                        role: msg.role
+                    }))
+                );
+
+                // Auto-detect location if not provided
+                let location = chat.location;
+                if (!location) {
+                    const clientIP = getClientIP(request);
+                    const locationResult = await detectLocationFromIP(clientIP);
+                    if (locationResult.location) {
+                        location = locationResult.location;
+                    }
+                }
                 
                 const doc = {
                     _type: 'chat',
                     uniqueKey: chat.uniqueKey || generateUniqueKey('chat'),
                     ...chat,
+                    detectedLanguage,
+                    location,
                     messages: chat.messages.map((msg, index) => ({
                         _key: msg.uniqueKey || `msg_${index}_${Date.now()}`,
                         role: msg.role,
@@ -121,7 +168,11 @@ export async function POST(request: NextRequest) {
 
                 try {
                     const savedChat = await client.create(doc) as SanityChat;
-                    console.log('Successfully created chat:', { chatId: savedChat._id });
+                    console.log('Successfully created chat:', { 
+                        chatId: savedChat._id,
+                        detectedLanguage: savedChat.detectedLanguage,
+                        location: savedChat.location?.city || 'Unknown'
+                    });
                     return NextResponse.json(convertSanityChatToChat(savedChat));
                 } catch (error) {
                     console.error('Sanity create operation error:', error);

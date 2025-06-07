@@ -18,7 +18,7 @@ export async function POST(req: Request) {
       // For any validation errors or missing config, allow by default
       if (!domainValidation.allowed && domainValidation.reason && domainValidation.reason.includes('blacklist')) {
         // Only block if the domain is explicitly in the blacklist
-        const blockedMessage = "this domain has been restricted. Please contact alhayatgpt.com team for access.";
+        const blockedMessage = "This domain has been restricted. Please contact alhayatgpt.com team for access.";
         
         const stream = new ReadableStream({
           start(controller) {
