@@ -11,9 +11,10 @@ import { LanguageProvider } from '@/contexts/LanguageContext';
 import { Message } from '@/types/chat';
 import { isSanityPermissionError } from '@/utils/sanity-permissions';
 import { Button } from "@/components/ui/button";
-import { redirectToProperDomain, isValidDomain, getApiEndpoint, getClerkConfig } from '@/utils/domain-config';
+import { redirectToProperDomain, isValidDomain, getApiEndpoint } from '@/utils/domain-config';
 import { useUserLocation } from '@/hooks/useUserLocation';
 import { detectUserLocation, VisitorApiData, getCountryFlag } from '@/utils/visitorApiDetection';
+
 import Link from "next/link";
 import { useChat, Message as VercelMessage } from 'ai/react';
 
@@ -168,7 +169,8 @@ function WidgetChatPage() {
             console.log(`[Widget ${instanceId.current}] Claimed as the active widget instance.`);
 
             setIsMounted(true);
-            setIsWidgetReady(true);
+
+            // Domain validation is now handled in separate useEffect above
         }
 
         return () => {
@@ -200,6 +202,11 @@ function WidgetChatPage() {
     const lastName = sourceWebsite; // Track source website
     const fullNameInitials = 'G';
     const email = '';
+
+    // Widget is now ready to load - domain validation moved to API level
+    useEffect(() => {
+        setIsWidgetReady(true);
+    }, []);
 
     // Detect and store user location using HTML5 Geolocation API (Widget)
     useEffect(() => {
@@ -306,12 +313,6 @@ function WidgetChatPage() {
         const initializeWidget = () => {
             if (isInitialized) return;
             isInitialized = true;
-
-            // Check domain validity and redirect if necessary
-            if (!isValidDomain()) {
-                redirectToProperDomain();
-                return;
-            }
 
             // Get configuration from URL parameters
             const urlParams = new URLSearchParams(window.location.search);
@@ -432,7 +433,7 @@ function WidgetChatPage() {
 
                 if (questionText && !isLoading) {
                     // Track the click event
-                    trackChatEvent('CLICK', `Suggested Question: ${questionText.substring(0, 50)}...`);
+                    trackChatEvent('CLICK');
 
                     // Create user message
                     const userMessage: Message = {
@@ -455,11 +456,11 @@ function WidgetChatPage() {
 
                     // Submit the question automatically
                     try {
-                        const response = await fetch('/api/chat', {
+                        const apiEndpoint = getApiEndpoint();
+                        const chatApiUrl = `${apiEndpoint}/api/chat`;
+                        const response = await fetch(chatApiUrl, {
                             method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
+                            headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 messages: [...(currentChat?.messages || []), userMessage].map(msg => ({
                                     role: msg.role,
@@ -470,7 +471,7 @@ function WidgetChatPage() {
                                 })),
                                 isWidget: true,
                                 isGuest: isGuestMode
-                            }),
+                            })
                         });
 
                         if (!response.ok) {
@@ -547,7 +548,7 @@ function WidgetChatPage() {
                             }
                         }
 
-                        trackChatEvent('RECEIVE_MESSAGE', `Widget suggested question response length: ${aiResponseContent.length}`);
+                        trackChatEvent('RECEIVE_MESSAGE');
 
                     } catch (error) {
                         console.error('Error in suggested question submission:', error);
@@ -590,70 +591,37 @@ function WidgetChatPage() {
         e.preventDefault();
         if (!input.trim() || isLoading) return;
 
-        const userMessage: Message = {
-            role: 'user',
-            content: input.trim(),
-            timestamp: new Date(),
-            uniqueKey: `msg_user_${Date.now()}`,
-            firstName,
-            lastName,
-            email,
-        };
-
-        const currentInput = input.trim();
-        setInput("");
-        setIsLoading(true);
+        const newMessages: Message[] = [...displayMessages, { role: 'user', content: input, timestamp: new Date(), uniqueKey: Date.now().toString() }];
+        setDisplayMessages(newMessages);
+        setInput(""); // Clear input after grabbing its value
         setStreamingMessage("");
+        setIsLoading(true);
+        trackChatEvent('SEND_MESSAGE');
 
-        setDisplayMessages(prev => [...prev, userMessage]);
-
-        trackChatEvent('SEND_MESSAGE', `Widget message length: ${currentInput.length}`);
-
-        // Notify parent SDK about message being sent
-        if (window.parent && window.parent !== window) {
-            try {
-                window.parent.postMessage({
-                    type: 'MESSAGE_SENT',
-                    payload: {
-                        content: currentInput,
-                        source: sourceWebsite
-                    }
-                }, parentOrigin);
-            } catch (error) {
-                console.log('Could not notify parent about message sent:', error);
-            }
-        }
+        // Use the sourceWebsite from URL params for validation
+        const sourceOrigin = sourceWebsite.startsWith('http') ? sourceWebsite : `https://${sourceWebsite}`;
 
         try {
-            const response = await fetch('/api/chat', {
+            const apiEndpoint = getApiEndpoint();
+            const chatApiUrl = `${apiEndpoint}/api/chat`;
+            const response = await fetch(chatApiUrl, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    messages: [...(currentChat?.messages || []), userMessage].map(msg => ({
-                        role: msg.role,
-                        content: msg.content,
-                        firstName: msg.firstName || firstName,
-                        lastName: msg.lastName || lastName,
-                        email: msg.email || email,
-                    })),
+                    messages: newMessages.map(({ role, content }) => ({ role, content })),
                     isWidget: true,
                     isGuest: isGuestMode,
-                    parentOrigin: parentOrigin !== '*' ? parentOrigin : undefined,
-                    userLocation: location ? {
-                        country: location.country,
-                        countryCode: location.countryCode,
-                        city: location.city,
-                        region: location.region,
-                        detectionMethod: location.detectionMethod,
-                        confidence: location.confidence
-                    } : undefined
-                }),
+                    userLocation: location,
+                    parentOrigin: sourceOrigin, // Pass correct origin for validation
+                    chatId: currentChat?._id,
+                    firstName: firstName,
+                    lastName: lastName
+                })
             });
 
             if (!response.ok) {
-                throw new Error('Failed to get AI response');
+                const errorData = await response.json().catch(() => ({ message: 'An unknown error occurred' }));
+                throw new Error(errorData.message || 'Failed to get AI response');
             }
 
             const reader = response.body?.getReader();
@@ -718,7 +686,11 @@ function WidgetChatPage() {
 
             // Always save conversation to Sanity for tracking purposes
             try {
-                await addConversationTurn(userMessage, aiMessage);
+                // Pass the user message that initiated this turn
+                const userMessageForTurn = newMessages.find(m => m.role === 'user' && m.content === input);
+                if (userMessageForTurn) {
+                    await addConversationTurn(userMessageForTurn, aiMessage);
+                }
             } catch (error) {
                 console.error('Error saving conversation turn:', error);
                 if (isSanityPermissionError(error)) {
@@ -727,14 +699,18 @@ function WidgetChatPage() {
                 // Continue even if saving fails - don't block the user experience
             }
 
-            trackChatEvent('RECEIVE_MESSAGE', `Widget response length: ${aiResponseContent.length}`);
+            trackChatEvent('RECEIVE_MESSAGE');
 
         } catch (error) {
             console.error('Error in widget chat:', error);
 
+            const errorMessageContent = (error instanceof Error && error.message.includes('Domain access denied'))
+                ? "This domain is not authorized. Please contact support to whitelist it."
+                : 'Sorry, I encountered an error. Please try again. If the problem persists, please contact our support team.';
+
             const errorMessage: Message = {
                 role: 'assistant',
-                content: 'Sorry, I encountered an error. Please try again. If you are an Admin then please contact alhayatgpt.com to white-list your domain.',
+                content: errorMessageContent,
                 timestamp: new Date(),
                 uniqueKey: `msg_error_${Date.now()}`
             };
@@ -802,7 +778,7 @@ function WidgetChatPage() {
                 setCopiedMessageId(null);
             }, 2000);
 
-            trackChatEvent('SEND_MESSAGE', `Widget copy - length: ${textContent.length}`);
+            trackChatEvent('SEND_MESSAGE');
         } catch (error) {
             console.error('Failed to copy message:', error);
         }
@@ -855,7 +831,7 @@ function WidgetChatPage() {
 
     // Show full chat interface for both authenticated and guest users
     return (
-        <div className="flex flex-col bg-gray-50 widget-chat-container" style={{ minHeight: '100vh', position: 'relative' }}>
+        <div className="flex flex-col bg-gray-50 widget-chat-container" style={{ height: '100%', minHeight: '100vh', position: 'relative' }}>
             {/* Authentication Status Banner - Completely hidden for widget users */}
 
             {/* Permission Issues Banner */}

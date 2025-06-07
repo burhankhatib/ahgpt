@@ -1,7 +1,7 @@
 import { openai } from '@ai-sdk/openai';
 import { streamText } from 'ai';
 import jwt from 'jsonwebtoken';
-import { validateDomainAccess, createDomainBlockedResponse } from '@/utils/domain-validation';
+import { validateDomainAccessServer, createDomainBlockedResponse } from '@/utils/domain-validation';
 
 // Allow streaming responses up to 30 seconds
 export const maxDuration = 30;
@@ -10,22 +10,34 @@ export async function POST(req: Request) {
   try {
     const { messages, isWidget, isGuest, userLocation, parentOrigin } = await req.json();
 
-    // Always validate domain access, regardless of widget status
-    const domainValidation = await validateDomainAccess(req, { isWidget, parentOrigin });
-    
-    // Log detailed debugging information
-    console.log('=== DOMAIN VALIDATION DEBUG ===');
-    console.log('Is Widget Request:', isWidget);
-    console.log('Domain detected:', domainValidation.domain);
-    console.log('Validation result:', domainValidation.allowed);
-    console.log('Reason:', domainValidation.reason);
-    console.log('Origin header:', req.headers.get('origin'));
-    console.log('Referer header:', req.headers.get('referer'));
-    console.log('=== END DEBUG ===');
-    
-    if (!domainValidation.allowed) {
-      console.log(`SDK access blocked for domain: ${domainValidation.domain}, reason: ${domainValidation.reason}`);
-      return createDomainBlockedResponse(domainValidation.domain, domainValidation.reason);
+    // Check domain access for widget requests - return immediately if blocked
+    if (isWidget) {
+      const domainValidation = await validateDomainAccessServer(req, { isWidget, parentOrigin });
+      
+      // MARKETING STRATEGY: Only block if explicitly blacklisted
+      // For any validation errors or missing config, allow by default
+      if (!domainValidation.allowed && domainValidation.reason && domainValidation.reason.includes('blacklist')) {
+        // Only block if the domain is explicitly in the blacklist
+        const blockedMessage = "this domain has been restricted. Please contact alhayatgpt.com team for access.";
+        
+        const stream = new ReadableStream({
+          start(controller) {
+            const encoder = new TextEncoder();
+            controller.enqueue(encoder.encode(`0:"${blockedMessage}"`));
+            controller.close();
+          }
+        });
+        
+        return new Response(stream, {
+          headers: {
+            'Content-Type': 'text/plain; charset=utf-8',
+            'Access-Control-Allow-Origin': '*',
+          },
+        });
+      }
+      
+      // For all other cases (errors, missing config, etc.), allow the request
+      // This ensures maximum compatibility for marketing purposes
     }
 
     const authHeader = req.headers.get('authorization') || '';
@@ -206,28 +218,6 @@ export async function POST(req: Request) {
   "وليد الحسيني",
   "علاء عبد الفتاح",
   "شهرزاد قاسم حسن",
-  "بسام البغدادي",
-  "هشام الهاشمي",
-  "مريم جواد",
-  "سامي الذيب السويسري",
-  "محمد جابر الأنصاري",
-  "سيد درويش",
-  "أمير عبد الله",
-  "محمد كمال",
-  "علي الدجاني",
-  "أحمد القبانجي",
-  "علي الكيالي",
-  "عبد القادر البدوي",
-  "محمود صبري",
-  "حسين القاضي",
-  "عبد العزيز الحكيم",
-  "سعيد شاور",
-  "عبد الرزاق الجبران",
-  "نزيه أبو نضال",
-  "عبد الفتاح سعيد",
-  "أحمد القاضي",
-  "مروان الشوربجي",
-  "باسم يوسف",
   "رائد السمهوري",
   "محمد حبش",
   "ناظم المنيفي",
@@ -263,6 +253,7 @@ export async function POST(req: Request) {
       "الحديث النبوي",
     ];
 
+    // Continue with AI response processing (domain is allowed)
     const result = streamText({
       model: openai('gpt-4o'),
       temperature: 0.5,

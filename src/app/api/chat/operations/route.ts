@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { client } from '@/sanity/lib/client';
 import { Chat, SanityChat, convertSanityChatToChat } from '@/types/chat';
-import { validateDomainAccess, createDomainBlockedResponse } from '@/utils/domain-validation';
+import { validateDomainAccessServer, createDomainBlockedResponse } from '@/utils/domain-validation';
 
 // Helper function to generate unique keys
 const generateUniqueKey = (prefix: string) => {
@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
         console.log('Operation:', operation);
 
         // Always validate domain access, regardless of widget status
-        const domainValidation = await validateDomainAccess(request, { isWidget, parentOrigin });
+        const domainValidation = await validateDomainAccessServer(request, { isWidget, parentOrigin });
         
         console.log('=== OPERATIONS DOMAIN VALIDATION ===');
         console.log('Is Widget Request:', isWidget);

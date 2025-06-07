@@ -106,31 +106,99 @@ class LanguageDetector {
   }
 }
 
-// Location detection utility
+// Location detection utility using browser geolocation
 class LocationDetector {
   static async detectUserLocation(): Promise<UserLocation | null> {
-    try {
-      // Use VisitorAPI for IP-based location detection
-      const response = await fetch('https://ipapi.co/json/');
-      const data = await response.json();
-      
-      if (data.country_name && data.country_name !== 'Unknown') {
-        return {
-          country: data.country_name,
-          countryCode: data.country_code,
-          city: data.city || 'Unknown',
-          region: data.region || 'Unknown',
-          detectionMethod: 'ipapi',
-          confidence: 0.85
-        };
+    return new Promise((resolve) => {
+      // Check if geolocation is supported
+      if (!navigator.geolocation) {
+        console.warn('[Widget] Geolocation not supported by browser');
+        resolve(null);
+        return;
       }
-    } catch (error) {
-      console.warn('[Widget] Location detection failed:', error);
-    }
-    
-    return null;
+
+      // Set timeout for geolocation request
+      const timeoutId = setTimeout(() => {
+        console.warn('[Widget] Geolocation request timed out');
+        resolve(null);
+      }, 5000); // 5 second timeout
+
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          clearTimeout(timeoutId);
+          try {
+            const { latitude, longitude } = position.coords;
+            
+            // Use reverse geocoding to get location details
+            const location = await LocationDetector.reverseGeocode(latitude, longitude);
+            resolve(location);
+          } catch (error) {
+            console.warn('[Widget] Reverse geocoding failed:', error);
+            resolve({
+              country: 'Unknown',
+              countryCode: 'UN',
+              city: 'Unknown',
+              region: 'Unknown',
+              detectionMethod: 'browser-coords-only',
+              confidence: 0.6
+            });
+          }
+        },
+        (error) => {
+          clearTimeout(timeoutId);
+          console.warn('[Widget] Geolocation error:', error.message);
+          resolve(null);
+        },
+        {
+          enableHighAccuracy: false, // Use network-based location for faster response
+          timeout: 4000, // 4 second timeout for position request
+          maximumAge: 300000 // Accept cached position up to 5 minutes old
+        }
+      );
+    });
   }
-  
+
+  static async reverseGeocode(lat: number, lon: number): Promise<UserLocation> {
+    try {
+      // Use a free reverse geocoding service (OpenStreetMap Nominatim)
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&addressdetails=1`,
+        {
+          headers: {
+            'User-Agent': 'AlHayatGPT-Widget/2.0'
+          }
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
+      const data = await response.json();
+      const address = data.address || {};
+      
+      return {
+        country: address.country || 'Unknown',
+        countryCode: address.country_code?.toUpperCase() || 'UN',
+        city: address.city || address.town || address.village || 'Unknown',
+        region: address.state || address.region || 'Unknown',
+        detectionMethod: 'browser-geocoding',
+        confidence: 0.85
+      };
+    } catch (error) {
+      console.warn('[Widget] Reverse geocoding failed:', error);
+      // Return minimal location data
+      return {
+        country: 'Unknown',
+        countryCode: 'UN', 
+        city: 'Unknown',
+        region: 'Unknown',
+        detectionMethod: 'browser-coords-only',
+        confidence: 0.6
+      };
+    }
+  }
+
   static getCountryFlag(countryCode: string): string {
     if (!countryCode || countryCode.length !== 2) return '';
     
@@ -139,7 +207,6 @@ class LocationDetector {
       .toUpperCase()
       .split('')
       .map(char => 127397 + char.charCodeAt(0));
-    
     return String.fromCodePoint(...codePoints);
   }
 }
@@ -178,41 +245,69 @@ export class AlHayatGPTWidget {
   
   private async initialize(): Promise<void> {
     try {
-      console.log('[Widget Debug] Starting initialization...');
+      this.log('Starting widget initialization...');
       
-      // Find container
-      console.log('[Widget Debug] Looking for container:', this.config.containerId);
-      const container = document.getElementById(this.config.containerId);
-      if (!container) {
-        console.error('[Widget Debug] Container not found:', this.config.containerId);
+      // Step 1: Check if domain is blocked
+      const domainAllowed = await this.checkDomainAccess();
+      if (!domainAllowed) {
         throw new WidgetError(
-          `Container with id "${this.config.containerId}" not found`,
-          ErrorCodes.CONTAINER_NOT_FOUND
+          'This domain is not authorized to use the Al Hayat GPT widget. Please contact support if you believe this is an error.',
+          ErrorCodes.DOMAIN_BLOCKED,
+          false,
+          { domain: this.sourceWebsite }
         );
       }
       
-      console.log('[Widget Debug] Container found:', container);
-      this.container = container;
+      // Step 2: Find container
+      this.log('Looking for container:', this.config.containerId);
+      this.container = document.querySelector(this.config.containerId);
       
-      // Create and setup iframe
-      console.log('[Widget Debug] Creating iframe...');
+      if (!this.container) {
+        throw new WidgetError(
+          `Container not found: ${this.config.containerId}`,
+          ErrorCodes.CONTAINER_NOT_FOUND,
+          false,
+          { selector: this.config.containerId }
+        );
+      }
+      
+      // Step 3: Start location detection (non-blocking)
+      this.log('Starting location detection...');
+      LocationDetector.detectUserLocation().then(location => {
+        this.userLocation = location;
+        this.log('Location detected:', location);
+      }).catch(error => {
+        this.log('Location detection failed:', error);
+        this.userLocation = null;
+      });
+      
+      // Step 4: Create and configure iframe
+      this.log('Creating iframe...');
       await this.createIframe();
-      console.log('[Widget Debug] Iframe created successfully');
       
-      // Detect user location
-      console.log('[Widget Debug] Detecting user location...');
-      this.userLocation = await LocationDetector.detectUserLocation();
-      console.log('[Widget Debug] User location detected:', this.userLocation);
+      // Step 5: Setup message handling
+      this.log('Setting up message handling...');
+      this.setupMessageHandling();
       
-      // NOTE: onReady will be called when we receive WIDGET_READY message from iframe
-      console.log('[Widget Debug] Waiting for WIDGET_READY message from iframe...');
+      this.log('Widget initialization completed successfully');
       
-      this.log('Widget iframe setup completed, waiting for ready signal');
+      // Call onReady callback if provided
+      if (this.config.onReady) {
+        this.config.onReady();
+      }
       
     } catch (error) {
-      console.error('[Widget Debug] Initialization failed:', error);
+      this.log('Widget initialization failed:', error);
       this.handleError(error);
+      throw error;
     }
+  }
+  
+  private async checkDomainAccess(): Promise<boolean> {
+    // Always allow widget to load for marketing purposes
+    // Domain blocking is now handled at API level when users try to chat
+    this.log('Domain access check bypassed - widget loads on all domains for marketing');
+    return true;
   }
   
   private async createIframe(): Promise<void> {

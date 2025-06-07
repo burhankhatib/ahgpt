@@ -30,8 +30,8 @@ export async function getDomainAccessConfig(): Promise<DomainAccessConfig> {
       return {
         _id: config._id,
         mode: config.mode || 'blacklist',
-        whitelist: config.whitelist || ['alhayatgpt.com', 'www.alhayatgpt.com', 'localhost', '127.0.0.1'],
-        blacklist: config.blacklist || ['example-blocked-site.com', 'spam-website.net', 'unauthorized-domain.org'],
+        whitelist: config.whitelist || [],
+        blacklist: config.blacklist || [],
         allowedTesting: config.allowedTesting !== false,
         lastUpdated: config.lastUpdated,
       }
@@ -44,8 +44,8 @@ export async function getDomainAccessConfig(): Promise<DomainAccessConfig> {
     // Return default config as fallback
     return {
       mode: 'blacklist',
-      whitelist: ['alhayatgpt.com', 'www.alhayatgpt.com', 'localhost', '127.0.0.1'],
-      blacklist: ['example-blocked-site.com', 'spam-website.net', 'unauthorized-domain.org'],
+      whitelist: [],
+      blacklist: [],
       allowedTesting: true,
     }
   }
@@ -59,8 +59,8 @@ export async function createDefaultDomainAccessConfig(): Promise<DomainAccessCon
       _type: 'domainAccess',
       title: 'SDK Domain Access Control',
       mode: 'blacklist',
-      whitelist: ['alhayatgpt.com', 'www.alhayatgpt.com', 'localhost', '127.0.0.1'],
-      blacklist: ['example-blocked-site.com', 'spam-website.net', 'unauthorized-domain.org'],
+      whitelist: [],
+      blacklist: [],  // No hardcoded domains - everything managed through Sanity
       allowedTesting: true,
       lastUpdated: new Date().toISOString(),
     }

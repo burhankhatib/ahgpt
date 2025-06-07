@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Al Hayat GPT SDK Test</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 40px auto; padding: 0 20px; }
+        h1 { color: #1a1a1a; }
+        #widget-container {
+            width: 400px;
+            height: 600px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin-top: 20px;
+            overflow: hidden; /* Ensures the iframe stays within the rounded corners */
+        }
+        code { background-color: #f4f4f4; padding: 2px 6px; border-radius: 4px; font-family: "SF Mono", "Menlo", "Monaco", monospace; }
+        .instructions { background-color: #f9f9f9; border-left: 3px solid #007bff; padding: 15px; margin-top: 20px; }
+    </style>
+    <script src="./sdk.js" defer></script>
+</head>
+<body>
+
+    <h1>Al Hayat GPT SDK v3.0 Test Page</h1>
+    <p>This page tests the basic embedding functionality of the new, simplified SDK.</p>
+
+    <div class="instructions">
+        <p>The SDK script <code>{{SDK_FILE_NAME}}</code> is loaded. It will automatically find the container below and create the widget iframe inside it.</p>
+        <p>If you see the chat widget below, the SDK has loaded and is working correctly.</p>
+    </div>
+
+    <!-- This is the container where the widget will be embedded. -->
+    <div id="widget-container"></div>
+
+    <script>
+        // Wait for the SDK to be ready before creating the widget.
+        window.addEventListener('AlHayatGPTSDKReady', () => {
+            AlHayatGPT.createWidget({
+                containerId: 'widget-container',
+                // Optional: For local testing, you might point to your dev server
+                // widgetBaseUrl: 'http://localhost:3001/widget/chat', 
+            });
+        });
+    </script>
+
+</body>
+</html> 

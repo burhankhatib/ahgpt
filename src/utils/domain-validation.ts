@@ -1,192 +1,170 @@
-// Domain validation utility for SDK access control
+/**
+ * Domain Validation Utility for Sanity Integration
+ * Validates domains against admin-configured whitelist/blacklist in Sanity
+ */
 import { getDomainAccessConfig, type DomainAccessConfig } from '@/sanity/lib/data/domainAccess';
 
-export interface DomainValidationConfig {
-    mode: 'whitelist' | 'blacklist' | 'disabled';
-    whitelist: string[];
-    blacklist: string[];
-    allowedTesting?: boolean; // Allow localhost and development domains
-}
-
-// Default configuration - you can modify this as needed
-const DEFAULT_CONFIG: DomainValidationConfig = {
-    mode: 'blacklist', // Start with blacklist mode (block specific domains)
-    whitelist: [
-        'alhayatgpt.com',
-        'www.alhayatgpt.com',
-        'localhost',
-        '127.0.0.1',
-    ],
-    blacklist: [
-        'example-blocked-site.com',
-        'spam-website.net',
-        'unauthorized-domain.org',
-    ],
-    allowedTesting: true, // Allow development/testing domains
-};
-
-/**
- * Get the origin domain from a request
- * For widget requests, check the parentOrigin parameter first
- */
-export function getOriginDomain(request: Request, requestBody?: any): string | null {
-    // For widget requests, check parentOrigin from request body first
-    if (requestBody?.isWidget && requestBody?.parentOrigin) {
-        try {
-            return new URL(requestBody.parentOrigin).hostname.toLowerCase();
-        } catch {
-            // If parentOrigin is invalid, continue to other methods
-        }
-    }
-
-    // Check Origin header first (more reliable)
-    const origin = request.headers.get('origin');
-    if (origin) {
-        try {
-            return new URL(origin).hostname.toLowerCase();
-        } catch {
-            return null;
-        }
-    }
-
-    // Fallback to Referer header
-    const referer = request.headers.get('referer');
-    if (referer) {
-        try {
-            return new URL(referer).hostname.toLowerCase();
-        } catch {
-            return null;
-        }
-    }
-
-    return null;
+export interface DomainValidationResult {
+  allowed: boolean;
+  reason: string;
 }
 
 /**
- * Check if a domain is allowed to use the SDK
+ * Normalize domain for comparison
  */
-export function isDomainAllowed(domain: string | null, config: DomainValidationConfig = DEFAULT_CONFIG): boolean {
-    // If domain validation is disabled, allow all
-    if (config.mode === 'disabled') {
-        return true;
+function normalizeDomain(domain: string): string {
+  try {
+    // Handle domains with protocols and paths
+    if (domain.includes('://')) {
+      domain = new URL(domain).hostname;
+    }
+  } catch (e) {
+    // Ignore invalid URLs, proceed with original string
+  }
+  return domain.toLowerCase().replace(/^www\./, '');
+}
+
+/**
+ * Check if domain matches against a list (with subdomain support)
+ */
+function domainMatches(testDomain: string, targetDomain: string): boolean {
+  const normalizedTest = normalizeDomain(testDomain);
+  const normalizedTarget = normalizeDomain(targetDomain);
+  
+  return normalizedTest === normalizedTarget || 
+         normalizedTest.endsWith(`.${normalizedTarget}`);
+}
+
+/**
+ * Main domain validation function using Sanity database
+ */
+export async function validateDomainAccess(domain?: string): Promise<DomainValidationResult> {
+  try {
+    const targetDomain = domain || (typeof window !== 'undefined' ? window.location.hostname : '');
+    
+    if (!targetDomain) {
+      // MARKETING: Allow by default even if no domain detected
+      return { allowed: true, reason: 'No domain provided - allowing by default for marketing' };
     }
 
-    // If no domain detected, block by default
-    if (!domain) {
-        return false;
+    const config = await getDomainAccessConfig();
+    
+    // MARKETING: If no config or disabled, allow everything
+    if (!config || config.mode === 'disabled') {
+      return { allowed: true, reason: 'Domain validation disabled - allowing for marketing' };
     }
 
-    // Normalize domain
-    const normalizedDomain = domain.toLowerCase().replace(/^www\./, '');
+    const normalizedDomain = normalizeDomain(targetDomain);
 
-    // Check for development/testing domains
-    if (config.allowedTesting) {
-        const testingDomains = ['localhost', '127.0.0.1'];
-        const isLocalDev = testingDomains.some(testDomain => normalizedDomain === testDomain);
-        if (isLocalDev) {
-            return true;
-        }
+    // Always allow localhost for development
+    if (config.allowedTesting && (normalizedDomain === 'localhost' || normalizedDomain === '127.0.0.1')) {
+      return { allowed: true, reason: 'Development domain allowed' };
     }
 
-    // Whitelist mode: only allow explicitly listed domains
     if (config.mode === 'whitelist') {
-        return config.whitelist.some(allowedDomain => {
-            const normalizedAllowed = allowedDomain.toLowerCase().replace(/^www\./, '');
-            return normalizedDomain === normalizedAllowed || normalizedDomain.endsWith(`.${normalizedAllowed}`);
-        });
+      const isWhitelisted = config.whitelist.some(whitelistedDomain => 
+        domainMatches(targetDomain, whitelistedDomain)
+      );
+      return {
+        allowed: isWhitelisted,
+        reason: isWhitelisted ? 'Domain whitelisted' : 'Domain not in whitelist'
+      };
     }
 
-    // Blacklist mode: block explicitly listed domains
     if (config.mode === 'blacklist') {
-        const isBlocked = config.blacklist.some(blockedDomain => {
-            const normalizedBlocked = blockedDomain.toLowerCase().replace(/^www\./, '');
-            return normalizedDomain === normalizedBlocked || normalizedDomain.endsWith(`.${normalizedBlocked}`);
-        });
-        return !isBlocked;
+      const isBlacklisted = config.blacklist.some(blacklistedDomain => 
+        domainMatches(targetDomain, blacklistedDomain)
+      );
+      if (isBlacklisted) {
+        return { allowed: false, reason: 'Domain is in blacklist' };
+      }
+      return { allowed: true, reason: 'Domain not in blacklist - allowed for marketing' };
     }
 
-    return false;
-}
+    // MARKETING: Default to allow
+    return { allowed: true, reason: 'Default allow for marketing purposes' };
 
-/**
- * Get current domain validation configuration from Sanity
- */
-export async function getDomainValidationConfig(): Promise<DomainValidationConfig> {
-    try {
-        // Load from Sanity
-        console.log('Loading domain config from Sanity...');
-        const savedConfig = await getDomainAccessConfig();
-        console.log('Sanity config loaded:', savedConfig);
-        
-        if (savedConfig) {
-            const config = {
-                mode: savedConfig.mode,
-                whitelist: savedConfig.whitelist,
-                blacklist: savedConfig.blacklist,
-                allowedTesting: savedConfig.allowedTesting,
-            };
-            console.log('Using Sanity config:', config);
-            return config;
-        }
-    } catch (error) {
-        console.error('Error loading domain config from Sanity:', error);
-        console.log('Using default configuration');
-    }
-
-    // Fallback to default config
-    console.log('Using default config:', DEFAULT_CONFIG);
-    return DEFAULT_CONFIG;
-}
-
-/**
- * Middleware function to validate domain access
- */
-export async function validateDomainAccess(request: Request, requestBody?: any): Promise<{ allowed: boolean; domain: string | null; reason?: string }> {
-    const config = await getDomainValidationConfig();
-    const domain = getOriginDomain(request, requestBody);
-    const allowed = isDomainAllowed(domain, config);
-
-    // Debug logging
-    console.log('=== DOMAIN VALIDATION CONFIG DEBUG ===');
-    console.log('Config mode:', config.mode);
-    console.log('Config whitelist:', config.whitelist);
-    console.log('Config blacklist:', config.blacklist);
-    console.log('Config allowedTesting:', config.allowedTesting);
-    console.log('Detected domain:', domain);
-    console.log('Domain allowed:', allowed);
-    console.log('=== END CONFIG DEBUG ===');
-
-    let reason: string | undefined;
-    if (!allowed) {
-        if (!domain) {
-            reason = 'No origin domain detected';
-        } else if (config.mode === 'whitelist') {
-            reason = `Domain '${domain}' not in whitelist`;
-        } else if (config.mode === 'blacklist') {
-            reason = `Domain '${domain}' is blacklisted`;
-        }
-    }
-
-    return { allowed, domain, reason };
+  } catch (error) {
+    console.error('[Domain Validation] Error:', error);
+    // MARKETING: On any error, allow by default
+    return { allowed: true, reason: 'Validation error - allowing by default for marketing' };
+  }
 }
 
 /**
  * Create a standardized error response for blocked domains
  */
 export function createDomainBlockedResponse(domain: string | null, reason?: string): Response {
-    return new Response(
-        JSON.stringify({
-            error: 'Domain access denied',
-            domain,
-            reason,
-            message: 'This domain is not authorized to use the AHGPT SDK. Please contact support if you believe this is an error.',
-        }),
-        {
-            status: 403,
-            headers: {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*', // Allow CORS so the error message can be read
-            },
-        }
-    );
+  return new Response(
+    JSON.stringify({
+      error: 'Domain access denied',
+      domain,
+      reason,
+      message: 'This domain is not authorized to use the AHGPT SDK. Please contact support if you believe this is an error.',
+    }),
+    {
+      status: 403,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*', // Allow CORS so the error message can be read
+      },
+    }
+  );
+}
+
+/**
+ * Extract domain from request headers for server-side validation
+ */
+function getOriginDomain(request: Request, requestBody?: any): string | null {
+  if (requestBody?.isWidget && requestBody?.parentOrigin) {
+    try {
+      return new URL(requestBody.parentOrigin).hostname;
+    } catch {
+      // Fallback for when parentOrigin is just a hostname
+      return requestBody.parentOrigin;
+    }
+  }
+
+  const origin = request.headers.get('origin');
+  if (origin) {
+    try {
+      return new URL(origin).hostname;
+    } catch {
+      return origin;
+    }
+  }
+
+  const referer = request.headers.get('referer');
+  if (referer) {
+    try {
+      return new URL(referer).hostname;
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Server-side domain validation for API routes
+ */
+export async function validateDomainAccessServer(request: Request, requestBody?: any): Promise<{ allowed: boolean; domain: string | null; reason?: string }> {
+  try {
+    const domain = getOriginDomain(request, requestBody);
+    const result = await validateDomainAccess(domain || undefined);
+
+    return {
+      allowed: result.allowed,
+      domain,
+      reason: result.reason
+    };
+  } catch (error) {
+    console.error('Error in server domain validation:', error);
+    return {
+      allowed: true,
+      domain: getOriginDomain(request, requestBody),
+      reason: 'Domain validation error (allowed by default)'
+    };
+  }
 } 

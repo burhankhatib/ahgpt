@@ -55,7 +55,19 @@ export function getDomainConfig(): DomainConfig {
  */
 export function getApiEndpoint(): string {
   if (typeof window !== 'undefined') {
-    // Client-side: use current origin
+    // Client-side: Check if we're on an external domain (widget context)
+    const hostname = window.location.hostname;
+    const isExternal = hostname !== 'www.alhayatgpt.com' && 
+                      hostname !== 'alhayatgpt.com' && 
+                      hostname !== 'localhost' && 
+                      hostname !== '127.0.0.1';
+    
+    if (isExternal) {
+      // For widgets embedded on external domains, always use the main domain
+      return 'https://www.alhayatgpt.com';
+    }
+    
+    // For same-domain requests, use current origin
     return window.location.origin;
   }
   

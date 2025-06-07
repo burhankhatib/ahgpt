@@ -92,15 +92,15 @@ function Step({ number, title, children }: {
     );
 }
 
-export default function InstructionsPage() {
-    const [activeTab, setActiveTab] = useState('wordpress');
+const TABS = [
+    { id: 'html', label: 'HTML', icon: <FaHtml5 className="w-5 h-5 sm:w-6 sm:h-6" /> },
+    { id: 'wordpress', label: 'WordPress', icon: <FaWordpress className="w-5 h-5 sm:w-6 sm:h-6" /> },
+    { id: 'react', label: 'React / Next.js', icon: <FaReact className="w-5 h-5 sm:w-6 sm:h-6" /> },
+    { id: 'angular', label: 'Angular', icon: <FaAngular className="w-5 h-5 sm:w-6 sm:h-6" /> },
+];
 
-    const platforms = [
-        { id: 'wordpress', name: 'WordPress', icon: <FaWordpress className="h-5 w-5" /> },
-        { id: 'react', name: 'React/Next.js', icon: <FaReact className="h-5 w-5" /> },
-        { id: 'html', name: 'HTML/Static', icon: <FaHtml5 className="h-5 w-5" /> },
-        { id: 'angular', name: 'Angular', icon: <FaAngular className="h-5 w-5" /> },
-    ];
+export default function InstructionsPage() {
+    const [activeTab, setActiveTab] = useState('html');
 
     return (
         <div className="min-h-screen bg-gray-50" dir="ltr" lang="en">
@@ -140,220 +140,264 @@ export default function InstructionsPage() {
                         </h1>
                         <p className="text-base sm:text-lg lg:text-xl text-gray-600 max-w-3xl mx-auto px-4">
                             Integrate our powerful Christian AI chatbot into your website with just a few lines of code.
-                            <strong>Works instantly in guest mode</strong> - no authentication required for your visitors.
+                            The widget works instantly in guest mode - no authentication required for your visitors.
                         </p>
+                    </div>
+                </div>
+            </div>
 
-                        {/* Migration Notice */}
-                        <div className="mt-8 max-w-4xl mx-auto">
-                            <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6">
-                                <div className="flex items-start gap-4">
-                                    <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-                                        <span className="text-white text-sm font-bold">!</span>
-                                    </div>
-                                    <div className="text-left">
-                                        <h3 className="text-lg font-semibold text-blue-900 mb-2">
-                                            🚨 FIXED: 404 Error Issue Resolved
-                                        </h3>
-                                        <p className="text-blue-800 mb-3">
-                                            <strong>Issue resolved:</strong> The 404 errors on external websites have been fixed!
-                                            SDK v2.0 now operates in pure guest-only mode with zero authentication dependencies.
-                                            Simply update your SDK URL to start working immediately.
-                                        </p>
-                                        <div className="flex flex-col sm:flex-row gap-3">
-                                            <Link
-                                                href="/MIGRATION_GUIDE.md"
-                                                target="_blank"
-                                                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                                            >
-                                                <DocumentDuplicateIcon className="w-4 h-4 mr-2" />
-                                                View Migration Guide
-                                            </Link>
-                                            <div className="text-xs text-blue-700 flex items-center">
-                                                ✅ Guest-only mode &nbsp;•&nbsp; ✅ No authentication &nbsp;•&nbsp; ✅ Works instantly
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+            {/* What&apos;s New Section */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12" dir="ltr">
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-8 border border-blue-200 mb-12">
+                    <div className="text-center mb-8">
+                        <h2 className="text-2xl font-bold text-gray-900 mb-4">🚀 SDK v3.0 - Completely Rebuilt</h2>
+                        <p className="text-gray-600 max-w-2xl mx-auto">
+                            Our latest SDK is a complete rebuild from the ground up, designed for maximum simplicity and reliability.
+                        </p>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div className="text-center">
+                            <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                                <span className="text-2xl">⚡</span>
                             </div>
+                            <h4 className="font-semibold text-gray-900 mb-2">Ultra-Lightweight</h4>
+                            <p className="text-sm text-gray-600">Only 3KB minified - loads instantly on any website</p>
+                        </div>
+                        <div className="text-center">
+                            <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                                <span className="text-2xl">🎯</span>
+                            </div>
+                            <h4 className="font-semibold text-gray-900 mb-2">Zero Dependencies</h4>
+                            <p className="text-sm text-gray-600">Pure JavaScript - no external libraries required</p>
+                        </div>
+                        <div className="text-center">
+                            <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                                <span className="text-2xl">🌐</span>
+                            </div>
+                            <h4 className="font-semibold text-gray-900 mb-2">Universal Compatibility</h4>
+                            <p className="text-sm text-gray-600">Works on any website, any framework, any platform</p>
+                        </div>
+                        <div className="text-center">
+                            <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                                <span className="text-2xl">🎨</span>
+                            </div>
+                            <h4 className="font-semibold text-gray-900 mb-2">Auto-Updating Styles</h4>
+                            <p className="text-sm text-gray-600">Automatic visual updates - no code changes required on your end</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Centralized Styling Feature */}
+                <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-8 border border-purple-200 mb-12">
+                    <div className="text-center mb-8">
+                        <h2 className="text-2xl font-bold text-gray-900 mb-4">🎨 Automatic Style Updates</h2>
+                        <p className="text-gray-600 max-w-2xl mx-auto">
+                            The widget automatically receives style updates from our servers. When we improve the design, typography, or add new features, your widget gets updated instantly without any code changes on your end.
+                        </p>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-6">
+                        <div className="text-center">
+                            <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <span className="text-xl">🔄</span>
+                            </div>
+                            <h4 className="font-semibold text-gray-900 mb-2">Zero Maintenance</h4>
+                            <p className="text-sm text-gray-600">
+                                Style improvements, bug fixes, and new features are deployed automatically to all widgets.
+                            </p>
+                        </div>
+                        <div className="text-center">
+                            <div className="w-12 h-12 bg-pink-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <span className="text-xl">✨</span>
+                            </div>
+                            <h4 className="font-semibold text-gray-900 mb-2">Always Up-to-Date</h4>
+                            <p className="text-sm text-gray-600">
+                                Your widget stays current with the latest design trends and accessibility improvements.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Benefits Section */}
+                <div className="bg-white rounded-2xl p-8 border border-gray-200 mb-12 shadow-sm">
+                    <div className="text-center mb-8">
+                        <h3 className="text-xl font-bold text-gray-900 mb-4">Perfect for Any Website</h3>
+                        <p className="text-gray-600">
+                            Whether you&apos;re running a blog, business site, or online ministry, our widget integrates seamlessly.
+                        </p>
+                    </div>
+
+                    <div className="grid md:grid-cols-3 gap-6">
+                        <div className="text-center">
+                            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <span className="text-xl">🚀</span>
+                            </div>
+                            <h4 className="font-semibold text-gray-900 mb-2">Instant Setup</h4>
+                            <p className="text-sm text-gray-600">
+                                Copy, paste, done. No complex configuration or API keys needed.
+                            </p>
+                        </div>
+                        <div className="text-center">
+                            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <span className="text-xl">💬</span>
+                            </div>
+                            <h4 className="font-semibold text-gray-900 mb-2">Immediate Engagement</h4>
+                            <p className="text-sm text-gray-600">
+                                Visitors can start conversations without any sign-up process.
+                            </p>
+                        </div>
+                        <div className="text-center">
+                            <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <span className="text-xl">📱</span>
+                            </div>
+                            <h4 className="font-semibold text-gray-900 mb-2">Mobile Optimized</h4>
+                            <p className="text-sm text-gray-600">
+                                Responsive design that works perfectly on all devices.
+                            </p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* Quick Start */}
+            {/* Main Integration Guide */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-16" dir="ltr">
-                <div className="text-center mb-8 sm:mb-16">
-                    <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">Quick Start</h2>
-                    <p className="text-gray-600 max-w-2xl mx-auto px-4">
-                        Choose your platform below and follow the simple integration steps.
-                        <strong>Works in guest mode</strong> - no login required for your visitors.
+                <div className="text-center mb-8">
+                    <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">Choose Your Platform</h2>
+                    <p className="text-gray-600 max-w-2xl mx-auto">
+                        Select your platform below for step-by-step integration instructions.
                     </p>
                 </div>
 
-                {/* Key Changes Summary */}
-                <div className="mb-12 bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-100 p-6">
-                        <h3 className="text-xl font-bold text-gray-900 mb-2">🆕 What&apos;s New in SDK v2.0</h3>
-                        <p className="text-gray-600">Complete rebuild from scratch with guest-only focus and advanced features</p>
-                    </div>
-                    <div className="p-6">
-                        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-                            <div className="text-center">
-                                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-                                    <span className="text-2xl">🚀</span>
-                                </div>
-                                <h4 className="font-semibold text-gray-900 mb-2">32% Smaller</h4>
-                                <p className="text-sm text-gray-600">Bundle size reduced to 13.5KB for ultra-fast loading</p>
-                            </div>
-                            <div className="text-center">
-                                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-                                    <span className="text-2xl">🔒</span>
-                                </div>
-                                <h4 className="font-semibold text-gray-900 mb-2">Guest Mode Only</h4>
-                                <p className="text-sm text-gray-600">No authentication required - seamless guest experience</p>
-                            </div>
-                            <div className="text-center">
-                                <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-                                    <span className="text-2xl">🛡️</span>
-                                </div>
-                                <h4 className="font-semibold text-gray-900 mb-2">Enhanced Security</h4>
-                                <p className="text-sm text-gray-600">CSP compliance and cryptographic nonce validation</p>
-                            </div>
-                            <div className="text-center">
-                                <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-                                    <span className="text-2xl">🌍</span>
-                                </div>
-                                <h4 className="font-semibold text-gray-900 mb-2">Language Detection</h4>
-                                <p className="text-sm text-gray-600">Auto-detects user language with RTL support</p>
-                            </div>
-                        </div>
-                        <div className="mt-6 p-4 bg-yellow-50 rounded-xl border border-yellow-200">
-                            <h5 className="font-semibold text-yellow-800 mb-2">⚠️ Breaking Changes for Existing Users</h5>
-                            <ul className="text-sm text-yellow-700 space-y-1">
-                                <li>• <strong>Update SDK URL:</strong> <code className="bg-white px-1 py-0.5 rounded">widget-sdk-v2.min.js</code> (new URL)</li>
-                                <li>• <strong>Add required height:</strong> <code className="bg-white px-1 py-0.5 rounded">height: &quot;600px&quot;</code> parameter</li>
-                                <li>• <strong>Remove</strong> <code className="bg-white px-1 py-0.5 rounded">clerkPublishableKey</code> (pure guest-only mode)</li>
-                                <li>• <strong>New language events:</strong> <code className="bg-white px-1 py-0.5 rounded">onLanguageDetected</code> callback</li>
-                                <li>• <strong>Source tracking:</strong> Guest lastName now tracks website origin</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Guest-Only Benefits */}
-                <div className="mb-12 bg-gradient-to-r from-green-50 to-blue-50 rounded-3xl p-8 border border-green-100">
-                    <div className="text-center mb-8">
-                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <span className="text-3xl">🎯</span>
-                        </div>
-                        <h3 className="text-2xl font-bold text-gray-900 mb-4">Perfect for External Websites</h3>
-                        <p className="text-gray-600 max-w-2xl mx-auto">
-                            Our widget is specifically designed for seamless integration on external websites.
-                            Your visitors get instant access without any authentication barriers.
-                        </p>
-                    </div>
-
-                    <div className="grid md:grid-cols-3 gap-6">
-                        <div className="bg-white rounded-xl p-6 text-center">
-                            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <span className="text-xl">⚡</span>
-                            </div>
-                            <h4 className="font-semibold text-gray-900 mb-2">Instant Access</h4>
-                            <p className="text-sm text-gray-600">
-                                No sign-ups, no logins, no barriers. Visitors can start chatting immediately after the widget loads.
-                            </p>
-                        </div>
-
-                        <div className="bg-white rounded-xl p-6 text-center">
-                            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <span className="text-xl">🏠</span>
-                            </div>
-                            <h4 className="font-semibold text-gray-900 mb-2">Stay on Your Site</h4>
-                            <p className="text-sm text-gray-600">
-                                Visitors never leave your website. No redirects to external sign-in pages or popup windows.
-                            </p>
-                        </div>
-
-                        <div className="bg-white rounded-xl p-6 text-center">
-                            <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <span className="text-xl">🔧</span>
-                            </div>
-                            <h4 className="font-semibold text-gray-900 mb-2">Zero Configuration</h4>
-                            <p className="text-sm text-gray-600">
-                                Just copy, paste, and it works. No API keys, no authentication setup, no complex configuration.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* 404 Error Fix */}
-                <div className="mb-12 bg-red-50 rounded-3xl p-8 border border-red-200">
-                    <div className="text-center mb-8">
-                        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <span className="text-3xl">🚨</span>
-                        </div>
-                        <h3 className="text-2xl font-bold text-gray-900 mb-4">Experiencing 404 Errors? Fixed!</h3>
-                        <p className="text-gray-600 max-w-2xl mx-auto">
-                            The 404 error issue has been completely resolved. Update to SDK v2.0 for instant fixes.
-                        </p>
-                    </div>
-
-                    <div className="grid md:grid-cols-2 gap-6">
-                        <div className="bg-white rounded-xl p-6">
-                            <h4 className="font-semibold text-red-900 mb-3">❌ Old Version (Causes 404s)</h4>
-                            <code className="text-sm bg-gray-100 px-2 py-1 rounded block mb-2 text-red-600">
-                                widget-sdk.min.js
-                            </code>
-                            <p className="text-sm text-gray-600">
-                                The old SDK had authentication dependencies that caused 404 errors on external websites.
-                            </p>
-                        </div>
-
-                        <div className="bg-white rounded-xl p-6">
-                            <h4 className="font-semibold text-green-900 mb-3">✅ New Version (Works Perfectly)</h4>
-                            <code className="text-sm bg-gray-100 px-2 py-1 rounded block mb-2 text-green-600">
-                                widget-sdk-v2.min.js
-                            </code>
-                            <p className="text-sm text-gray-600">
-                                SDK v2.0 operates in pure guest-only mode with zero authentication dependencies.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="mt-6 p-4 bg-green-100 rounded-xl border border-green-200">
-                        <h5 className="font-semibold text-green-800 mb-2">🎯 Quick Fix Instructions</h5>
-                        <ol className="text-sm text-green-700 space-y-1 list-decimal list-inside">
-                            <li>Replace <code className="bg-white px-1 py-0.5 rounded">widget-sdk.min.js</code> with <code className="bg-white px-1 py-0.5 rounded">widget-sdk-v2.min.js</code></li>
-                            <li>Add required <code className="bg-white px-1 py-0.5 rounded">height</code> parameter to your config</li>
-                            <li>Remove any <code className="bg-white px-1 py-0.5 rounded">clerkPublishableKey</code> parameters</li>
-                            <li>Test - it should work instantly without 404 errors!</li>
-                        </ol>
-                    </div>
-                </div>
-
-                {/* Platform Tabs */}
-                <div className="bg-white rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
                     {/* Tab Navigation */}
-                    <div className="border-b border-gray-100" dir="ltr">
-                        <div className="flex overflow-x-auto scrollbar-hide">
-                            {platforms.map((platform) => (
-                                <button
-                                    key={platform.id}
-                                    onClick={() => setActiveTab(platform.id)}
-                                    className={`flex items-center gap-2 sm:gap-3 px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-medium whitespace-nowrap transition-all duration-200 border-b-2 min-w-max ${activeTab === platform.id
-                                        ? 'text-blue-600 border-blue-600 bg-blue-50'
-                                        : 'text-gray-600 border-transparent hover:text-gray-900 hover:border-gray-200'
-                                        }`}
-                                >
-                                    <span className="w-4 h-4 sm:w-5 sm:h-5">{platform.icon}</span>
-                                    <span className="">{platform.name}</span>
-                                </button>
-                            ))}
-                        </div>
+                    <div className="flex justify-start sm:justify-center items-center border-b border-gray-200 bg-gray-50 overflow-x-auto">
+                        {TABS.map((tab) => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={`flex items-center gap-2 sm:gap-3 px-4 py-3 sm:px-6 sm:py-4 font-semibold text-sm sm:text-base whitespace-nowrap transition-colors duration-200 ${activeTab === tab.id
+                                    ? 'text-blue-600 border-b-2 border-blue-600 bg-white'
+                                    : 'text-gray-500 hover:text-gray-800'
+                                    }`}
+                            >
+                                {tab.icon}
+                                <span>{tab.label}</span>
+                            </button>
+                        ))}
                     </div>
 
                     {/* Tab Content */}
                     <div className="p-4 sm:p-6 lg:p-8 text-left">
+                        {activeTab === 'html' && (
+                            <div>
+                                <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
+                                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-50 rounded-xl sm:rounded-2xl flex items-center justify-center flex-shrink-0">
+                                        <FaHtml5 className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xl sm:text-2xl font-bold text-gray-900">HTML / Static Site Integration</h3>
+                                        <p className="text-sm sm:text-base text-gray-600">The most direct method. Works on any basic website.</p>
+                                    </div>
+                                </div>
+                                <Step number={1} title="Add a Container Element">
+                                    <p className="text-gray-600 mb-4">
+                                        Add a div element where you want the widget to appear. The widget will fill 100% of the container by default.
+                                    </p>
+                                    <CodeBlock
+                                        language="html"
+                                        filename="index.html"
+                                        code={`<!-- Full-screen widget (recommended - covers entire viewport) -->
+<div id="alhayat-gpt-widget" style="width: 100%; height: 100vh;"></div>
+
+<!-- Full-width but fixed height -->
+<div id="alhayat-gpt-widget" style="width: 100%; height: 600px;"></div>
+
+<!-- Fixed size container -->
+<div id="alhayat-gpt-widget" style="width: 400px; height: 600px; margin: 0 auto;"></div>
+
+<!-- For specific page sections with full height -->
+<div style="height: 100vh; display: flex; flex-direction: column;">
+    <h1>My Website</h1>
+    <div id="alhayat-gpt-widget" style="flex: 1; min-height: 500px;"></div>
+</div>`}
+                                    />
+                                </Step>
+                                <Step number={2} title="Add the SDK Scripts">
+                                    <p className="text-gray-600 mb-4">
+                                        Place these script tags just before the closing &lt;/body&gt; tag. The widget supports flexible styling options.
+                                    </p>
+                                    <CodeBlock
+                                        language="html"
+                                        filename="index.html"
+                                        code={`<script src="https://www.alhayatgpt.com/sdk.js" defer></script>
+<script>
+    window.addEventListener('AlHayatGPTSDKReady', () => {
+        // Default widget (fills 100% of container)
+        AlHayatGPT.createWidget({
+            containerId: 'alhayat-gpt-widget'
+        });
+
+        // OR with custom styling
+        AlHayatGPT.createWidget({
+            containerId: 'alhayat-gpt-widget',
+            width: '400px',
+            height: '600px',
+            style: {
+                borderRadius: '15px',
+                boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
+                border: '2px solid #e0e0e0'
+            }
+        });
+    });
+</script>`}
+                                    />
+                                </Step>
+                                <Step number={3} title="Styling Options">
+                                    <p className="text-gray-600 mb-4">
+                                        You can customize the widget appearance using various styling options:
+                                    </p>
+                                    <CodeBlock
+                                        language="javascript"
+                                        filename="Advanced Styling Examples"
+                                        code={`// Fullscreen widget
+AlHayatGPT.createWidget({
+    containerId: 'fullscreen-widget'
+    // Defaults to 100% width & height
+});
+
+// Custom dimensions
+AlHayatGPT.createWidget({
+    containerId: 'custom-widget',
+    width: '350px',
+    height: '500px'
+});
+
+// Rounded corners with shadow
+AlHayatGPT.createWidget({
+    containerId: 'styled-widget',
+    style: {
+        borderRadius: '20px',
+        boxShadow: '0 15px 40px rgba(0,0,0,0.15)',
+        border: '1px solid #ddd'
+    }
+});
+
+// Compact mobile-friendly widget
+AlHayatGPT.createWidget({
+    containerId: 'mobile-widget',
+    width: '320px',
+    height: '480px',
+    style: {
+        borderRadius: '10px',
+        boxShadow: '0 5px 20px rgba(0,0,0,0.1)'
+    }
+});`}
+                                    />
+                                </Step>
+                            </div>
+                        )}
+
                         {activeTab === 'wordpress' && (
                             <div>
                                 <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
@@ -362,121 +406,66 @@ export default function InstructionsPage() {
                                     </div>
                                     <div>
                                         <h3 className="text-xl sm:text-2xl font-bold text-gray-900">WordPress Integration</h3>
-                                        <p className="text-sm sm:text-base text-gray-600">Guest-only mode - works instantly without authentication</p>
+                                        <p className="text-sm sm:text-base text-gray-600">The easiest way to add the widget to a post or page.</p>
                                     </div>
                                 </div>
-                                <Step number={1} title="Add to Post/Page">
+                                <Step number={1} title="Add a Custom HTML Block">
                                     <p className="text-gray-600 mb-4">
-                                        In the WordPress editor, add a Custom HTML block and paste:
+                                        In the WordPress editor, add a &quot;Custom HTML&quot; block to your page or post where you want the widget to appear.
+                                    </p>
+                                </Step>
+                                <Step number={2} title="Paste the Code">
+                                    <p className="text-gray-600 mb-4">
+                                        Copy and paste the following code into the Custom HTML block. The widget fills 100% of the container by default.
                                     </p>
                                     <CodeBlock
                                         language="html"
-                                        code={`<!-- Al Hayat GPT Widget v2.0 for WordPress -->
-<div id="ahgpt-widget-wp" style="width: 100%; height: 600px; margin: 20px 0;"></div>
+                                        filename="WordPress Custom HTML Block"
+                                        code={`<!-- Full-screen widget (recommended - covers entire viewport) -->
+<div id="alhayat-gpt-widget" style="width: 100%; height: 100vh;"></div>
 
-<script src="https://www.alhayatgpt.com/widget-sdk-v2.min.js" async></script>
+<!-- Full-width but custom height -->
+<div id="alhayat-gpt-widget" style="width: 100%; height: 70vh; min-height: 500px;"></div>
+
+<script src="https://www.alhayatgpt.com/sdk.js" defer></script>
 <script>
-function initAlHayatGPTWordPress() {
-    if (window.AlHayatGPT) {
-        window.AlHayatGPT.createWidget({
-            containerId: 'ahgpt-widget-wp',
-            height: '600px', // Required height parameter
-            
-            onReady: function() {
-                console.log('Al Hayat GPT widget loaded in WordPress');
-            },
-            
-            onLanguageDetected: function(detection) {
-                console.log('Language detected:', detection.language, 'Direction:', detection.direction);
-                document.getElementById('ahgpt-widget-wp').dir = detection.direction;
-            }
-        });
-    }
-}
-
-window.addEventListener('AlHayatGPTSDKReady', initAlHayatGPTWordPress);
-setTimeout(initAlHayatGPTWordPress, 100);
+    window.addEventListener('AlHayatGPTSDKReady', () => {
+        if (document.getElementById('alhayat-gpt-widget')) {
+            AlHayatGPT.createWidget({
+                containerId: 'alhayat-gpt-widget'
+            });
+        }
+    });
 </script>`}
                                     />
                                 </Step>
-
-                                <Step number={2} title="Add Shortcode to functions.php">
+                                <Step number={3} title="Custom Styling (Optional)">
+                                    <p className="text-gray-600 mb-4">
+                                        For a more customized appearance, use this enhanced version with styling options:
+                                    </p>
                                     <CodeBlock
-                                        language="php"
-                                        filename="functions.php"
-                                        code={`<?php
-// Add Al Hayat GPT Widget Shortcode
-function ahgpt_widget_shortcode($atts) {
-    $atts = shortcode_atts(array(
-        'height' => '600'
-    ), $atts);
-    
-    $container_id = 'ahgpt-widget-' . uniqid();
-    
-    ob_start();
-    ?>
-    <div id="<?php echo esc_attr($container_id); ?>" 
-         style="width: 100%; height: <?php echo esc_attr($atts['height']); ?>px; margin: 20px 0;"></div>
-    
-    <script>
-    (function() {
-        if (!window.AlHayatGPTSDKLoaded) {
-            var script = document.createElement('script');
-            script.src = 'https://www.alhayatgpt.com/widget-sdk-v2.min.js';
-            script.async = true;
-            document.head.appendChild(script);
-            window.AlHayatGPTSDKLoaded = true;
+                                        language="html"
+                                        filename="WordPress Custom HTML Block - Styled"
+                                        code={`<!-- Styled widget with custom appearance -->
+<div id="alhayat-gpt-widget" style="width: 100%; max-width: 500px; height: 600px; margin: 0 auto;"></div>
+
+<script src="https://www.alhayatgpt.com/sdk.js" defer></script>
+<script>
+    window.addEventListener('AlHayatGPTSDKReady', () => {
+        if (document.getElementById('alhayat-gpt-widget')) {
+            AlHayatGPT.createWidget({
+                containerId: 'alhayat-gpt-widget',
+                style: {
+                    borderRadius: '15px',
+                    boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
+                    border: '2px solid #e0e0e0'
+                }
+            });
         }
-        
-        function initWidget() {
-            if (window.AlHayatGPT) {
-                window.AlHayatGPT.createWidget({
-                    containerId: '<?php echo esc_js($container_id); ?>',
-                    height: '<?php echo esc_js($atts['height']); ?>px',
-                    
-                    onReady: function() {
-                        console.log('Al Hayat GPT widget ready in WordPress');
-                    },
-                    
-                    onLanguageDetected: function(detection) {
-                        console.log('Language detected:', detection.language, 'Direction:', detection.direction);
-                        document.getElementById('<?php echo esc_js($container_id); ?>').dir = detection.direction;
-                    }
-                });
-            }
-        }
-        
-        if (window.AlHayatGPT) {
-            initWidget();
-        } else {
-            window.addEventListener('AlHayatGPTSDKReady', initWidget);
-            setTimeout(initWidget, 200);
-        }
-    })();
-    </script>
-    <?php
-    return ob_get_clean();
-}
-add_shortcode('ahgpt_widget', 'ahgpt_widget_shortcode');
-?>`}
+    });
+</script>`}
                                     />
                                 </Step>
-
-                                <Step number={3} title="Use in Posts/Pages">
-                                    <div className="bg-blue-50 rounded-xl p-4 mb-4">
-                                        <h5 className="font-semibold text-blue-900 mb-2">Basic Usage</h5>
-                                        <p className="text-sm text-blue-800 mb-2">Add this shortcode to any post or page:</p>
-                                        <code className="text-sm bg-white px-2 py-1 rounded">[ahgpt_widget]</code>
-                                    </div>
-
-                                    <div className="bg-green-50 rounded-xl p-4">
-                                        <h5 className="font-semibold text-green-900 mb-2">Custom Height</h5>
-                                        <p className="text-sm text-green-800 mb-2">To change the widget height:</p>
-                                        <code className="text-sm bg-white px-2 py-1 rounded">[ahgpt_widget height=&quot;800&quot;]</code>
-                                    </div>
-                                </Step>
-
-
                             </div>
                         )}
 
@@ -488,391 +477,164 @@ add_shortcode('ahgpt_widget', 'ahgpt_widget_shortcode');
                                     </div>
                                     <div>
                                         <h3 className="text-xl sm:text-2xl font-bold text-gray-900">React / Next.js Integration</h3>
-                                        <p className="text-sm sm:text-base text-gray-600">Component-based integration</p>
+                                        <p className="text-sm sm:text-base text-gray-600">A reusable component for your React-based projects.</p>
                                     </div>
                                 </div>
 
-                                <Step number={1} title="Create Widget Component">
+                                <Step number={1} title="Create the Widget Component">
+                                    <p className="text-gray-600 mb-4">
+                                        Create a new component file, for example <code>components/AlHayatGPTWidget.tsx</code>, and add the following code. The component defaults to 100% width and height.
+                                    </p>
                                     <CodeBlock
                                         language="typescript"
                                         filename="components/AlHayatGPTWidget.tsx"
                                         code={`'use client';
 
-import React, { useEffect, useRef, useId } from 'react';
-
-interface LanguageDetection {
-    language: string;
-    direction: 'ltr' | 'rtl';
-    confidence: number;
-}
-
-interface AlHayatGPTConfig {
-    containerId: string;
-    clerkPublishableKey?: string; // Optional since we support guest-only mode
-    height?: string;
-    allowGuests?: boolean;
-    autoDetectLanguage?: boolean;
-    onReady?: () => void;
-    onLanguageDetected?: (detection: LanguageDetection) => void;
-}
-
-interface AlHayatGPTWidget {
-    destroy: () => void;
-}
-
-declare global {
-    interface Window {
-        AlHayatGPT: {
-            createWidget: (config: AlHayatGPTConfig) => AlHayatGPTWidget;
-        };
-        AlHayatGPTSDKLoaded?: boolean;
-    }
-}
+import React, { useEffect } from 'react';
 
 interface Props {
-    height?: string;
+    containerId?: string;
+    style?: React.CSSProperties;
 }
 
-export default function AlHayatGPTWidget({ height = '600px' }: Props): React.ReactElement {
-    const containerRef = useRef<HTMLDivElement>(null);
-    const widgetRef = useRef<AlHayatGPTWidget | null>(null);
-    const scriptRef = useRef<HTMLScriptElement | null>(null);
-    const initAttemptedRef = useRef(false);
-
-    // Generate unique ID for this widget instance
-    const uniqueId = useId();
-    const containerId = \`chat-widget-\${uniqueId.replace(/:/g, '')}\`;
-
+export default function AlHayatGPTWidget({ 
+    containerId = 'alhayat-gpt-widget-container',
+    style = { width: '100%', height: '100%' }
+}: Props) {
     useEffect(() => {
-        // Prevent multiple initialization attempts
-        if (initAttemptedRef.current) {
-            return;
-        }
-        initAttemptedRef.current = true;
+        const initWidget = () => {
+            const container = document.getElementById(containerId);
+            const windowObj = window as unknown as Record<string, unknown>;
+            const sdk = windowObj['AlHayatGPT'];
+            
+            // Final check to ensure the container exists and hasn't been initialized
+            if (sdk && typeof sdk === 'object' && sdk !== null && 
+                'createWidget' in sdk && typeof sdk.createWidget === 'function' &&
+                container && !container.hasAttribute('data-ahgpt-widget-initialized')) {
+                container.setAttribute('data-ahgpt-widget-initialized', 'true');
+                (sdk.createWidget as (options: { containerId: string }) => void)({ containerId });
+            }
+        };
 
-        const initWidget = (): void => {
-            // Check if widget already exists to prevent duplicates
-            if (widgetRef.current || !containerRef.current) {
+        const loadAndInit = () => {
+            const windowObj = window as unknown as Record<string, unknown>;
+            
+            // If SDK is already ready, initialize now
+            if (windowObj['AlHayatGPTSDKReady']) {
+                initWidget();
                 return;
             }
 
-            if (window.AlHayatGPT) {
-                try {
-                                            widgetRef.current = window.AlHayatGPT.createWidget({
-                            containerId: containerId,
-                            height: height,
-                            allowGuests: true,
-                        autoDetectLanguage: true,
+            // If not ready, add a listener for when it is
+            window.addEventListener('AlHayatGPTSDKReady', initWidget);
 
-                        onReady: () => {
-                            console.log('Widget is ready');
-                        },
-
-                        onLanguageDetected: (detection: LanguageDetection) => {
-                            console.log('Language detected:', detection.language, 'Direction:', detection.direction);
-                            if (containerRef.current) {
-                                containerRef.current.dir = detection.direction;
-                            }
-                        }
-                    });
-                } catch (error) {
-                    console.error('Error creating AlHayatGPT widget:', error);
-                }
+            // Check if script is already being loaded or has been loaded
+            if (document.getElementById('ahgpt-sdk-script')) {
+                return;
             }
+
+            // If not, create and load the script
+            const script = document.createElement('script');
+            script.id = 'ahgpt-sdk-script';
+            script.src = 'https://www.alhayatgpt.com/sdk.js';
+            script.async = true;
+            document.body.appendChild(script);
         };
 
-        // Check if SDK is already loaded
-        if (window.AlHayatGPTSDKLoaded && window.AlHayatGPT) {
-            initWidget();
-            return;
-        }
+        loadAndInit();
 
-        // Check if script is already being loaded or exists
-        const existingScript = document.querySelector('script[src="https://www.alhayatgpt.com/widget-sdk-v2.min.js"]');
-        if (existingScript) {
-            // Script exists, wait for it to load or try initializing if already loaded
-            if (window.AlHayatGPT) {
-                initWidget();
-            } else {
-                const handleLoad = () => {
-                    window.AlHayatGPTSDKLoaded = true;
-                    initWidget();
-                    existingScript.removeEventListener('load', handleLoad);
-                };
-                existingScript.addEventListener('load', handleLoad);
-            }
-            return;
-        }
-
-        // Create and load the script
-        const script = document.createElement('script');
-        script.src = 'https://www.alhayatgpt.com/widget-sdk-v2.min.js';
-        script.async = true;
-        scriptRef.current = script;
-
-        const handleScriptLoad = () => {
-            window.AlHayatGPTSDKLoaded = true;
-            initWidget();
-            script.removeEventListener('load', handleScriptLoad);
-            script.removeEventListener('error', handleScriptError);
-        };
-
-        const handleScriptError = (error: Event) => {
-            console.error('Failed to load AlHayatGPT SDK:', error);
-            script.removeEventListener('load', handleScriptLoad);
-            script.removeEventListener('error', handleScriptError);
-        };
-
-        script.addEventListener('load', handleScriptLoad);
-        script.addEventListener('error', handleScriptError);
-
-        document.head.appendChild(script);
-
-        // Cleanup function
+        // Cleanup: remove the event listener when the component unmounts
         return () => {
-            initAttemptedRef.current = false;
-
-            // Destroy widget instance
-            if (widgetRef.current) {
-                try {
-                    widgetRef.current.destroy();
-                    widgetRef.current = null;
-                } catch (error) {
-                    console.error('Error destroying widget:', error);
-                }
-            }
-
-            // Clean up script event listeners
-            if (scriptRef.current) {
-                scriptRef.current.removeEventListener('load', handleScriptLoad);
-                scriptRef.current.removeEventListener('error', handleScriptError);
-            }
-
-            // Note: We don't remove the script from DOM as it might be used by other instances
-            // The SDK should handle multiple widget instances properly
+            window.removeEventListener('AlHayatGPTSDKReady', initWidget);
         };
-    }, [height, containerId]);
+    }, [containerId]);
 
-    return (
-        <div className="w-full" dir="auto" style={{ height }}>
-            <div id={containerId} ref={containerRef} />
-        </div>
-    );
+    return <div id={containerId} style={style} />;
 }`}
                                     />
                                 </Step>
 
-                                <Step number={2} title="Use in Your App">
+                                <Step number={2} title="Use the Component">
+                                    <p className="text-gray-600 mb-4">
+                                        Now you can import and use the component anywhere in your app with flexible styling options.
+                                    </p>
                                     <CodeBlock
                                         language="typescript"
-                                        filename="app/page.tsx or pages/index.tsx"
+                                        filename="app/page.tsx"
                                         code={`import AlHayatGPTWidget from '@/components/AlHayatGPTWidget';
 
 export default function HomePage() {
     return (
-        <div className="container mx-auto p-6">
-            <h1 className="text-3xl font-bold mb-8">
-                Welcome to Our Website
-            </h1>
+        <div>
+            <h1>Welcome to My Website</h1>
             
-            {/* Basic usage */}
-            <AlHayatGPTWidget />
+            {/* Full-screen widget (recommended - covers entire viewport) */}
+            <div style={{ width: '100%', height: '100vh' }}>
+                <AlHayatGPTWidget />
+            </div>
             
-            {/* Custom height */}
-            <AlHayatGPTWidget height="800px" />
+            {/* OR custom styled widget */}
+            <AlHayatGPTWidget 
+                containerId="my-widget-container" 
+                style={{ 
+                    width: '400px', 
+                    height: '700px', 
+                    margin: 'auto',
+                    borderRadius: '15px',
+                    boxShadow: '0 10px 30px rgba(0,0,0,0.15)'
+                }}
+            />
         </div>
     );
 }`}
                                     />
                                 </Step>
-                            </div>
-                        )}
-
-                        {activeTab === 'html' && (
-                            <div>
-                                <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
-                                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-50 rounded-xl sm:rounded-2xl flex items-center justify-center flex-shrink-0">
-                                        <FaHtml5 className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
-                                    </div>
-                                    <div>
-                                        <h3 className="text-xl sm:text-2xl font-bold text-gray-900">HTML / Static Sites Integration</h3>
-                                        <p className="text-sm sm:text-base text-gray-600">Pure HTML implementation</p>
-                                    </div>
-                                </div>
-                                <Step number={1} title="Basic Integration">
+                                <Step number={3} title="Styling Examples">
+                                    <p className="text-gray-600 mb-4">
+                                        Here are some common styling patterns you can use:
+                                    </p>
                                     <CodeBlock
-                                        language="html"
-                                        filename="index.html"
-                                        code={`<!DOCTYPE html>
-<html lang="en" dir="ltr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Website with Al Hayat GPT</title>
-    <style>
-        .ahgpt-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        
-        .ahgpt-widget {
-            width: 100%;
-            height: 600px;
-            margin: 20px 0;
-            transition: all 0.3s ease;
-        }
-        
-        /* RTL Support Styles */
-        .rtl-mode {
-            direction: rtl;
-        }
-        
-        .rtl-mode .ahgpt-container {
-            text-align: right;
-        }
-        
-        .rtl-mode .ahgpt-widget {
-            direction: rtl;
-        }
-        
-        /* Language detection indicator */
-        .language-indicator {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            background: rgba(59, 130, 246, 0.9);
-            color: white;
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            z-index: 1000;
-            transition: all 0.3s ease;
-        }
-    </style>
-</head>
-<body>
-    <div class="language-indicator" id="langIndicator" style="display: none;">
-        Language: <span id="detectedLang">Auto</span> | Direction: <span id="detectedDir">LTR</span>
-    </div>
-    
-    <div class="ahgpt-container">
-        <h1>Christian AI Assistant</h1>
-        <p>The chat below automatically detects your language and adjusts text direction (RTL/LTR) accordingly.</p>
-        
-        <!-- Al Hayat GPT Widget -->
-        <div id="chat-widget" class="ahgpt-widget"></div>
-    </div>
+                                        language="typescript"
+                                        filename="Styling Examples"
+                                        code={`// Full-screen widget (covers entire viewport)
+<div style={{ width: '100%', height: '100vh' }}>
+    <AlHayatGPTWidget />
+</div>
 
-    <script src="https://www.alhayatgpt.com/widget-sdk-v2.min.js" async></script>
-    <script>
-        function initAlHayatGPT() {
-            if (window.AlHayatGPT) {
-                window.AlHayatGPT.createWidget({
-                    containerId: 'chat-widget',
-                    height: '600px',
-                    
-                    onReady: function() {
-                        console.log('Al Hayat GPT widget ready with language detection');
-                        document.getElementById('langIndicator').style.display = 'block';
-                    },
-                    
-                    onUserSignIn: function(user) {
-                        console.log('User signed in:', user);
-                    },
-                    
-                    onUserSignOut: function() {
-                        console.log('User signed out');
-                    },
-                    
-                    onLanguageDetected: function(detection) {
-                        console.log('Language detected:', detection);
-                        
-                        // Update language indicator
-                        document.getElementById('detectedLang').textContent = detection.language.toUpperCase();
-                        document.getElementById('detectedDir').textContent = detection.direction.toUpperCase();
-                        
-                        // Auto-adjust page direction for better integration
-                        if (detection.confidence > 0.7) {
-                            // Update HTML direction
-                            document.documentElement.dir = detection.direction;
-                            
-                            // Toggle RTL mode class
-                            document.body.classList.toggle('rtl-mode', detection.direction === 'rtl');
-                            
-                            // Update widget container direction
-                            document.getElementById('chat-widget').dir = detection.direction;
-                        }
-                    },
-                    
-                    onDirectionChange: function(direction) {
-                        console.log('Text direction changed to:', direction);
-                        document.getElementById('detectedDir').textContent = direction.toUpperCase();
-                    },
-                    
-                    onError: function(error) {
-                        console.error('Widget error:', error);
-                    }
-                });
-            }
-        }
+// Centered custom-sized widget
+<AlHayatGPTWidget 
+    style={{ 
+        width: '500px', 
+        height: '700px', 
+        margin: '0 auto',
+        borderRadius: '20px',
+        boxShadow: '0 15px 40px rgba(0,0,0,0.1)',
+        border: '2px solid #f0f0f0'
+    }}
+/>
 
-        // Initialize widget when SDK loads
-        window.addEventListener('AlHayatGPTSDKReady', initAlHayatGPT);
-        
-        // Also try immediate initialization in case SDK is already loaded
-        document.addEventListener('DOMContentLoaded', function() {
-            setTimeout(initAlHayatGPT, 100);
-        });
-    </script>
-</body>
-</html>`}
-                                    />
-                                </Step>
+// Mobile-friendly responsive widget
+<AlHayatGPTWidget 
+    style={{ 
+        width: '100%', 
+        maxWidth: '400px', 
+        height: '500px', 
+        margin: '0 auto',
+        borderRadius: '12px',
+        boxShadow: '0 8px 25px rgba(0,0,0,0.15)'
+    }}
+/>
 
-                                <Step number={2} title="Add Widget to HTML">
-                                    <CodeBlock
-                                        language="html"
-                                        filename="index.html"
-                                        code={`<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Website with Al Hayat GPT</title>
-</head>
-<body>
-    <h1>Christian AI Assistant</h1>
-    <p>The chat below automatically detects your language.</p>
-    
-    <!-- Al Hayat GPT Widget -->
-    <div id="chat-widget" style="width: 100%; height: 600px;"></div>
-
-    <script src="https://www.alhayatgpt.com/widget-sdk-v2.min.js" async></script>
-    <script>
-        function initAlHayatGPT() {
-            if (window.AlHayatGPT) {
-                window.AlHayatGPT.createWidget({
-                    containerId: 'chat-widget',
-                    height: '600px', // Required height parameter
-                    
-                    onReady: function() {
-                        console.log('Widget is ready');
-                    },
-                    
-                    onLanguageDetected: function(detection) {
-                        console.log('Language detected:', detection.language, 'Direction:', detection.direction);
-                        document.getElementById('chat-widget').dir = detection.direction;
-                    }
-                });
-            }
-        }
-
-        window.addEventListener('AlHayatGPTSDKReady', initAlHayatGPT);
-        setTimeout(initAlHayatGPT, 100);
-    </script>
-</body>
-</html>`}
+// Sidebar widget
+<AlHayatGPTWidget 
+    containerId="sidebar-chat"
+    style={{ 
+        width: '350px', 
+        height: '450px',
+        borderRadius: '10px',
+        border: '1px solid #e0e0e0'
+    }}
+/>`}
                                     />
                                 </Step>
                             </div>
@@ -886,303 +648,165 @@ export default function HomePage() {
                                     </div>
                                     <div>
                                         <h3 className="text-xl sm:text-2xl font-bold text-gray-900">Angular Integration</h3>
-                                        <p className="text-sm sm:text-base text-gray-600">Angular component integration</p>
+                                        <p className="text-sm sm:text-base text-gray-600">A simple component for your Angular application.</p>
                                     </div>
                                 </div>
-                                <Step number={1} title="Create Widget Component">
+                                <Step number={1} title="Create the Widget Component">
+                                    <p className="text-gray-600 mb-4">
+                                        Create a new component, for example <code>ng g c alhayat-gpt-widget</code>, and update the TypeScript file. The widget defaults to 100% width and height.
+                                    </p>
                                     <CodeBlock
                                         language="typescript"
-                                        filename="ahgpt-widget.component.ts"
-                                        code={`import { Component, Input, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
-
-interface LanguageDetection {
-  language: string;
-  direction: 'ltr' | 'rtl';
-  confidence: number;
-}
-
-interface AlHayatGPTWidget {
-  destroy: () => void;
-}
-
-declare global {
-  interface Window {
-    AlHayatGPT: {
-      createWidget: (config: any) => AlHayatGPTWidget;
-    };
-    AlHayatGPTSDKLoaded?: boolean;
-  }
-}
+                                        filename="alhayat-gpt-widget.component.ts"
+                                        code={`import { Component, Input, OnInit, OnDestroy, AfterViewInit } from '@angular/core';
 
 @Component({
-  selector: 'app-ahgpt-widget',
-  template: \`
-    <div class="ahgpt-widget-container" [style.height]="height">
-      <div #widgetContainer [id]="containerId"></div>
-    </div>
-  \`,
-  styles: [\`
-    .ahgpt-widget-container {
-      width: 100%;
-      position: relative;
-    }
-  \`]
+  selector: 'app-alhayat-gpt-widget',
+  template: '<div [id]="containerId" [ngStyle]="containerStyle"></div>',
 })
-export class AhgptWidgetComponent implements OnInit, OnDestroy {
-  @Input() height: string = '600px';
+export class AlhayatGptWidgetComponent implements OnInit, OnDestroy, AfterViewInit {
+    @Input() containerId: string = 'alhayat-gpt-widget';
+    @Input() width: string = '100%';
+    @Input() height: string = '100%';
+    @Input() customStyle: Record<string, string> = {};
 
-  @ViewChild('widgetContainer') widgetContainer!: ElementRef<HTMLDivElement>;
+    public containerStyle: Record<string, string> = {};
+    private sdkReadyListener: () => void;
 
-  containerId: string = 'ahgpt-widget-' + Math.random().toString(36).substr(2, 9);
-  
-  private widget: AlHayatGPTWidget | null = null;
-  private initAttempted: boolean = false;
-  private scriptEventHandlers: { [key: string]: () => void } = {};
-
-  ngOnInit() {
-    this.loadSDK();
-  }
-
-  ngOnDestroy() {
-    // Cleanup widget
-    if (this.widget) {
-      try {
-        this.widget.destroy();
-        this.widget = null;
-      } catch (error) {
-        console.error('Error destroying widget:', error);
-      }
+    constructor() {
+        this.sdkReadyListener = () => this.initWidget();
     }
 
-    // Cleanup event listeners
-    Object.keys(this.scriptEventHandlers).forEach(event => {
-      window.removeEventListener(event, this.scriptEventHandlers[event]);
-    });
-    
-    this.initAttempted = false;
-  }
-
-  private loadSDK() {
-    // Prevent multiple initialization attempts
-    if (this.initAttempted) {
-      return;
-    }
-    this.initAttempted = true;
-
-    // Check if SDK is already loaded
-    if (window.AlHayatGPTSDKLoaded && window.AlHayatGPT) {
-      this.initializeWidget();
-      return;
-    }
-
-    // Check if script is already being loaded or exists
-    const existingScript = document.querySelector('script[src="https://www.alhayatgpt.com/widget-sdk-v2.min.js"]');
-    if (existingScript) {
-      // Script exists, wait for it to load or try initializing if already loaded
-      if (window.AlHayatGPT) {
-        this.initializeWidget();
-      } else {
-        const handleLoad = () => {
-          window.AlHayatGPTSDKLoaded = true;
-          this.initializeWidget();
-          existingScript.removeEventListener('load', handleLoad);
+    ngOnInit(): void {
+        // Combine default styles with custom styles
+        this.containerStyle = {
+            width: this.width,
+            height: this.height,
+            ...this.customStyle
         };
-        existingScript.addEventListener('load', handleLoad);
-      }
-      return;
+        this.loadSdk();
     }
-
-    // Create and load the script
-    const script = document.createElement('script');
-    script.src = 'https://www.alhayatgpt.com/widget-sdk-v2.min.js';
-    script.async = true;
     
-    const handleScriptLoad = () => {
-      window.AlHayatGPTSDKLoaded = true;
-      this.initializeWidget();
-      script.removeEventListener('load', handleScriptLoad);
-      script.removeEventListener('error', handleScriptError);
-    };
-
-    const handleScriptError = (error: Event) => {
-      console.error('Failed to load AlHayatGPT SDK:', error);
-      script.removeEventListener('load', handleScriptLoad);
-      script.removeEventListener('error', handleScriptError);
-    };
-
-    script.addEventListener('load', handleScriptLoad);
-    script.addEventListener('error', handleScriptError);
-
-    document.head.appendChild(script);
-
-    // Also listen for SDK ready event
-    const handleSDKReady = () => {
-      this.initializeWidget();
-    };
-    this.scriptEventHandlers['AlHayatGPTSDKReady'] = handleSDKReady;
-    window.addEventListener('AlHayatGPTSDKReady', handleSDKReady);
-  }
-
-  private initializeWidget() {
-    // Check if widget already exists to prevent duplicates
-    if (this.widget || !this.widgetContainer) {
-      return;
-    }
-
-    if (!window.AlHayatGPT) {
-      setTimeout(() => this.initializeWidget(), 100);
-      return;
-    }
-
-    try {
-      this.widget = window.AlHayatGPT.createWidget({
-        containerId: this.containerId,
-        height: this.height,
-
-        onReady: () => {
-          console.log('Al Hayat GPT widget ready in Angular');
-        },
-
-        onLanguageDetected: (detection: LanguageDetection) => {
-          console.log('Language detected:', detection.language, 'Direction:', detection.direction);
-          const container = document.getElementById(this.containerId);
-          if (container) {
-            container.dir = detection.direction;
-          }
+    ngAfterViewInit(): void {
+        const windowObj = window as unknown as Record<string, unknown>;
+        if (windowObj['AlHayatGPTSDKReady']) {
+            this.initWidget();
         }
-      });
-    } catch (error) {
-      console.error('Failed to initialize Al Hayat GPT widget:', error);
     }
-  }
+
+    ngOnDestroy(): void {
+        window.removeEventListener('AlHayatGPTSDKReady', this.sdkReadyListener);
+    }
+
+    private initWidget(): void {
+        const windowObj = window as unknown as Record<string, unknown>;
+        const sdk = windowObj['AlHayatGPT'];
+        const hasContainer = document.getElementById(this.containerId);
+        
+        if (sdk && typeof sdk === 'object' && sdk !== null && 
+            'createWidget' in sdk && typeof sdk.createWidget === 'function' &&
+            hasContainer && !hasContainer.hasAttribute('data-initialized')) {
+            hasContainer.setAttribute('data-initialized', 'true');
+            
+            // Create widget with potential styling options
+            const widgetOptions: Record<string, unknown> = { containerId: this.containerId };
+            
+            // Add style options if custom styling is provided
+            if (Object.keys(this.customStyle).length > 0) {
+                widgetOptions.style = this.customStyle;
+            }
+            
+            (sdk.createWidget as (options: Record<string, unknown>) => void)(widgetOptions);
+        }
+    }
+
+    private loadSdk(): void {
+        if (!document.querySelector('script[src="https://www.alhayatgpt.com/sdk.js"]')) {
+            const script = document.createElement('script');
+            script.src = 'https://www.alhayatgpt.com/sdk.js';
+            script.defer = true;
+            document.body.appendChild(script);
+            window.addEventListener('AlHayatGPTSDKReady', this.sdkReadyListener);
+        }
+    }
 }`}
                                     />
                                 </Step>
 
-                                <Step number={2} title="Module Configuration">
-                                    <CodeBlock
-                                        language="typescript"
-                                        filename="app.module.ts"
-                                        code={`import { NgModule } from '@angular/core';
-import { BrowserModule } from '@angular/platform-browser';
-import { AhgptWidgetComponent } from './ahgpt-widget.component';
-import { AppComponent } from './app.component';
-
-@NgModule({
-  declarations: [
-    AppComponent,
-    AhgptWidgetComponent
-  ],
-  imports: [
-    BrowserModule
-  ],
-  providers: [],
-  bootstrap: [AppComponent]
-})
-export class AppModule { }`}
-                                    />
-                                </Step>
-
-                                <Step number={3} title="Use in Template">
+                                <Step number={2} title="Use in Your App Template">
+                                    <p className="text-gray-600 mb-4">
+                                        Add the component&apos;s selector to any template with flexible styling options.
+                                    </p>
                                     <CodeBlock
                                         language="html"
                                         filename="app.component.html"
-                                        code={`<div class="container" [class.rtl-mode]="isRtlMode">
-  <h1>Welcome to Our Christian Community</h1>
-  <p>The chat below automatically detects language and adjusts text direction.</p>
-  
-  <!-- Al Hayat GPT Widget with Full Customization -->
-  <div class="widget-section">
-    <app-ahgpt-widget 
-      height="700px">
-      fontFamily="Roboto, sans-serif"
-      fontSize="16px"
-      [allowGuests]="true"
-      [autoDetectLanguage]="true"
-      defaultDirection="auto"
-      welcomeMessage="Hello! I&apos;m here to help with any questions about Christianity."
-      placeholder="Ask me anything about faith..."
-      [enableVoiceInput]="true"
-      [enableFileUpload]="false"
-      [enableEmoji]="true"
-      [enableAnimations]="true"
-      [allowGuests]="true"
-      [showLanguageIndicator]="true"
-      (ready)="onWidgetReady()"
-      (userSignIn)="onUserSignIn($event)"
-      (languageDetected)="onLanguageDetected($event)"
-      (directionChange)="onDirectionChange($event)">
-    </app-ahgpt-widget>
-  </div>
-</div>`}
+                                        code={`<h1>Welcome to My Angular App</h1>
+
+<!-- Full-screen widget (recommended - covers entire viewport) -->
+<div style="width: 100%; height: 100vh;">
+    <app-alhayat-gpt-widget></app-alhayat-gpt-widget>
+</div>
+
+<!-- Custom sized widget -->
+<app-alhayat-gpt-widget 
+    containerId="custom-chat"
+    width="400px" 
+    height="600px"
+    [customStyle]="{
+        'margin': '0 auto',
+        'border-radius': '15px',
+        'box-shadow': '0 10px 30px rgba(0,0,0,0.15)',
+        'border': '2px solid #e0e0e0'
+    }">
+</app-alhayat-gpt-widget>`}
                                     />
                                 </Step>
-
-                                <Step number={4} title="Component Logic">
-                                    <CodeBlock
-                                        language="typescript"
-                                        filename="app.component.ts"
-                                        code={`import { Component } from '@angular/core';
-
-interface LanguageDetection {
-  language: string;
-  direction: 'ltr' | 'rtl';
-  confidence: number;
-}
-
-@Component({
-  selector: 'app-root',
-  templateUrl: './app.component.html',
-  styleUrls: ['./app.component.css']
-})
-export class AppComponent {
-  isRtlMode = false;
-  currentLanguage = 'auto';
-  
-  onWidgetReady() {
-    console.log('Al Hayat GPT widget is ready!');
-  }
-  
-  onUserSignIn(user: any) {
-    console.log('User signed in:', user);
-    // Handle user sign-in logic
-  }
-  
-  onLanguageDetected(detection: LanguageDetection) {
-    console.log('Language detected:', detection);
-    this.currentLanguage = detection.language;
-    
-    // Update page direction based on detected language
-    if (detection.confidence > 0.7) {
-      this.isRtlMode = detection.direction === 'rtl';
-      
-      // Update document direction for better integration
-      document.documentElement.dir = detection.direction;
-      document.body.classList.toggle('rtl-active', this.isRtlMode);
-    }
-  }
-  
-  onDirectionChange(direction: 'ltr' | 'rtl') {
-    console.log('Text direction changed to:', direction);
-    this.isRtlMode = direction === 'rtl';
-  }
-}`}
-                                    />
-                                </Step>
-
-                                <Step number={5} title="Use in Your App">
+                                <Step number={3} title="Styling Examples">
+                                    <p className="text-gray-600 mb-4">
+                                        Here are some common styling patterns you can use:
+                                    </p>
                                     <CodeBlock
                                         language="html"
-                                        filename="app.component.html"
-                                        code={`<div class="container">
-  <h1>Welcome to Our Christian Community</h1>
-  
-  <!-- Basic usage -->
-  <app-ahgpt-widget></app-ahgpt-widget>
-  
-  <!-- Custom height -->
-  <app-ahgpt-widget height="800px"></app-ahgpt-widget>
-</div>`}
+                                        filename="Angular Styling Examples"
+                                        code={`<!-- Full-screen widget (covers entire viewport) -->
+<div style="width: 100%; height: 100vh;">
+    <app-alhayat-gpt-widget></app-alhayat-gpt-widget>
+</div>
+
+<!-- Centered custom widget -->
+<app-alhayat-gpt-widget 
+    width="500px" 
+    height="700px"
+    [customStyle]="{
+        'margin': '0 auto',
+        'border-radius': '20px',
+        'box-shadow': '0 15px 40px rgba(0,0,0,0.1)',
+        'border': '2px solid #f0f0f0'
+    }">
+</app-alhayat-gpt-widget>
+
+<!-- Mobile-friendly widget -->
+<app-alhayat-gpt-widget 
+    width="100%" 
+    height="500px"
+    [customStyle]="{
+        'max-width': '400px',
+        'margin': '0 auto',
+        'border-radius': '12px',
+        'box-shadow': '0 8px 25px rgba(0,0,0,0.15)'
+    }">
+</app-alhayat-gpt-widget>
+
+<!-- Sidebar widget -->
+<app-alhayat-gpt-widget 
+    containerId="sidebar-chat"
+    width="350px" 
+    height="450px"
+    [customStyle]="{
+        'border-radius': '10px',
+        'border': '1px solid #e0e0e0'
+    }">
+</app-alhayat-gpt-widget>`}
                                     />
                                 </Step>
                             </div>
@@ -1190,694 +814,20 @@ export class AppComponent {
                     </div>
                 </div>
 
-                {/* Quick Implementation Summary */}
-                <div className="mt-8 sm:mt-16">
-                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 border border-blue-100">
-                        <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6 sm:mb-8 flex items-center gap-2 sm:gap-3">
-                            <Cog6ToothIcon className="h-6 w-6 sm:h-7 sm:w-7 text-blue-600" />
-                            Quick Implementation Summary
-                        </h3>
-
-                        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-                            {/* WordPress */}
-                            <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-sm">
-                                <h4 className="font-bold text-gray-900 mb-3 text-base sm:text-lg">WordPress</h4>
-                                <ol className="text-xs sm:text-sm text-gray-600 space-y-1.5 sm:space-y-2">
-                                    <li><strong>1.</strong> Add functions.php code</li>
-                                    <li><strong>2.</strong> Add CSS to Additional CSS</li>
-                                    <li><strong>3.</strong> Use shortcode: <code className="text-xs bg-gray-100 px-1 rounded">[ahgpt_widget]</code></li>
-                                    <li><strong>4.</strong> Configure Clerk key in settings</li>
-                                </ol>
-                            </div>
-
-                            {/* React/Next.js */}
-                            <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-sm">
-                                <h4 className="font-bold text-gray-900 mb-3 text-base sm:text-lg">React/Next.js</h4>
-                                <ol className="text-xs sm:text-sm text-gray-600 space-y-1.5 sm:space-y-2">
-                                    <li><strong>1.</strong> Create widget component</li>
-                                    <li><strong>2.</strong> Create CSS file</li>
-                                    <li><strong>3.</strong> Import styles in app</li>
-                                    <li><strong>4.</strong> Add environment variables</li>
-                                </ol>
-                            </div>
-
-                            {/* HTML/Static */}
-                            <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-sm">
-                                <h4 className="font-bold text-gray-900 mb-3 text-base sm:text-lg">HTML/Static</h4>
-                                <ol className="text-xs sm:text-sm text-gray-600 space-y-1.5 sm:space-y-2">
-                                    <li><strong>1.</strong> Create CSS file</li>
-                                    <li><strong>2.</strong> Link CSS in HTML head</li>
-                                    <li><strong>3.</strong> Add widget div + script</li>
-                                    <li><strong>4.</strong> Replace Clerk key</li>
-                                </ol>
-                            </div>
-
-                            {/* Angular */}
-                            <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-sm">
-                                <h4 className="font-bold text-gray-900 mb-3 text-base sm:text-lg">Angular</h4>
-                                <ol className="text-xs sm:text-sm text-gray-600 space-y-1.5 sm:space-y-2">
-                                    <li><strong>1.</strong> Create component files</li>
-                                    <li><strong>2.</strong> Add to app module</li>
-                                    <li><strong>3.</strong> Add CSS styles</li>
-                                    <li><strong>4.</strong> Use in template</li>
-                                </ol>
-                            </div>
-                        </div>
-
-                        {/* Key Features Reminder */}
-                        <div className="mt-6 sm:mt-8 grid sm:grid-cols-3 gap-4 sm:gap-6">
-                            <div className="text-center">
-                                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-3">
-                                    <GlobeAltIcon className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
-                                </div>
-                                <h5 className="font-semibold text-gray-900 mb-1 sm:mb-2 text-sm sm:text-base">Auto Language Detection</h5>
-                                <p className="text-xs sm:text-sm text-gray-600">Automatically detects user language and switches RTL/LTR direction</p>
-                            </div>
-
-                            <div className="text-center">
-                                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-3">
-                                    <Cog6ToothIcon className="h-6 w-6 sm:h-8 sm:w-8 text-purple-600" />
-                                </div>
-                                <h5 className="font-semibold text-gray-900 mb-1 sm:mb-2 text-sm sm:text-base">Full Customization</h5>
-                                <p className="text-xs sm:text-sm text-gray-600">Customize colors, fonts, layout, and behavior via CSS and configuration</p>
-                            </div>
-
-                            <div className="text-center">
-                                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-3">
-                                    <CodeBracketIcon className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" />
-                                </div>
-                                <h5 className="font-semibold text-gray-900 mb-1 sm:mb-2 text-sm sm:text-base">Easy Integration</h5>
-                                <p className="text-xs sm:text-sm text-gray-600">Works with all platforms - just copy, paste, and customize</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Configuration Options */}
-                <div className="mt-8 sm:mt-16">
-                    <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 shadow-sm border border-gray-100">
-                        <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6 sm:mb-8">Complete Configuration Options</h3>
-
-                        {/* Layout & Appearance */}
-                        <div className="mb-6 sm:mb-8">
-                            <h4 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Layout & Appearance</h4>
-                            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                                <div className="p-3 sm:p-4 bg-gray-50 rounded-lg sm:rounded-xl">
-                                    <h5 className="font-semibold text-gray-900 mb-1 sm:mb-2 text-sm sm:text-base">theme</h5>
-                                    <p className="text-xs sm:text-sm text-gray-600 mb-1 sm:mb-2">Visual appearance</p>
-                                    <code className="text-xs bg-white px-1.5 sm:px-2 py-0.5 sm:py-1 rounded">auto | light | dark | custom</code>
-                                </div>
-
-                                <div className="p-4 bg-gray-50 rounded-xl">
-                                    <h5 className="font-semibold text-gray-900 mb-2">width / height</h5>
-                                    <p className="text-sm text-gray-600 mb-2">Widget dimensions</p>
-                                    <code className="text-xs bg-white px-2 py-1 rounded">CSS values (px, %, vh, auto)</code>
-                                </div>
-
-                                <div className="p-4 bg-green-50 rounded-xl border border-green-200">
-                                    <h5 className="font-semibold text-green-900 mb-2">🆕 autoResize</h5>
-                                    <p className="text-sm text-green-700 mb-2">Smart height detection</p>
-                                    <code className="text-xs bg-white px-2 py-1 rounded">true (default) | false</code>
-                                </div>
-
-                                <div className="p-4 bg-green-50 rounded-xl border border-green-200">
-                                    <h5 className="font-semibold text-green-900 mb-2">🆕 smartHeight</h5>
-                                    <p className="text-sm text-green-700 mb-2">Container-aware sizing</p>
-                                    <code className="text-xs bg-white px-2 py-1 rounded">true (default) | false</code>
-                                </div>
-
-                                <div className="p-4 bg-green-50 rounded-xl border border-green-200">
-                                    <h5 className="font-semibold text-green-900 mb-2">🆕 responsiveHeight</h5>
-                                    <p className="text-sm text-green-700 mb-2">Device-specific heights</p>
-                                    <code className="text-xs bg-white px-2 py-1 rounded">true (default) | false</code>
-                                </div>
-
-                                <div className="p-4 bg-gray-50 rounded-xl">
-                                    <h5 className="font-semibold text-gray-900 mb-2">borderRadius</h5>
-                                    <p className="text-sm text-gray-600 mb-2">Corner rounding</p>
-                                    <code className="text-xs bg-white px-2 py-1 rounded">CSS border-radius value</code>
-                                </div>
-
-                                <div className="p-4 bg-gray-50 rounded-xl">
-                                    <h5 className="font-semibold text-gray-900 mb-2">position</h5>
-                                    <p className="text-sm text-gray-600 mb-2">Widget positioning</p>
-                                    <code className="text-xs bg-white px-2 py-1 rounded">relative | fixed | absolute</code>
-                                </div>
-
-                                <div className="p-4 bg-gray-50 rounded-xl">
-                                    <h5 className="font-semibold text-gray-900 mb-2">boxShadow</h5>
-                                    <p className="text-sm text-gray-600 mb-2">Drop shadow effect</p>
-                                    <code className="text-xs bg-white px-2 py-1 rounded">CSS box-shadow value</code>
-                                </div>
-
-                                <div className="p-4 bg-gray-50 rounded-xl">
-                                    <h5 className="font-semibold text-gray-900 mb-2">zIndex</h5>
-                                    <p className="text-sm text-gray-600 mb-2">Layer stacking order</p>
-                                    <code className="text-xs bg-white px-2 py-1 rounded">Number (e.g., 1000)</code>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Color Customization */}
-                        <div className="mb-8">
-                            <h4 className="text-lg font-semibold text-gray-900 mb-4">Color Customization</h4>
-                            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                <div className="p-4 bg-gray-50 rounded-xl">
-                                    <h5 className="font-semibold text-gray-900 mb-2">customColors.primary</h5>
-                                    <p className="text-sm text-gray-600 mb-2">Main brand color</p>
-                                    <code className="text-xs bg-white px-2 py-1 rounded">#3b82f6 (hex/rgb/hsl)</code>
-                                </div>
-
-                                <div className="p-4 bg-gray-50 rounded-xl">
-                                    <h5 className="font-semibold text-gray-900 mb-2">customColors.background</h5>
-                                    <p className="text-sm text-gray-600 mb-2">Chat background</p>
-                                    <code className="text-xs bg-white px-2 py-1 rounded">#ffffff</code>
-                                </div>
-
-                                <div className="p-4 bg-gray-50 rounded-xl">
-                                    <h5 className="font-semibold text-gray-900 mb-2">customColors.text</h5>
-                                    <p className="text-sm text-gray-600 mb-2">Text color</p>
-                                    <code className="text-xs bg-white px-2 py-1 rounded">#1f2937</code>
-                                </div>
-
-                                <div className="p-4 bg-gray-50 rounded-xl">
-                                    <h5 className="font-semibold text-gray-900 mb-2">customColors.surface</h5>
-                                    <p className="text-sm text-gray-600 mb-2">Message bubbles</p>
-                                    <code className="text-xs bg-white px-2 py-1 rounded">#f8fafc</code>
-                                </div>
-
-                                <div className="p-4 bg-gray-50 rounded-xl">
-                                    <h5 className="font-semibold text-gray-900 mb-2">customColors.border</h5>
-                                    <p className="text-sm text-gray-600 mb-2">Border colors</p>
-                                    <code className="text-xs bg-white px-2 py-1 rounded">#e5e7eb</code>
-                                </div>
-
-                                <div className="p-4 bg-gray-50 rounded-xl">
-                                    <h5 className="font-semibold text-gray-900 mb-2">Full Color Object</h5>
-                                    <p className="text-sm text-gray-600 mb-2">Complete color scheme</p>
-                                    <code className="text-xs bg-white px-2 py-1 rounded">See full example →</code>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Typography */}
-                        <div className="mb-8">
-                            <h4 className="text-lg font-semibold text-gray-900 mb-4">Typography</h4>
-                            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                <div className="p-4 bg-gray-50 rounded-xl">
-                                    <h5 className="font-semibold text-gray-900 mb-2">fontFamily</h5>
-                                    <p className="text-sm text-gray-600 mb-2">Font stack</p>
-                                    <code className="text-xs bg-white px-2 py-1 rounded">CSS font-family value</code>
-                                </div>
-
-                                <div className="p-4 bg-gray-50 rounded-xl">
-                                    <h5 className="font-semibold text-gray-900 mb-2">fontSize</h5>
-                                    <p className="text-sm text-gray-600 mb-2">Text size</p>
-                                    <code className="text-xs bg-white px-2 py-1 rounded">CSS font-size value</code>
-                                </div>
-
-                                <div className="p-4 bg-gray-50 rounded-xl">
-                                    <h5 className="font-semibold text-gray-900 mb-2">lineHeight</h5>
-                                    <p className="text-sm text-gray-600 mb-2">Line spacing</p>
-                                    <code className="text-xs bg-white px-2 py-1 rounded">Number or CSS value</code>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Language & Direction */}
-                        <div className="mb-8">
-                            <h4 className="text-lg font-semibold text-gray-900 mb-4">Language & Direction</h4>
-                            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                <div className="p-4 bg-gray-50 rounded-xl">
-                                    <h5 className="font-semibold text-gray-900 mb-2">autoDetectLanguage</h5>
-                                    <p className="text-sm text-gray-600 mb-2">Auto language detection</p>
-                                    <code className="text-xs bg-white px-2 py-1 rounded">true | false</code>
-                                </div>
-
-                                <div className="p-4 bg-gray-50 rounded-xl">
-                                    <h5 className="font-semibold text-gray-900 mb-2">defaultDirection</h5>
-                                    <p className="text-sm text-gray-600 mb-2">Text direction</p>
-                                    <code className="text-xs bg-white px-2 py-1 rounded">auto | ltr | rtl</code>
-                                </div>
-
-                                <div className="p-4 bg-gray-50 rounded-xl">
-                                    <h5 className="font-semibold text-gray-900 mb-2">supportedLanguages</h5>
-                                    <p className="text-sm text-gray-600 mb-2">Language whitelist</p>
-                                    <code className="text-xs bg-white px-2 py-1 rounded">&apos;en&apos;, &apos;ar&apos;, &apos;es&apos;</code>
-                                </div>
-
-                                <div className="p-4 bg-gray-50 rounded-xl">
-                                    <h5 className="font-semibold text-gray-900 mb-2">fallbackLanguage</h5>
-                                    <p className="text-sm text-gray-600 mb-2">Default language</p>
-                                    <code className="text-xs bg-white px-2 py-1 rounded">Language code (e.g., &apos;en&apos;)</code>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Enhanced Height Detection */}
-                        <div className="mb-8">
-                            <div className="bg-gradient-to-r from-green-50 to-blue-50 p-6 rounded-2xl border border-green-200 mb-6">
-                                <h4 className="text-lg font-semibold text-green-900 mb-3">🆕 Enhanced Height Detection</h4>
-                                <p className="text-green-700 mb-4">
-                                    Automatically adapts to any website layout. The widget intelligently detects your site&apos;s structure
-                                    and adjusts its height to ensure the input field is always visible and properly positioned.
-                                </p>
-                                <div className="grid md:grid-cols-2 gap-4">
-                                    <div>
-                                        <h5 className="font-semibold text-green-900 mb-2">✨ Smart Features:</h5>
-                                        <ul className="text-sm text-green-700 space-y-1">
-                                            <li>• Detects headers and footers</li>
-                                            <li>• Responsive breakpoints (mobile/tablet/desktop)</li>
-                                            <li>• Parent container awareness</li>
-                                            <li>• Virtual keyboard handling on mobile</li>
-                                        </ul>
-                                    </div>
-                                    <div>
-                                        <h5 className="font-semibold text-green-900 mb-2">🎯 Benefits:</h5>
-                                        <ul className="text-sm text-green-700 space-y-1">
-                                            <li>• Input always above the fold</li>
-                                            <li>• Perfect fit on any website</li>
-                                            <li>• No manual height adjustments needed</li>
-                                            <li>• Works with dynamic layouts</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Behavior & Features */}
-                        <div className="mb-8">
-                            <h4 className="text-lg font-semibold text-gray-900 mb-4">Behavior & Features</h4>
-                            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                <div className="p-4 bg-gray-50 rounded-xl">
-                                    <h5 className="font-semibold text-gray-900 mb-2">allowGuests</h5>
-                                    <p className="text-sm text-gray-600 mb-2">Guest mode access</p>
-                                    <code className="text-xs bg-white px-2 py-1 rounded">true | false</code>
-                                </div>
-
-                                <div className="p-4 bg-gray-50 rounded-xl">
-                                    <h5 className="font-semibold text-gray-900 mb-2">enableVoiceInput</h5>
-                                    <p className="text-sm text-gray-600 mb-2">Voice message support</p>
-                                    <code className="text-xs bg-white px-2 py-1 rounded">true | false</code>
-                                </div>
-
-                                <div className="p-4 bg-gray-50 rounded-xl">
-                                    <h5 className="font-semibold text-gray-900 mb-2">enableFileUpload</h5>
-                                    <p className="text-sm text-gray-600 mb-2">File attachment support</p>
-                                    <code className="text-xs bg-white px-2 py-1 rounded">true | false</code>
-                                </div>
-
-                                <div className="p-4 bg-gray-50 rounded-xl">
-                                    <h5 className="font-semibold text-gray-900 mb-2">welcomeMessage</h5>
-                                    <p className="text-sm text-gray-600 mb-2">Initial greeting</p>
-                                    <code className="text-xs bg-white px-2 py-1 rounded">String message</code>
-                                </div>
-
-                                <div className="p-4 bg-gray-50 rounded-xl">
-                                    <h5 className="font-semibold text-gray-900 mb-2">placeholder</h5>
-                                    <p className="text-sm text-gray-600 mb-2">Input placeholder text</p>
-                                    <code className="text-xs bg-white px-2 py-1 rounded">String text</code>
-                                </div>
-
-                                <div className="p-4 bg-gray-50 rounded-xl">
-                                    <h5 className="font-semibold text-gray-900 mb-2">enableAnimations</h5>
-                                    <p className="text-sm text-gray-600 mb-2">UI animations</p>
-                                    <code className="text-xs bg-white px-2 py-1 rounded">true | false</code>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* CSS Classes */}
-                        <div className="mb-8">
-                            <h4 className="text-lg font-semibold text-gray-900 mb-4">Custom CSS Classes</h4>
-                            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                <div className="p-4 bg-gray-50 rounded-xl">
-                                    <h5 className="font-semibold text-gray-900 mb-2">containerClass</h5>
-                                    <p className="text-sm text-gray-600 mb-2">Main wrapper</p>
-                                    <code className="text-xs bg-white px-2 py-1 rounded">CSS class name</code>
-                                </div>
-
-                                <div className="p-4 bg-gray-50 rounded-xl">
-                                    <h5 className="font-semibold text-gray-900 mb-2">headerClass</h5>
-                                    <p className="text-sm text-gray-600 mb-2">Header section</p>
-                                    <code className="text-xs bg-white px-2 py-1 rounded">CSS class name</code>
-                                </div>
-
-                                <div className="p-4 bg-gray-50 rounded-xl">
-                                    <h5 className="font-semibold text-gray-900 mb-2">bodyClass</h5>
-                                    <p className="text-sm text-gray-600 mb-2">Chat messages area</p>
-                                    <code className="text-xs bg-white px-2 py-1 rounded">CSS class name</code>
-                                </div>
-
-                                <div className="p-4 bg-gray-50 rounded-xl">
-                                    <h5 className="font-semibold text-gray-900 mb-2">inputClass</h5>
-                                    <p className="text-sm text-gray-600 mb-2">Input field</p>
-                                    <code className="text-xs bg-white px-2 py-1 rounded">CSS class name</code>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Customization Examples */}
-                        <div className="mt-8">
-                            <h4 className="text-lg font-semibold text-gray-900 mb-6">Customization Examples</h4>
-
-                            {/* Chat Bubble Colors Example */}
-                            <div className="mb-6 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-100">
-                                <h5 className="font-semibold text-gray-900 mb-3">Custom Chat Bubble Colors</h5>
-                                <CodeBlock
-                                    language="javascript"
-                                    code={`// Example: Custom chat bubble colors (guest-only mode)
-window.AlHayatGPT.createWidget({
-    containerId: 'chat-widget',
-    allowGuests: true,
-    customColors: {
-        // User Messages (right side)
-        userBubble: '#8B5CF6', // Purple bubble
-        userBubbleText: '#FFFFFF', // White text
-        
-        // Assistant Messages (left side)
-        assistantBubble: '#F1F5F9', // Light gray bubble
-        assistantBubbleText: '#1E293B', // Dark text
-        
-        // System Messages (center)
-        systemBubble: '#FEF3C7', // Light yellow bubble
-        systemBubbleText: '#92400E', // Brown text
-        
-        // Chat Interface
-        background: '#FFFFFF',
-        inputBackground: '#F9FAFB',
-        inputBorder: '#D1D5DB',
-        buttonPrimary: '#8B5CF6'
-    }
-});`}
-                                />
-                            </div>
-
-                            {/* Brand Colors Example */}
-                            <div className="mb-6 p-6 bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl border border-purple-100">
-                                <h5 className="font-semibold text-gray-900 mb-3">Complete Brand Integration</h5>
-                                <CodeBlock
-                                    language="javascript"
-                                    code={`// Example: Full brand color scheme (guest-only mode)
-window.AlHayatGPT.createWidget({
-    containerId: 'chat-widget',
-    allowGuests: true,
-    customColors: {
-        // Brand Identity
-        primary: '#8B5CF6', // Your brand purple
-        secondary: '#A78BFA', // Lighter purple
-        accent: '#EC4899', // Pink accent
-        
-        // Chat Bubbles
-        userBubble: '#8B5CF6',
-        userBubbleText: '#FFFFFF',
-        assistantBubble: '#F3F4F6',
-        assistantBubbleText: '#1F2937',
-        
-        // Interface
-        background: '#FAFAFA',
-        headerBackground: '#8B5CF6',
-        headerText: '#FFFFFF',
-        inputBackground: '#FFFFFF',
-        buttonPrimary: '#8B5CF6',
-        
-        // Interactive States
-        hover: '#7C3AED',
-        focus: '#A855F7',
-        border: '#E5E7EB'
-    }
-});`}
-                                />
-                            </div>
-
-                            {/* Dark Theme Example */}
-                            <div className="mb-6 p-6 bg-gradient-to-r from-gray-50 to-slate-50 rounded-2xl border border-gray-100">
-                                <h5 className="font-semibold text-gray-900 mb-3">Dark Theme Configuration</h5>
-                                <CodeBlock
-                                    language="javascript"
-                                    code={`// Example: Dark theme (guest-only mode)
-window.AlHayatGPT.createWidget({
-    containerId: 'chat-widget',
-    allowGuests: true,
-    theme: 'dark',
-    customColors: {
-        primary: '#60A5FA',
-        background: '#1F2937',
-        surface: '#374151',
-        text: '#F9FAFB',
-        textSecondary: '#D1D5DB',
-        border: '#4B5563'
-    },
-    borderRadius: '12px',
-    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3)'
-});`}
-                                />
-                            </div>
-
-                            {/* Floating Widget Example */}
-                            <div className="mb-6 p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border border-green-100">
-                                <h5 className="font-semibold text-gray-900 mb-3">Floating Chat Widget</h5>
-                                <CodeBlock
-                                    language="javascript"
-                                    code={`// Example: Floating widget with custom positioning (guest-only mode)
-window.AlHayatGPT.createWidget({
-    containerId: 'floating-chat',
-    allowGuests: true,
-    position: 'fixed',
-    bottom: '20px',
-    right: '20px',
-    width: '350px',
-    height: '500px',
-    zIndex: 9999,
-    borderRadius: '20px',
-    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-    enableAnimations: true,
-    transitionDuration: '400ms'
-});`}
-                                />
-                            </div>
-
-                            {/* Enhanced Height Detection Example */}
-                            <div className="mb-6 p-6 bg-gradient-to-r from-green-50 to-blue-50 rounded-2xl border border-green-100">
-                                <h5 className="font-semibold text-gray-900 mb-3">🆕 Enhanced Height Detection</h5>
-                                <CodeBlock
-                                    language="javascript"
-                                    code={`// Example: Smart height detection (guest-only mode)
-window.AlHayatGPT.createWidget({
-    containerId: 'chat-widget',
-    allowGuests: true,
-    
-    // Height Detection Features (all enabled by default)
-    autoResize: true,           // Auto-adjust to page changes
-    smartHeight: true,          // Detect parent containers
-    responsiveHeight: true,     // Device-specific sizing
-    minHeight: 400,            // Minimum height (px)
-    maxHeight: 800,            // Maximum height (px)
-    
-    // Manual override (if needed)
-    height: 'auto',            // Let system decide
-    // height: '100vh',        // Full viewport
-    // height: 'calc(100vh - 120px)', // Viewport minus header/footer
-    
-    // Event handler for height changes
-    onResize: function(dimensions) {
-        console.log('Widget resized:', dimensions);
-        console.log('Breakpoint:', dimensions.breakpoint);
-        console.log('Is embedded:', dimensions.isEmbedded);
-    }
-});`}
-                                />
-                                <div className="mt-4 p-4 bg-white rounded-lg border border-green-200">
-                                    <h6 className="font-medium text-green-900 mb-2">✨ Automatic Features:</h6>
-                                    <ul className="text-sm text-green-700 space-y-1">
-                                        <li>• Detects website headers and footers</li>
-                                        <li>• Adjusts for mobile virtual keyboards</li>
-                                        <li>• Handles responsive breakpoints (mobile/tablet/desktop)</li>
-                                        <li>• Ensures input field is always visible above the fold</li>
-                                        <li>• Works with dynamic layouts and SPA navigation</li>
-                                    </ul>
-                                </div>
-                            </div>
-
-                            {/* Multi-language Example */}
-                            <div className="mb-6 p-6 bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl border border-amber-100">
-                                <h5 className="font-semibold text-gray-900 mb-3">Multi-language Configuration</h5>
-                                <CodeBlock
-                                    language="javascript"
-                                    code={`// Example: Multi-language support with RTL (guest-only mode)
-window.AlHayatGPT.createWidget({
-    containerId: 'chat-widget',
-    allowGuests: true,
-    autoDetectLanguage: true,
-    supportedLanguages: ['en', 'ar', 'he', 'es', 'fr', 'de'],
-    fallbackLanguage: 'en',
-    defaultDirection: 'auto',
-    welcomeMessage: 'Welcome! Ask me anything.',
-    placeholder: 'Type your message...',
-    
-    onLanguageDetected: function(detection) {
-        console.log('Detected:', detection.language, detection.direction);
-        // Update your page elements if needed
-        if (detection.direction === 'rtl') {
-            document.body.classList.add('rtl-chat-active');
-        }
-    }
-});`}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Enhanced Error Handling */}
-                        <div className="mt-8 p-6 bg-gradient-to-r from-red-50 to-rose-50 rounded-2xl border border-red-100">
-                            <h4 className="text-lg font-semibold text-gray-900 mb-4">🆕 Guest-Only Error Handling</h4>
-                            <p className="text-gray-600 mb-4">Simplified error handling for guest-only widgets with automatic retry and detailed error codes:</p>
-                            <CodeBlock
-                                language="javascript"
-                                code={`// Guest-only widget with enhanced error handling
-const widget = window.AlHayatGPT.createWidget({
-    containerId: 'chat-widget',
-    allowGuests: true, // Always true for external widgets
-    
-    // Unified error callback - no authentication errors!
-    onError: (error) => {
-        console.error('Widget error:', error.code, error.message);
-        
-        switch (error.code) {
-            case 'CONTAINER_NOT_FOUND':
-                console.error('Widget container not found in DOM');
-                break;
-                
-            case 'SECURITY_VIOLATION':
-                console.error('Security or origin validation issue');
-                // Handle cross-origin security issues
-                break;
-                
-            case 'NETWORK_ERROR':
-                console.error('Network error occurred');
-                if (error.retryable) {
-                    console.log('Will retry automatically in', error.retryAfter, 'ms');
-                }
-                break;
-                
-            case 'IFRAME_LOAD_FAILED':
-                console.error('Widget failed to load');
-                break;
-                
-            case 'TIMEOUT':
-                console.error('Operation timed out');
-                break;
-                
-            case 'INVALID_CONFIG':
-                console.error('Invalid configuration:', error.details);
-                break;
-                
-            case 'INITIALIZATION_FAILED':
-                console.error('Widget initialization failed');
-                break;
-                
-            default:
-                console.error('Unknown error:', error.message);
-        }
-    }
-});
-
-// Event-based error handling
-widget.on('ERROR', (error) => {
-    console.log('Error details:', {
-        code: error.code,
-        message: error.message,
-        retryable: error.retryable,
-        timestamp: error.timestamp
-    });
-});
-
-// ❌ OLD - Remove these (no longer supported):
-// widget.on('AUTH_ERROR', handler);     // REMOVED - no authentication
-// onAuthError: (error) => {}            // REMOVED - no authentication  
-// usePopupAuth: true                    // REMOVED - guest-only mode
-// clerkPublishableKey: 'KEY'            // REMOVED - no authentication needed`}
-                            />
-                        </div>
-
-                        {/* Widget Methods */}
-                        <div className="mt-8 p-6 bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl border border-purple-100">
-                            <h4 className="text-lg font-semibold text-gray-900 mb-4">Widget Methods & API</h4>
-                            <p className="text-gray-600 mb-4">Control the widget programmatically after initialization:</p>
-                            <CodeBlock
-                                language="javascript"
-                                code={`// Get widget instance
-const widget = window.AlHayatGPT.createWidget(config);
-
-// Available methods:
-widget.setTheme('dark');                    // Change theme
-widget.setDirection('rtl');                 // Change text direction
-widget.updateColors({ primary: '#FF6B6B' }); // Update colors
-widget.toggleFeature('voiceInput');         // Toggle features
-widget.resize({ width: '400px', height: '600px' }); // Resize
-widget.showMessage('Welcome back!');        // Show custom message
-widget.clearChat();                         // Clear chat history
-widget.minimize();                          // Minimize widget
-widget.maximize();                          // Maximize widget
-widget.destroy();                           // Remove widget
-
-// Event listeners:
-widget.on('messageReceived', (msg) => console.log(msg));
-widget.on('userTyping', () => console.log('User is typing'));
-widget.on('themeChanged', (theme) => console.log('Theme:', theme));
-widget.on('ERROR', (error) => console.log('Error:', error.code)); // 🆕 New error handling`}
-                            />
-                        </div>
-
-                        {/* Language Detection Features */}
-                        <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-100">
-                            <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                                <GlobeAltIcon className="h-5 w-5 text-blue-600" />
-                                Language Detection & RTL Support
-                            </h4>
-                            <div className="grid md:grid-cols-2 gap-6">
-                                <div>
-                                    <h5 className="font-medium text-gray-900 mb-2">Automatic Features</h5>
-                                    <ul className="text-sm text-gray-600 space-y-1">
-                                        <li>• Real-time language detection</li>
-                                        <li>• Automatic RTL/LTR switching</li>
-                                        <li>• Location detection with country flags</li>
-                                        <li>• Unicode-based character analysis</li>
-                                        <li>• Dynamic layout adjustments</li>
-                                    </ul>
-                                </div>
-                                <div>
-                                    <h5 className="font-medium text-gray-900 mb-2">Supported Languages</h5>
-                                    <ul className="text-sm text-gray-600 space-y-1">
-                                        <li>• <strong>RTL:</strong> Arabic, Hebrew, Persian, Urdu</li>
-                                        <li>• <strong>LTR:</strong> English, Chinese, Russian, European</li>
-                                        <li>• <strong>Mixed:</strong> Automatic detection per message</li>
-                                        <li>• <strong>Confidence:</strong> 85%+ accuracy rate</li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 {/* Support Section */}
-                <div className="mt-8 sm:mt-16 text-center">
-                    <div className="bg-blue-50 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8">
-                        <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3 sm:mb-4">Need Help?</h3>
-                        <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6 max-w-2xl mx-auto px-2">
-                            Our guest-only widget is designed to work instantly without configuration.
-                            If you need help with integration or customization, we&apos;re here to assist.
-                        </p>
-                        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
-                            <button className="px-4 sm:px-6 py-2.5 sm:py-3 bg-blue-600 text-white rounded-lg sm:rounded-xl hover:bg-blue-700 transition-colors text-sm sm:text-base">
-                                Contact Support
-                            </button>
-                            <button className="px-4 sm:px-6 py-2.5 sm:py-3 bg-white text-blue-600 border border-blue-600 rounded-lg sm:rounded-xl hover:bg-blue-50 transition-colors text-sm sm:text-base">
-                                View Documentation
-                            </button>
-                        </div>
-                    </div>
+                <div className="mt-16 bg-gray-50 rounded-2xl p-8 text-center">
+                    <h3 className="text-xl font-bold text-gray-900 mb-4">Need Help?</h3>
+                    <p className="text-gray-600 mb-6">
+                        Having trouble with the integration? We&apos;re here to help!
+                    </p>
+                    <Link
+                        href="/contact"
+                        className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                    >
+                        Contact Support
+                    </Link>
                 </div>
-            </div >
-        </div >
+            </div>
+        </div>
     );
 }

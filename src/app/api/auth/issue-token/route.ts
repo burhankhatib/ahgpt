@@ -1,6 +1,7 @@
 import { getAuth } from '@clerk/nextjs/server';
 import jwt from 'jsonwebtoken';
 import { NextRequest, NextResponse } from 'next/server';
+import { validateDomainAccessServer, createDomainBlockedResponse } from '@/utils/domain-validation';
 
 export async function GET(req: NextRequest) {
   const { userId } = getAuth(req);
@@ -16,7 +17,23 @@ export async function POST(req: NextRequest) {
   try {
     const { userId } = getAuth(req);
     const body = await req.json();
-    const { userId: bodyUserId, isWidget } = body;
+    const { userId: bodyUserId, isWidget, parentOrigin } = body;
+
+    // Validate domain access for widget requests
+    if (isWidget) {
+      const domainValidation = await validateDomainAccessServer(req, { isWidget, parentOrigin });
+      
+      console.log('=== AUTH TOKEN DOMAIN VALIDATION ===');
+      console.log('Domain detected:', domainValidation.domain);
+      console.log('Validation result:', domainValidation.allowed);
+      console.log('Reason:', domainValidation.reason);
+      console.log('=== END AUTH DEBUG ===');
+      
+      if (!domainValidation.allowed) {
+        console.log(`Auth token blocked for domain: ${domainValidation.domain}, reason: ${domainValidation.reason}`);
+        return createDomainBlockedResponse(domainValidation.domain, domainValidation.reason);
+      }
+    }
 
     // For widget requests, use the userId from the request body if provided
     const targetUserId = isWidget && bodyUserId ? bodyUserId : userId;
