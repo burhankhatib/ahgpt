@@ -1218,6 +1218,121 @@ button.send-btn:active {
   .suggested-question:hover {
     background: #374151;
   }
+  
+  /* Dark mode for chat bubbles */
+  .chat-bubble-assistant {
+    background: #374151 !important;
+    color: #f9fafb !important;
+    border-color: #4b5563 !important;
+  }
+}
+
+/* ===== SPECIFIC CHAT BUBBLE STYLING ===== */
+/* These classes are used by the widget components for proper chat bubble appearance */
+
+/* User Chat Bubble */
+.chat-bubble-user {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%) !important;
+  color: white !important;
+  padding: 12px 16px !important;
+  border-radius: 18px 18px 4px 18px !important;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3) !important;
+  font-weight: 500 !important;
+  line-height: 1.5 !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  max-width: 100% !important;
+  display: block !important;
+  text-align: left !important;
+}
+
+/* Assistant Chat Bubble */
+.chat-bubble-assistant {
+  background: white !important;
+  color: #1f2937 !important;
+  padding: 16px 20px !important;
+  border-radius: 18px 18px 18px 4px !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1) !important;
+  border: 1px solid #e5e7eb !important;
+  line-height: 1.6 !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  max-width: 100% !important;
+  display: block !important;
+  text-align: left !important;
+}
+
+/* Widget Message Container */
+.widget-message {
+  margin-bottom: 16px !important;
+  display: flex !important;
+  animation: messageSlideIn 0.3s ease-out !important;
+}
+
+/* Widget Message Hover Effect */
+.widget-message-hover:hover {
+  transform: translateY(-1px) !important;
+  transition: all 0.2s ease !important;
+}
+
+/* Widget Typing Indicator */
+.widget-typing {
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+
+.widget-typing span {
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 50% !important;
+  background: #9ca3af !important;
+  animation: typing 1.4s infinite ease-in-out !important;
+}
+
+.widget-typing span:nth-child(1) {
+  animation-delay: -0.32s !important;
+}
+
+.widget-typing span:nth-child(2) {
+  animation-delay: -0.16s !important;
+}
+
+.widget-typing span:nth-child(3) {
+  animation-delay: 0s !important;
+}
+
+/* Enhanced visibility for user messages */
+.chat-bubble-user * {
+  color: white !important;
+}
+
+.chat-bubble-assistant * {
+  color: #1f2937 !important;
+}
+
+/* Mobile responsive adjustments for chat bubbles */
+@media (max-width: 768px) {
+  .chat-bubble-user,
+  .chat-bubble-assistant {
+    padding: 10px 14px !important;
+    font-size: 14px !important;
+  }
+  
+  .widget-message {
+    margin-bottom: 12px !important;
+  }
+}
+
+/* RTL support for chat bubbles */
+[dir="rtl"] .chat-bubble-user {
+  border-radius: 18px 18px 18px 4px !important;
+  text-align: right !important;
+}
+
+[dir="rtl"] .chat-bubble-assistant {
+  border-radius: 18px 18px 4px 18px !important;
+  text-align: right !important;
 }
 
 
