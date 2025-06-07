@@ -1,39 +1,314 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🤖 Al Hayat GPT - Advanced Christian AI Chatbot
 
-## Getting Started
+<div align="center">
 
-First, run the development server:
+![Al Hayat GPT](https://img.shields.io/badge/Al%20Hayat%20GPT-v2.0.0-blue.svg)
+![Next.js](https://img.shields.io/badge/Next.js-15.3.3-black)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue)
+![Clerk](https://img.shields.io/badge/Clerk-Auth-purple)
+![Sanity](https://img.shields.io/badge/Sanity-CMS-red)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+**The first and most advanced Christian AI chatbot that can engage in theological discussions comparing Islam and Christianity.**
+
+[🌐 Live Demo](https://alhayatgpt.com) • [📚 Documentation](#documentation) • [🚀 Quick Start](#quick-start)
+
+</div>
+
+## ✨ Features
+
+### 🎯 **Core Functionality**
+- **Advanced AI Conversations**: Powered by OpenAI with specialized Christian theology knowledge
+- **Real-time Chat**: Instant responses with streaming support
+- **Multi-language Support**: Auto-detection and support for 20+ languages
+- **Responsive Design**: Beautiful UI that works on all devices
+
+### 🔐 **Authentication & User Management**
+- **Clerk Integration**: Secure authentication with social login options
+- **Guest Mode**: Anonymous chatting without registration
+- **User Profiles**: Personalized experience for registered users
+- **Invisible Mode**: Private conversations that don't appear in history
+
+### 📊 **Dashboard & Analytics**
+- **Admin Dashboard**: Comprehensive chat management and analytics
+- **Real-time Updates**: Live chat monitoring with SanityLive
+- **Export Functionality**: Download chat data in JSON or TXT format
+- **User Analytics**: Detailed statistics and user behavior insights
+
+### 🌍 **Location & Personalization**
+- **Smart Location Detection**: Browser geolocation with IP fallback
+- **Personalized Responses**: Context-aware AI based on user location
+- **Cultural Adaptation**: Responses adapted to user's cultural context
+
+### 🎨 **Enhanced UI/UX**
+- **Rich Content Rendering**: Support for tables, lists, and formatted text
+- **Clickable Suggestions**: Interactive question buttons for better engagement
+- **Copy Message Feature**: Easy sharing of AI responses
+- **Modal Interactions**: Detailed conversation viewing
+
+### 🔧 **Widget & SDK**
+- **Embeddable Widget**: Easy integration into any website
+- **SDK Support**: Programmatic access for developers
+- **Cross-domain Compatibility**: Works across different domains
+- **Customizable Styling**: Adapt to your site's design
+
+## 🏗️ Architecture
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Frontend      │    │   Backend API   │    │   AI Service    │
+│   (Next.js)     │◄──►│   (Next.js)     │◄──►│   (OpenAI)      │
+│                 │    │                 │    │                 │
+│ • Chat UI       │    │ • Authentication│    │ • GPT Models    │
+│ • Dashboard     │    │ • Chat Logic    │    │ • Streaming     │
+│ • Widget SDK    │    │ • User Mgmt     │    │ • Context Aware │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                        │                        
+         ▼                        ▼                        
+┌─────────────────┐    ┌─────────────────┐               
+│   Clerk Auth    │    │   Sanity CMS    │               
+│                 │    │                 │               
+│ • User Auth     │    │ • Chat Storage  │               
+│ • Session Mgmt  │    │ • Real-time     │               
+│ • Social Login  │    │ • Analytics     │               
+└─────────────────┘    └─────────────────┘               
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🚀 Quick Start
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Prerequisites
+- Node.js 18+ 
+- npm or yarn
+- Sanity Studio account
+- Clerk account
+- OpenAI API key
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Installation
 
-## Learn More
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/burhankhatib/ahgpt.git
+   cd ahgpt
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+3. **Set up environment variables**
+   ```bash
+   cp .env.example .env.local
+   ```
+   
+   Configure your environment variables:
+   ```env
+   # OpenAI
+   OPENAI_API_KEY=your_openai_api_key
+   
+   # Clerk Authentication
+   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
+   CLERK_SECRET_KEY=your_clerk_secret_key
+   
+   # Sanity CMS
+   NEXT_PUBLIC_SANITY_PROJECT_ID=your_sanity_project_id
+   NEXT_PUBLIC_SANITY_DATASET=production
+   SANITY_API_TOKEN=your_sanity_token
+   
+   # App Configuration
+   NEXT_PUBLIC_APP_URL=http://localhost:3000
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+4. **Set up Sanity Studio**
+   ```bash
+   npm run sanity:init
+   npm run sanity:deploy
+   ```
 
-## Deploy on Vercel
+5. **Run the development server**
+   ```bash
+   npm run dev
+   ```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+6. **Open your browser**
+   Navigate to [http://localhost:3000](http://localhost:3000)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 📁 Project Structure
+
+```
+ahgpt/
+├── src/
+│   ├── app/                    # Next.js App Router
+│   │   ├── (website)/         # Main website pages
+│   │   ├── admin/             # Admin dashboard
+│   │   ├── api/               # API routes
+│   │   ├── chat/              # Chat interface
+│   │   └── widget/            # Embeddable widget
+│   ├── components/            # React components
+│   │   ├── ui/               # UI components
+│   │   └── providers/        # Context providers
+│   ├── contexts/             # React contexts
+│   ├── hooks/                # Custom hooks
+│   ├── lib/                  # Utility libraries
+│   ├── sanity/               # Sanity configuration
+│   ├── sdk/                  # Widget SDK
+│   ├── types/                # TypeScript types
+│   └── utils/                # Utility functions
+├── public/                   # Static assets
+├── scripts/                  # Build scripts
+└── docs/                     # Documentation
+```
+
+## 🛠️ Development
+
+### Available Scripts
+
+```bash
+# Development
+npm run dev              # Start development server
+npm run build           # Build for production
+npm run start           # Start production server
+
+# Sanity CMS
+npm run sanity:dev      # Start Sanity Studio
+npm run sanity:build    # Build Sanity Studio
+npm run sanity:deploy   # Deploy Sanity Studio
+
+# Code Quality
+npm run lint            # Run ESLint
+npm run type-check      # Run TypeScript checks
+
+# Widget SDK
+npm run build:widget    # Build widget SDK
+npm run optimize:widget # Optimize widget bundle
+```
+
+### Key Technologies
+
+- **Frontend**: Next.js 15, React 18, TypeScript
+- **Styling**: Tailwind CSS, CSS Modules
+- **Authentication**: Clerk
+- **Database**: Sanity CMS with real-time updates
+- **AI**: OpenAI GPT with streaming
+- **State Management**: React Context + Zustand
+- **Forms**: React Hook Form + Zod validation
+
+## 🌐 Deployment
+
+### Vercel (Recommended)
+
+1. **Connect your repository** to Vercel
+2. **Configure environment variables** in Vercel dashboard
+3. **Deploy** - Vercel will automatically build and deploy
+
+### Manual Deployment
+
+1. **Build the project**
+   ```bash
+   npm run build
+   ```
+
+2. **Start the production server**
+   ```bash
+   npm run start
+   ```
+
+## 📚 API Reference
+
+### Chat API
+
+```typescript
+POST /api/chat
+Content-Type: application/json
+
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": "Your question here",
+      "firstName": "User Name",
+      "email": "user@example.com"
+    }
+  ]
+}
+```
+
+### Widget Integration
+
+```html
+<!-- Basic Widget Integration -->
+<div id="ahgpt-widget"></div>
+<script src="https://alhayatgpt.com/widget-sdk.js"></script>
+<script>
+  AlHayatGPT.init({
+    containerId: 'ahgpt-widget',
+    domain: 'your-domain.com'
+  });
+</script>
+```
+
+## 🔧 Configuration
+
+### Widget Customization
+
+```javascript
+AlHayatGPT.init({
+  containerId: 'ahgpt-widget',
+  domain: 'your-domain.com',
+  theme: 'light', // 'light' | 'dark'
+  position: 'bottom-right', // Widget position
+  language: 'auto', // Auto-detect or specify
+  height: '600px',
+  width: '400px'
+});
+```
+
+### Environment Configuration
+
+See `CONFIGURATION.md` for detailed environment setup instructions.
+
+## 🤝 Contributing
+
+We welcome contributions! Please read our [Contributing Guidelines](CONTRIBUTING.md) for details.
+
+### Development Workflow
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Make your changes
+4. Write tests for your changes
+5. Run the test suite: `npm test`
+6. Commit your changes: `git commit -m 'Add amazing feature'`
+7. Push to the branch: `git push origin feature/amazing-feature`
+8. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- **OpenAI** for providing the AI capabilities
+- **Clerk** for authentication services
+- **Sanity** for content management
+- **Vercel** for hosting and deployment
+- **Next.js** team for the amazing framework
+
+## 📞 Support
+
+- **Documentation**: Check our [documentation](docs/)
+- **Issues**: [GitHub Issues](https://github.com/burhankhatib/ahgpt/issues)
+- **Email**: support@alhayatgpt.com
+- **Website**: [alhayatgpt.com](https://alhayatgpt.com)
+
+---
+
+<div align="center">
+
+**Made with ❤️ for the Christian community**
+
+[⭐ Star this project](https://github.com/burhankhatib/ahgpt) if you find it helpful!
+
+</div>
 
 # AHGPT - Al Hayat AI Assistant
 
