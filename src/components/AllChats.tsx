@@ -4,9 +4,9 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useChat } from '@/contexts/ChatContext';
 import { Chat, Message } from '@/types/chat';
 import { format, isWithinInterval, parseISO, startOfDay, endOfDay, startOfMonth, subDays, subWeeks } from 'date-fns';
-import { getAllChats } from '@/sanity/lib/data/getAllChats';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { trackChatEvent } from '@/utils/analytics';
+import { useLiveChats } from '@/hooks/useLiveChats';
 
 import {
     FunnelIcon,
@@ -188,9 +188,11 @@ export default function AllChats() {
     const { currentChat } = useChat();
     const { language: currentLanguage } = useLanguage();
 
-    // Data state
-    const [allChats, setAllChats] = useState<Chat[]>([]);
-    const [loading, setLoading] = useState(true);
+    // Use live chat hook for real-time updates
+    const { chats: allChats, loading, error: dataError, refetch } = useLiveChats(
+        5000, // Refresh every 5 seconds
+        true  // Enable auto-refresh
+    );
 
     // Filter state
     const [searchQuery, setSearchQuery] = useState('');
@@ -217,30 +219,12 @@ export default function AllChats() {
 
     const CHATS_PER_PAGE = 25;
 
-    // Load chats from Sanity
+    // Show data error if there's an issue loading chats
     useEffect(() => {
-        const loadChats = async () => {
-            setLoading(true);
-            try {
-                console.log('🔄 [AllChats] Loading chats from Sanity with new fields...');
-                const chats = await getAllChats();
-                setAllChats(chats);
-                console.log(`✅ [AllChats] Loaded ${chats.length} chats from Sanity`);
-
-                // Log sample of language and location data
-                const withLanguage = chats.filter(c => c.detectedLanguage).length;
-                const withLocation = chats.filter(c => c.location?.country).length;
-                console.log(`📊 [AllChats] Chats with language: ${withLanguage}/${chats.length}`);
-                console.log(`🌍 [AllChats] Chats with location: ${withLocation}/${chats.length}`);
-            } catch (error) {
-                console.error('❌ [AllChats] Error loading chats:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        loadChats();
-    }, []);
+        if (dataError) {
+            console.error('❌ [AllChats] Error loading chats:', dataError);
+        }
+    }, [dataError]);
 
     // Calculate filter statistics
     const filterStats: FilterStats = useMemo(() => {
@@ -416,8 +400,8 @@ export default function AllChats() {
 
             const result = await response.json();
 
-            // Remove the chat from local state
-            setAllChats(prevChats => prevChats.filter(chat => chat._id !== chatId));
+            // Refresh data to show updated state
+            await refetch();
 
             console.log(`✅ [AllChats] Successfully deleted chat: ${chatId}`, result);
         } catch (error) {
@@ -459,8 +443,8 @@ export default function AllChats() {
 
             const result = await response.json();
 
-            // Clear local state
-            setAllChats([]);
+            // Refresh data to show updated state
+            await refetch();
             setShowDeleteAllConfirm(false);
             setDeleteAllStep(1);
 
@@ -600,12 +584,18 @@ ${'='.repeat(80)}`
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-                            <span className="text-2xl text-blue-600">💬</span>
-                            All Chats
-                        </h1>
+                        <div className="flex items-center gap-3">
+                            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+                                <span className="text-2xl text-blue-600">💬</span>
+                                All Chats
+                            </h1>
+                            <div className="flex items-center gap-2 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                                Live Updates
+                            </div>
+                        </div>
                         <p className="text-gray-600 mt-1">
-                            Manage and analyze all chat conversations from the website and SDK widget
+                            Manage and analyze all chat conversations from the website and SDK widget • Auto-refreshes every 5 seconds
                         </p>
                     </div>
                     <div className="flex items-center gap-4">

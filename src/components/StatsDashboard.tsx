@@ -2,10 +2,10 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import { Chat, Message } from '@/types/chat';
-import { getAllChats } from '@/sanity/lib/data/getAllChats';
 import { detectLanguage } from '@/utils/languageDetection';
 import { getCountryFlag } from '@/utils/browserLocationDetection';
 import { format, isWithinInterval, subDays, parseISO } from 'date-fns';
+import { useLiveChats } from '@/hooks/useLiveChats';
 
 interface StatCard {
     title: string;
@@ -35,27 +35,27 @@ const dateRanges: DateRange[] = [
 ];
 
 export default function StatsDashboard() {
-    const [allChats, setAllChats] = useState<Chat[]>([]);
+    // Use live chat hook for real-time updates
+    const { chats: allChats, loading, error: dataError } = useLiveChats(
+        10000, // Refresh every 10 seconds for dashboard
+        true   // Enable auto-refresh
+    );
+
     const [selectedRange, setSelectedRange] = useState<DateRange>(dateRanges[1]); // Default to 30 days
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
     const [detectedLanguages, setDetectedLanguages] = useState<Record<string, string>>({});
 
     useEffect(() => {
-        const loadChats = async () => {
-            try {
-                setLoading(true);
-                console.log('🔄 [StatsDashboard] Loading chats from Sanity...');
+        const processLanguages = async () => {
+            if (allChats.length === 0) return;
 
-                const chats = await getAllChats();
-                console.log(`📊 [StatsDashboard] Loaded ${chats.length} chats`);
-                setAllChats(chats);
+            try {
+                console.log('🔄 [StatsDashboard] Processing language data...');
 
                 // Language detection using Franc
                 const languages: Record<string, string> = {};
                 console.log('🗣️ [StatsDashboard] Processing language detection...');
 
-                for (const chat of chats) {
+                for (const chat of allChats) {
                     if (chat._id) {
                         // Use Sanity-stored detected language first, fallback to detection
                         if (chat.detectedLanguage) {
@@ -63,9 +63,9 @@ export default function StatsDashboard() {
                             console.log(`✅ [StatsDashboard] Using Sanity language for chat ${chat._id}: ${chat.detectedLanguage}`);
                         } else if (chat.messages && chat.messages.length > 0) {
                             // Fallback to local detection for old chats
-                            const userMessages = chat.messages.filter(msg => msg?.role === 'user');
+                            const userMessages = chat.messages.filter((msg: Message) => msg?.role === 'user');
                             const recentUserMessages = userMessages.slice(-3);
-                            const combinedText = recentUserMessages.map(msg => msg?.content || '').join(' ');
+                            const combinedText = recentUserMessages.map((msg: Message) => msg?.content || '').join(' ');
 
                             if (combinedText.trim()) {
                                 try {
@@ -84,25 +84,22 @@ export default function StatsDashboard() {
                 console.log(`🎯 [StatsDashboard] Language processing completed. Found ${Object.keys(languages).length} languages`);
 
                 // Count chats with Sanity location data
-                const chatsWithLocation = chats.filter(chat =>
+                const chatsWithLocation = allChats.filter((chat: Chat) =>
                     chat.location &&
                     chat.location.country &&
                     chat.location.country !== 'Unknown' &&
                     chat.location.source !== 'unknown'
                 );
 
-                console.log(`🗺️ [StatsDashboard] Found ${chatsWithLocation.length}/${chats.length} chats with valid Sanity location data`);
+                console.log(`🗺️ [StatsDashboard] Found ${chatsWithLocation.length}/${allChats.length} chats with valid Sanity location data`);
 
             } catch (error) {
-                console.error('❌ [StatsDashboard] Error loading chats:', error);
-                setError(error instanceof Error ? error.message : 'Failed to load data');
-            } finally {
-                setLoading(false);
+                console.error('❌ [StatsDashboard] Error processing language data:', error);
             }
         };
 
-        loadChats();
-    }, []);
+        processLanguages();
+    }, [allChats]);
 
     const filteredChats = useMemo(() => {
         if (selectedRange.days === 0) return allChats;
@@ -366,12 +363,12 @@ export default function StatsDashboard() {
         );
     }
 
-    if (error) {
+    if (dataError) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
                 <div className="text-red-600 text-center">
                     <p className="text-lg font-medium">Error loading statistics</p>
-                    <p className="text-sm text-gray-500 mt-2">{error}</p>
+                    <p className="text-sm text-gray-500 mt-2">{dataError}</p>
                 </div>
             </div>
         );
@@ -388,8 +385,14 @@ export default function StatsDashboard() {
                 <div className="mb-8">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                         <div>
-                            <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
-                            <p className="mt-2 text-gray-600">Overview of chat activity and user engagement</p>
+                            <div className="flex items-center gap-3">
+                                <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
+                                <div className="flex items-center gap-2 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                                    Live Updates
+                                </div>
+                            </div>
+                            <p className="mt-2 text-gray-600">Overview of chat activity and user engagement • Auto-refreshes every 10 seconds</p>
                         </div>
                         <div className="mt-4 sm:mt-0">
                             <select
