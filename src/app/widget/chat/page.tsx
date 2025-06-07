@@ -1,389 +1,249 @@
 "use client";
-import { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { PaperAirplaneIcon } from '@heroicons/react/24/solid';
-import { ExclamationTriangleIcon, InformationCircleIcon, DocumentDuplicateIcon, CheckIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
-// Removed Clerk dependencies - widget operates in guest-only mode
+import { ExclamationTriangleIcon, DocumentDuplicateIcon, CheckIcon } from '@heroicons/react/24/outline';
 import { trackChatEvent } from '@/utils/analytics';
 import { useChat as useChatContext } from '@/contexts/ChatContext';
-import { ChatProvider } from '@/contexts/ChatContext';
+import { GuestChatProvider } from '@/contexts/ChatContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { Message } from '@/types/chat';
 import { isSanityPermissionError } from '@/utils/sanity-permissions';
-import { Button } from "@/components/ui/button";
-import { redirectToProperDomain, isValidDomain, getApiEndpoint } from '@/utils/domain-config';
-
-import { detectUserLocation } from '@/utils/chatLocationDetection';
-
 import Link from "next/link";
-import { useChat, Message as VercelMessage } from 'ai/react';
-
-// Removed broken streaming component - using simple HTML rendering instead
 
 // Widget-specific message types
 interface WidgetMessage {
-    type: 'WIDGET_READY' | 'USER_SIGNED_IN' | 'USER_SIGNED_OUT' | 'RESIZE' | 'ERROR' | 'UPDATE_CONFIG';
+    type: 'WIDGET_READY' | 'USER_SIGNED_IN' | 'USER_SIGNED_OUT' | 'RESIZE' | 'ERROR';
     payload?: Record<string, unknown>;
 }
 
 function formatTime(date: Date | string) {
-    const d = typeof date === 'string' ? new Date(date) : date;
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    try {
+        const d = typeof date === 'string' ? new Date(date) : date;
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch {
+        return "00:00";
+    }
 }
 
-// Multilingual Welcome Animation Component
-function MultilingualWelcome() {
-    const welcomeTexts = [
-        { text: "Welcome! أهلاً وسهلاً!", lang: 'mixed' },
-        { text: "Peace be with you!", lang: 'en' },
-        { text: "السلام عليكم", lang: 'ar' },
-        { text: "Blessings to you!", lang: 'en' },
-        { text: "نعمة وسلام", lang: 'ar' },
-        { text: "Grace and Peace!", lang: 'en' },
-        { text: "بركة ونعمة", lang: 'ar' },
-        { text: "Shalom!", lang: 'he' },
-        { text: "Pax vobiscum", lang: 'la' }
-    ];
-
-    const [currentIndex, setCurrentIndex] = useState(0);
-    const [isVisible, setIsVisible] = useState(true);
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setIsVisible(false);
-            setTimeout(() => {
-                setCurrentIndex((prev) => (prev + 1) % welcomeTexts.length);
-                setIsVisible(true);
-            }, 300);
-        }, 2500);
-
-        return () => clearInterval(interval);
-    }, [welcomeTexts.length]);
-
-    const currentWord = welcomeTexts[currentIndex];
-
+// Simplified Welcome Component
+function SimpleWelcome() {
     return (
         <div className="text-center">
-            <div className="min-h-[2rem] flex items-center justify-center">
-                <h1
-                    className={`text-lg font-semibold text-blue-600 transition-all duration-300 ${isVisible ? 'opacity-100 transform translate-y-0' : 'opacity-0 transform -translate-y-2'
-                        } ${currentWord.lang === 'ar' ? 'font-arabic' : ''}`}
-                    dir={currentWord.lang === 'ar' ? 'rtl' : 'ltr'}
-                >
-                    {currentWord.text}
-                </h1>
+            <h1 className="text-lg font-semibold text-blue-600 mb-2">
+                Welcome to Al Hayat GPT
+            </h1>
+            <p className="text-sm text-gray-600">
+                Ask me anything about Christianity, theology, or general questions
+            </p>
+        </div>
+    );
+}
+
+// Fallback widget when contexts fail
+function FallbackWidget() {
+    const [input, setInput] = useState("");
+    const [messages, setMessages] = useState<Array<{ role: string, content: string, timestamp: Date }>>([]);
+    const [isLoading, setIsLoading] = useState(false);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!input.trim() || isLoading) return;
+
+        const userMessage = {
+            role: 'user',
+            content: input.trim(),
+            timestamp: new Date()
+        };
+
+        setMessages(prev => [...prev, userMessage]);
+        setInput("");
+        setIsLoading(true);
+
+        try {
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    messages: [...messages, userMessage].map(msg => ({
+                        role: msg.role,
+                        content: msg.content
+                    })),
+                    isWidget: true,
+                    isGuest: true
+                })
+            });
+
+            if (response.ok) {
+                const reader = response.body?.getReader();
+                if (reader) {
+                    let content = "";
+                    const decoder = new TextDecoder();
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+
+                        const chunk = decoder.decode(value);
+                        const lines = chunk.split('\n');
+
+                        for (const line of lines) {
+                            if (line.startsWith('0:')) {
+                                try {
+                                    const data = JSON.parse(line.slice(2));
+                                    if (typeof data === 'string') {
+                                        content += data;
+                                    }
+                                } catch { }
+                            }
+                        }
+                    }
+
+                    setMessages(prev => [...prev, {
+                        role: 'assistant',
+                        content: content || 'Sorry, I encountered an issue. Please try again.',
+                        timestamp: new Date()
+                    }]);
+                }
+            } else {
+                throw new Error('API call failed');
+            }
+        } catch (error) {
+            console.error('Chat error:', error);
+            setMessages(prev => [...prev, {
+                role: 'assistant',
+                content: 'Sorry, I encountered an error. Please try again.',
+                timestamp: new Date()
+            }]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <div className="flex flex-col bg-gray-50" style={{ height: '100%', minHeight: '100vh' }}>
+            <div className="flex-1 px-4 py-4 space-y-4 overflow-y-auto">
+                {messages.length === 0 && (
+                    <div className="flex flex-col items-center justify-center py-8">
+                        <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-gray-200/50 max-w-md text-center">
+                            <div className="w-fit px-3 py-1 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                                <Link href="https://alhayatgpt.com" target="_blank">
+                                    <span className="text-white text-lg font-bold">Al Hayat GPT</span>
+                                </Link>
+                            </div>
+                            <SimpleWelcome />
+                        </div>
+                    </div>
+                )}
+
+                {messages.map((m, index) => (
+                    <div
+                        key={`fallback_${index}_${m.timestamp.getTime()}`}
+                        className={`flex items-start gap-3 ${m.role === "user" ? "justify-end" : "justify-start"}`}
+                    >
+                        <div className={`max-w-md ${m.role === "user"
+                            ? "bg-gradient-to-br from-blue-500 to-blue-600 text-white"
+                            : "bg-white text-gray-800 border border-gray-200"
+                            } rounded-2xl px-4 py-3 shadow-lg`}
+                        >
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className={`text-xs font-medium ${m.role === "user" ? "text-blue-100" : "text-gray-500"}`}>
+                                    {m.role === "user" ? "Guest" : "Assistant"}
+                                </span>
+                                <span className={`text-xs ${m.role === "user" ? "text-blue-200" : "text-gray-400"}`}>
+                                    {formatTime(m.timestamp)}
+                                </span>
+                            </div>
+                            <div className="text-sm">
+                                {m.role === "assistant" ? (
+                                    <div dangerouslySetInnerHTML={{ __html: m.content }} />
+                                ) : (
+                                    <div className="whitespace-pre-line break-words">{m.content}</div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                ))}
+
+                {isLoading && (
+                    <div className="flex items-start gap-3 justify-start">
+                        <div className="bg-white rounded-2xl px-4 py-3 border border-gray-200 shadow-lg flex items-center gap-2">
+                            <div className="flex gap-1">
+                                <span className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></span>
+                                <span className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></span>
+                                <span className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></span>
+                            </div>
+                            <span className="text-xs text-gray-500">Thinking...</span>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            <div className="flex-shrink-0 p-4 bg-gray-50 border-t border-gray-200">
+                <form onSubmit={handleSubmit}>
+                    <div className="relative flex items-center gap-2">
+                        <div className="flex-1 relative">
+                            <input
+                                className="w-full px-4 py-3 pr-12 rounded-xl bg-white border border-gray-200 text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                value={input}
+                                onChange={(e) => setInput(e.target.value)}
+                                placeholder="Type your message..."
+                                disabled={isLoading}
+                            />
+                            <button
+                                type="submit"
+                                disabled={isLoading || !input.trim()}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                title="Send Message"
+                            >
+                                <PaperAirplaneIcon className="w-4 h-4" />
+                            </button>
+                        </div>
+                    </div>
+                </form>
             </div>
         </div>
     );
 }
 
-// All authentication functionality removed - widgets operate in guest-only mode
-
-// Global singleton guard to prevent multiple widget instances across the entire page
-let globalWidgetInstance: string | null = null;
-let globalWidgetInitialized = false;
-
-// Prevent widget nesting inside iframes
-const isEmbeddedWidget = typeof window !== 'undefined' && window.parent !== window;
-
 function WidgetChatPage() {
-    // Prevent infinite nesting if widget is loaded inside another widget
-    const [isNested, setIsNested] = useState(false);
+    const [contextError, setContextError] = useState<string | null>(null);
+    const [isInitialized, setIsInitialized] = useState(false);
 
-    // Unique instance ID for this widget
-    const instanceId = useRef<string>(`widget_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
-    const isActiveInstance = useRef<boolean>(false);
+    // Safe context hooks with error handling
+    let currentChat: any = null;
+    let addConversationTurn: any = null;
+    let createNewChat: any = null;
+    let getFontClass: any = null;
+    let isRTL: boolean = false;
+    let getPlaceholderText: any = null;
 
-    // Component mounting guard to prevent multiple instances
-    const [isMounted, setIsMounted] = useState(false);
-    const [isWidgetReady, setIsWidgetReady] = useState(false);
+    try {
+        ({ currentChat, addConversationTurn, createNewChat } = useChatContext());
+        ({ getFontClass, isRTL, getPlaceholderText } = useLanguage());
+    } catch (error) {
+        console.error('Context hook error:', error);
+        setContextError(error instanceof Error ? error.message : 'Context initialization failed');
+        return <FallbackWidget />;
+    }
 
-    const { currentChat, addConversationTurn, createNewChat } = useChatContext();
-    const { getFontClass, isRTL, getPlaceholderText, detectInputLanguageChange, autoDetect, checkLanguageSwitch } = useLanguage();
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [streamingMessage, setStreamingMessage] = useState("");
     const [displayMessages, setDisplayMessages] = useState<Message[]>([]);
     const [hasPermissionIssue, setHasPermissionIssue] = useState(false);
     const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
-    const [parentOrigin, setParentOrigin] = useState<string>('*');
-    const [widgetConfig, setWidgetConfig] = useState({
-        theme: 'auto',
-        allowGuests: true
-    });
-    const [isGuestMode, setIsGuestMode] = useState(true); // Always guest mode for external widgets
-
-    // Check for infinite nesting - prevent widget from loading inside itself
-    useEffect(() => {
-        const checkNesting = () => {
-            if (typeof window === 'undefined') return false;
-
-            try {
-                // Check if we're in an iframe that contains a widget
-                let currentWindow: Window = window;
-                let depth = 0;
-                const maxDepth = 5; // Prevent infinite loops
-
-                while (currentWindow !== currentWindow.parent && depth < maxDepth) {
-                    currentWindow = currentWindow.parent as Window;
-                    depth++;
-
-                    // Check if parent window has Al Hayat GPT widget elements
-                    try {
-                        const hasWidget = currentWindow.document.querySelector('[id*="chat-widget"], [id*="ahgpt-widget"], iframe[src*="widget/chat"]');
-                        if (hasWidget) {
-                            console.warn('[Widget] Detected widget nesting - preventing infinite loop');
-                            return true;
-                        }
-                    } catch (e) {
-                        // Cross-origin access blocked - this is normal for embedded widgets
-                        break;
-                    }
-                }
-
-                return false;
-            } catch (error) {
-                console.warn('[Widget] Error checking for nesting:', error);
-                return false;
-            }
-        };
-
-        if (checkNesting()) {
-            setIsNested(true);
-            return;
-        }
-
-        // Global singleton mounting guard - ensures only ONE widget exists across the entire page
-        // Check if another widget instance is already active
-        if (globalWidgetInitialized && globalWidgetInstance && globalWidgetInstance !== instanceId.current) {
-            console.log(`[Widget ${instanceId.current}] Another widget instance is already active (${globalWidgetInstance}). Preventing duplicate.`);
-            return; // Don't mount this instance
-        }
-
-        // Claim this instance as the active one
-        if (!globalWidgetInitialized) {
-            globalWidgetInstance = instanceId.current;
-            globalWidgetInitialized = true;
-            isActiveInstance.current = true;
-
-            console.log(`[Widget ${instanceId.current}] Claimed as the active widget instance.`);
-
-            setIsMounted(true);
-
-            // Domain validation is now handled in separate useEffect above
-        }
-
-        return () => {
-            // Only cleanup if this was the active instance
-            if (isActiveInstance.current && globalWidgetInstance === instanceId.current) {
-                globalWidgetInstance = null;
-                globalWidgetInitialized = false;
-                isActiveInstance.current = false;
-                console.log(`[Widget ${instanceId.current}] Released as the active widget instance.`);
-            }
-            setIsMounted(false);
-            setIsWidgetReady(false);
-        };
-    }, []); // No dependencies - run only once
-
-    // Location detection now handled via VisitorAPI in useEffect below
-    const [userLocationDetected, setUserLocationDetected] = useState(false);
 
     const chatRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
-    const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Always use guest info for external widgets
-    // Use source website as lastName for tracking
-    const urlParams = new URLSearchParams(window.location.search);
-    const sourceWebsite = urlParams.get('source') || 'unknown-source';
+    // Simple guest user info
     const firstName = 'Guest';
-    const lastName = sourceWebsite; // Track source website
-    const fullNameInitials = 'G';
+    const lastName = 'User';
+    const fullNameInitials = 'GU';
     const email = '';
 
-    // Widget is now ready to load - domain validation moved to API level
-    useEffect(() => {
-        setIsWidgetReady(true);
-    }, []);
-
-    // Detect and store user location using Enhanced Detection with Sanity Sync (Widget)
-    useEffect(() => {
-        const detectAndStoreUserLocation = async () => {
-            if (userLocationDetected) return;
-
-            // Use the same persistent guest ID that chat creation uses
-            const getGuestId = () => {
-                if (typeof window !== 'undefined') {
-                    let guestId = localStorage.getItem('ahgpt_guest_id');
-                    if (!guestId) {
-                        guestId = `guest_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
-                        localStorage.setItem('ahgpt_guest_id', guestId);
-                    }
-                    return guestId;
-                }
-                return `guest_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
-            };
-
-            const userKey = getGuestId();
-            const existingLocation = localStorage.getItem(`userLocation_${userKey}`);
-
-            // Only detect if we don't have recent enhanced detection data (or it's older than 24 hours)
-            // Force re-detection for old data that wasn't from enhanced detection
-            let shouldDetect = true;
-            if (existingLocation) {
-                try {
-                    const parsed = JSON.parse(existingLocation);
-                    const detectedAt = new Date(parsed.detectedAt);
-                    const now = new Date();
-                    const hoursSinceDetection = (now.getTime() - detectedAt.getTime()) / (1000 * 60 * 60);
-
-                    // Only skip if we have recent enhanced detection data (not old detection methods)
-                    if (hoursSinceDetection < 24 &&
-                        parsed.country !== 'Unknown' &&
-                        (parsed.source === 'widget-enhanced' || parsed.detectionMethod === 'visitorapi')) {
-                        shouldDetect = false;
-                        setUserLocationDetected(true);
-                        console.log(`📋 [Widget] User ${userKey} has recent enhanced detection data:`, parsed);
-                    } else {
-                        // Clear old non-enhanced data to force new detection
-                        localStorage.removeItem(`userLocation_${userKey}`);
-                        console.log(`🔄 [Widget] Clearing old location data for user ${userKey} to force enhanced detection`);
-                    }
-                } catch (error) {
-                    console.error('[Widget] Error parsing existing location data:', error);
-                    localStorage.removeItem(`userLocation_${userKey}`);
-                }
-            }
-
-            if (shouldDetect) {
-                try {
-                    console.log(`🌍 [Widget] Detecting location with enhanced detection for user ${userKey}...`);
-
-                    // Primary method: Enhanced location detection with Sanity sync
-                    const locationResult = await detectUserLocation();
-
-                    if (locationResult.location && locationResult.location.country && locationResult.location.country !== 'Unknown') {
-                        const locationToStore = {
-                            ...locationResult.location,
-                            detectedAt: new Date().toISOString(),
-                            userKey: userKey,
-                            source: 'widget-enhanced'
-                        };
-
-                        localStorage.setItem(`userLocation_${userKey}`, JSON.stringify(locationToStore));
-                        console.log(`✅ [Widget] Enhanced location stored for user ${userKey}:`, locationResult.location);
-                        setUserLocationDetected(true);
-
-                        // Also notify parent frame about user location if in widget mode
-                        if (window.parent && window.parent !== window) {
-                            try {
-                                window.parent.postMessage({
-                                    type: 'USER_LOCATION_DETECTED',
-                                    payload: {
-                                        userKey,
-                                        location: locationResult.location
-                                    }
-                                }, parentOrigin);
-                            } catch (error) {
-                                console.log('Could not notify parent about location:', error);
-                            }
-                        }
-                    } else {
-                        console.error(`❌ [Widget] Enhanced location detection failed for user ${userKey}:`, locationResult.error);
-                        setUserLocationDetected(true);
-                    }
-                } catch (error) {
-                    console.error(`🚨 [Widget] Error detecting location for user ${userKey}:`, error);
-                    setUserLocationDetected(true);
-                }
-            }
-        };
-
-        // Delay the location request slightly so the widget loads first
-        const timer = setTimeout(detectAndStoreUserLocation, 1000);
-        return () => clearTimeout(timer);
-    }, [userLocationDetected, parentOrigin]);
-
-    // Consolidated widget initialization - SINGLE useEffect to prevent multiple mounting
-    useEffect(() => {
-        // Only run if this is the active instance and properly mounted
-        if (!isMounted || !isWidgetReady || !isActiveInstance.current) {
-            return;
-        }
-
-        // Additional check to ensure we're still the active instance
-        if (globalWidgetInstance !== instanceId.current) {
-            console.log(`[Widget ${instanceId.current}] No longer the active instance. Skipping initialization.`);
-            return;
-        }
-
-        // Prevent multiple initialization attempts
-        let isInitialized = false;
-
-        const initializeWidget = () => {
-            if (isInitialized) return;
-            isInitialized = true;
-
-            // Get configuration from URL parameters
-            const urlParams = new URLSearchParams(window.location.search);
-            const theme = urlParams.get('theme') || 'auto';
-            const allowGuests = urlParams.get('allowGuests') !== 'false';
-            const origin = urlParams.get('parentOrigin');
-
-            if (origin) {
-                setParentOrigin(origin);
-            }
-
-            setWidgetConfig({ theme, allowGuests });
-
-            // Send messages to parent
-            const sendMessage = (message: WidgetMessage) => {
-                if (window.parent && window.parent !== window) {
-                    window.parent.postMessage(message, origin || '*');
-                }
-            };
-
-            // Send ready message
-            sendMessage({ type: 'WIDGET_READY' });
-
-            // Always operate in guest mode for external widgets
-            sendMessage({ type: 'USER_SIGNED_OUT' });
-            setIsGuestMode(true);
-
-            // Listen for messages from parent (only once)
-            const handleMessage = (event: MessageEvent) => {
-                if (origin && event.origin !== origin) {
-                    return; // Security check
-                }
-
-                const message: WidgetMessage = event.data;
-
-                switch (message.type) {
-                    case 'UPDATE_CONFIG':
-                        if (message.payload) {
-                            setWidgetConfig(prev => ({ ...prev, ...message.payload }));
-                        }
-                        break;
-                }
-            };
-
-            window.addEventListener('message', handleMessage);
-
-            // Return cleanup function
-            return () => {
-                window.removeEventListener('message', handleMessage);
-            };
-        };
-
-        const cleanup = initializeWidget();
-
-        return cleanup;
-    }, [isMounted, isWidgetReady]); // Only depend on mounting and ready state
-
-    // Height-related effects removed as requested
-
-    // Rest of the chat functionality (similar to main chat page but simplified)
+    // Simple avatars
     const AVATARS = {
         user: (
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-medium shadow-lg">
@@ -397,242 +257,130 @@ function WidgetChatPage() {
         ),
     };
 
-    // Create a new chat if none exists
+    // Simplified initialization
     useEffect(() => {
-        if (!currentChat) {
-            createNewChat();
-        }
-    }, [currentChat, createNewChat]);
+        const initializeWidget = async () => {
+            try {
+                console.log('Widget initialization starting...');
+
+                // Simple parent messaging
+                if (window.parent && window.parent !== window) {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const parentOrigin = urlParams.get('parentOrigin') || '*';
+
+                    // Send ready message
+                    try {
+                        window.parent.postMessage({ type: 'WIDGET_READY' }, parentOrigin);
+                        window.parent.postMessage({ type: 'USER_SIGNED_OUT' }, parentOrigin);
+                        console.log('Parent messages sent successfully');
+                    } catch (error) {
+                        console.warn('Could not send parent messages:', error);
+                    }
+                }
+
+                // Create new chat if needed
+                if (createNewChat && !currentChat) {
+                    try {
+                        await createNewChat();
+                        console.log('New chat created successfully');
+                    } catch (error) {
+                        console.warn('Could not create new chat:', error);
+                    }
+                }
+
+                setIsInitialized(true);
+                console.log('Widget initialization completed');
+            } catch (error) {
+                console.error('Widget initialization error:', error);
+                setContextError(error instanceof Error ? error.message : 'Initialization failed');
+            }
+        };
+
+        initializeWidget();
+    }, []); // Removed dependencies to prevent re-initialization
 
     // Load messages when currentChat changes
     useEffect(() => {
-        if (currentChat) {
-            const messagesWithDates = currentChat.messages.map((msg, index) => ({
-                ...msg,
-                timestamp: typeof msg.timestamp === 'string' ? new Date(msg.timestamp) : msg.timestamp,
-                uniqueKey: msg.uniqueKey || `msg_${currentChat._id}_${index}`,
-            }));
+        if (!isInitialized) return;
 
-            setDisplayMessages(messagesWithDates);
-            setStreamingMessage("");
-            setIsLoading(false);
-        } else {
+        try {
+            if (currentChat && currentChat.messages) {
+                const messagesWithDates = currentChat.messages.map((msg: any, index: number) => ({
+                    ...msg,
+                    timestamp: typeof msg.timestamp === 'string' ? new Date(msg.timestamp) : msg.timestamp,
+                    uniqueKey: msg.uniqueKey || `msg_${index}_${Date.now()}`,
+                }));
+
+                setDisplayMessages(messagesWithDates);
+                setStreamingMessage("");
+                setIsLoading(false);
+                console.log('Messages loaded:', messagesWithDates.length);
+            } else {
+                setDisplayMessages([]);
+                setStreamingMessage("");
+                setIsLoading(false);
+            }
+        } catch (error) {
+            console.error('Error loading messages:', error);
             setDisplayMessages([]);
-            setStreamingMessage("");
-            setIsLoading(false);
         }
-    }, [currentChat?._id]);
+    }, [currentChat?._id, isInitialized]);
 
-    // Auto-scroll to bottom when messages change
+    // Auto-scroll to bottom
     useEffect(() => {
         if (chatRef.current) {
             chatRef.current.scrollTop = chatRef.current.scrollHeight;
         }
-    }, [displayMessages, streamingMessage, isLoading]);
+    }, [displayMessages, streamingMessage]);
 
-    // Add click handlers for suggested questions
-    useEffect(() => {
-        if (!chatRef.current) return;
+    // If there's a context error, show fallback
+    if (contextError) {
+        console.log('Showing fallback widget due to context error:', contextError);
+        return <FallbackWidget />;
+    }
 
-        const handleQuestionClick = async (event: Event) => {
-            const target = event.target as HTMLElement;
-
-            // Check if clicked element is a question button
-            if (target.tagName === 'A' && target.getAttribute('data-question') === 'true') {
-                event.preventDefault();
-                const questionText = target.textContent?.trim();
-
-                if (questionText && !isLoading) {
-                    // Track the click event
-                    trackChatEvent('CLICK');
-
-                    // Create user message
-                    const userMessage: Message = {
-                        role: 'user',
-                        content: questionText,
-                        timestamp: new Date(),
-                        uniqueKey: `msg_user_question_${Date.now()}`,
-                        firstName,
-                        lastName,
-                        email,
-                    };
-
-                    // Clear input and start loading
-                    setInput("");
-                    setIsLoading(true);
-                    setStreamingMessage("");
-
-                    // Add user message to display
-                    setDisplayMessages(prev => [...prev, userMessage]);
-
-                    // Submit the question automatically
-                    try {
-                        const apiEndpoint = getApiEndpoint();
-                        const chatApiUrl = `${apiEndpoint}/api/chat`;
-                        const response = await fetch(chatApiUrl, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                messages: [...(currentChat?.messages || []), userMessage].map(msg => ({
-                                    role: msg.role,
-                                    content: msg.content,
-                                    firstName: msg.firstName || firstName,
-                                    lastName: msg.lastName || lastName,
-                                    email: msg.email || email,
-                                })),
-                                isWidget: true,
-                                isGuest: isGuestMode
-                            })
-                        });
-
-                        if (!response.ok) {
-                            throw new Error('Failed to get AI response');
-                        }
-
-                        const reader = response.body?.getReader();
-                        if (!reader) {
-                            throw new Error('No response body');
-                        }
-
-                        let aiResponseContent = "";
-                        const decoder = new TextDecoder();
-
-                        while (true) {
-                            const { done, value } = await reader.read();
-                            if (done) break;
-
-                            const chunk = decoder.decode(value, { stream: true });
-                            const lines = chunk.split('\n');
-
-                            for (const line of lines) {
-                                // Handle AI SDK streaming format: 0:"content"
-                                if (line.startsWith('0:"')) {
-                                    try {
-                                        // Extract content from 0:"content" format
-                                        const content = JSON.parse(line.slice(2));
-                                        if (typeof content === 'string') {
-                                            aiResponseContent += content;
-                                            setStreamingMessage(aiResponseContent);
-                                        }
-                                    } catch (e) {
-                                        // If JSON parsing fails, try to extract content manually
-                                        const match = line.match(/^0:"(.+)"$/);
-                                        if (match) {
-                                            const content = match[1].replace(/\\"/g, '"').replace(/\\n/g, '\n');
-                                            aiResponseContent += content;
-                                            setStreamingMessage(aiResponseContent);
-                                        }
-                                    }
-                                }
-                                // Also handle standard SSE format as fallback
-                                else if (line.startsWith('data: ') && line !== 'data: [DONE]') {
-                                    try {
-                                        const data = JSON.parse(line.slice(6));
-                                        if (data.content) {
-                                            aiResponseContent += data.content;
-                                            setStreamingMessage(aiResponseContent);
-                                        }
-                                    } catch (e) {
-                                        console.error('Error parsing SSE data:', e);
-                                    }
-                                }
-                            }
-                        }
-
-                        const aiMessage: Message = {
-                            role: 'assistant',
-                            content: aiResponseContent,
-                            timestamp: new Date(),
-                            uniqueKey: `msg_ai_question_${Date.now()}`
-                        };
-
-                        setDisplayMessages(prev => [...prev, aiMessage]);
-                        setStreamingMessage("");
-
-                        // Save conversation to Sanity for tracking purposes
-                        try {
-                            await addConversationTurn(userMessage, aiMessage);
-                        } catch (error) {
-                            console.error('Error saving conversation turn:', error);
-                            if (isSanityPermissionError(error)) {
-                                setHasPermissionIssue(true);
-                            }
-                        }
-
-                        trackChatEvent('RECEIVE_MESSAGE');
-
-                    } catch (error) {
-                        console.error('Error in suggested question submission:', error);
-
-                        const errorMessage: Message = {
-                            role: 'assistant',
-                            content: 'Sorry, I encountered an error. Please try again. If you are an Admin then please contact alhayatgpt.com to white-list your domain.',
-                            timestamp: new Date(),
-                            uniqueKey: `msg_error_question_${Date.now()}`
-                        };
-
-                        setDisplayMessages(prev => [...prev, errorMessage]);
-
-                        // Send error to parent
-                        if (window.parent && window.parent !== window) {
-                            window.parent.postMessage({
-                                type: 'ERROR',
-                                payload: { message: 'Chat error occurred' }
-                            }, parentOrigin);
-                        }
-                    } finally {
-                        setIsLoading(false);
-                        setStreamingMessage("");
-                    }
-                }
-            }
-        };
-
-        // Add event listener to chat container for event delegation
-        chatRef.current.addEventListener('click', handleQuestionClick);
-
-        return () => {
-            if (chatRef.current) {
-                chatRef.current.removeEventListener('click', handleQuestionClick);
-            }
-        };
-    }, [displayMessages, isLoading, firstName, lastName, email, currentChat, isGuestMode, parentOrigin, addConversationTurn]); // Re-run when messages change to ensure new questions get handlers
-
+    // Handle form submission
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!input.trim() || isLoading) return;
 
-        const newMessages: Message[] = [...displayMessages, { role: 'user', content: input, timestamp: new Date(), uniqueKey: Date.now().toString() }];
-        setDisplayMessages(newMessages);
-        setInput(""); // Clear input after grabbing its value
-        setStreamingMessage("");
-        setIsLoading(true);
-        trackChatEvent('SEND_MESSAGE');
+        const userMessage: Message = {
+            role: 'user',
+            content: input.trim(),
+            timestamp: new Date(),
+            uniqueKey: `msg_user_${Date.now()}`,
+            firstName,
+            lastName,
+            email,
+        };
 
-        // Use the sourceWebsite from URL params for validation
-        const sourceOrigin = sourceWebsite.startsWith('http') ? sourceWebsite : `https://${sourceWebsite}`;
+        const currentInput = input.trim();
+        setInput("");
+        setIsLoading(true);
+        setStreamingMessage("");
+
+        // Add user message to display
+        setDisplayMessages(prev => [...prev, userMessage]);
 
         try {
-            const apiEndpoint = getApiEndpoint();
-            const chatApiUrl = `${apiEndpoint}/api/chat`;
-            const response = await fetch(chatApiUrl, {
+            const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    messages: newMessages.map(({ role, content }) => ({ role, content })),
+                    messages: [...(currentChat?.messages || []), userMessage].map(msg => ({
+                        role: msg.role,
+                        content: msg.content,
+                        firstName: msg.firstName || firstName,
+                        lastName: msg.lastName || lastName,
+                        email: msg.email || email,
+                    })),
                     isWidget: true,
-                    isGuest: isGuestMode,
-                    userLocation: location,
-                    parentOrigin: sourceOrigin, // Pass correct origin for validation
-                    chatId: currentChat?._id,
-                    firstName: firstName,
-                    lastName: lastName
+                    isGuest: true
                 })
             });
 
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ message: 'An unknown error occurred' }));
-                throw new Error(errorData.message || 'Failed to get AI response');
+                throw new Error('Failed to get AI response');
             }
 
             const reader = response.body?.getReader();
@@ -643,43 +391,27 @@ function WidgetChatPage() {
             let aiResponseContent = "";
             const decoder = new TextDecoder();
 
+            // Simple streaming handling
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
 
-                const chunk = decoder.decode(value, { stream: true });
+                const chunk = decoder.decode(value);
                 const lines = chunk.split('\n');
 
                 for (const line of lines) {
-                    // Handle AI SDK streaming format: 0:"content"
-                    if (line.startsWith('0:"')) {
+                    if (line.trim() === '') continue;
+
+                    if (line.startsWith('0:')) {
                         try {
-                            // Extract content from 0:"content" format
-                            const content = JSON.parse(line.slice(2));
+                            const data = line.slice(2);
+                            const content = JSON.parse(data);
                             if (typeof content === 'string') {
                                 aiResponseContent += content;
                                 setStreamingMessage(aiResponseContent);
                             }
-                        } catch (e) {
-                            // If JSON parsing fails, try to extract content manually
-                            const match = line.match(/^0:"(.+)"$/);
-                            if (match) {
-                                const content = match[1].replace(/\\"/g, '"').replace(/\\n/g, '\n');
-                                aiResponseContent += content;
-                                setStreamingMessage(aiResponseContent);
-                            }
-                        }
-                    }
-                    // Also handle standard SSE format as fallback
-                    else if (line.startsWith('data: ') && line !== 'data: [DONE]') {
-                        try {
-                            const data = JSON.parse(line.slice(6));
-                            if (data.content) {
-                                aiResponseContent += data.content;
-                                setStreamingMessage(aiResponseContent);
-                            }
-                        } catch (e) {
-                            console.error('Error parsing SSE data:', e);
+                        } catch {
+                            // Ignore parsing errors
                         }
                     }
                 }
@@ -687,7 +419,7 @@ function WidgetChatPage() {
 
             const aiMessage: Message = {
                 role: 'assistant',
-                content: aiResponseContent,
+                content: aiResponseContent || 'I apologize, but I encountered an issue. Please try again.',
                 timestamp: new Date(),
                 uniqueKey: `msg_ai_${Date.now()}`
             };
@@ -695,200 +427,74 @@ function WidgetChatPage() {
             setDisplayMessages(prev => [...prev, aiMessage]);
             setStreamingMessage("");
 
-            // Always save conversation to Sanity for tracking purposes
-            try {
-                // Pass the user message that initiated this turn
-                const userMessageForTurn = newMessages.find(m => m.role === 'user' && m.content === input);
-                if (userMessageForTurn) {
-                    await addConversationTurn(userMessageForTurn, aiMessage);
+            // Save conversation (optional, don't fail if it errors)
+            if (addConversationTurn) {
+                try {
+                    await addConversationTurn(userMessage, aiMessage);
+                } catch (error) {
+                    console.error('Error saving conversation:', error);
+                    if (isSanityPermissionError(error)) {
+                        setHasPermissionIssue(true);
+                    }
                 }
-            } catch (error) {
-                console.error('Error saving conversation turn:', error);
-                if (isSanityPermissionError(error)) {
-                    setHasPermissionIssue(true);
-                }
-                // Continue even if saving fails - don't block the user experience
             }
 
-            trackChatEvent('RECEIVE_MESSAGE');
+            try {
+                trackChatEvent('RECEIVE_MESSAGE');
+            } catch (error) {
+                console.warn('Analytics tracking failed:', error);
+            }
 
         } catch (error) {
-            console.error('Error in widget chat:', error);
-
-            const errorMessageContent = (error instanceof Error && error.message.includes('Domain access denied'))
-                ? "This domain is not authorized. Please contact support to whitelist it."
-                : 'Sorry, I encountered an error. Please try again. If the problem persists, please contact our support team.';
+            console.error('Chat error:', error);
 
             const errorMessage: Message = {
                 role: 'assistant',
-                content: errorMessageContent,
+                content: 'Sorry, I encountered an error. Please try again.',
                 timestamp: new Date(),
                 uniqueKey: `msg_error_${Date.now()}`
             };
 
             setDisplayMessages(prev => [...prev, errorMessage]);
-
-            // Send error to parent
-            if (window.parent && window.parent !== window) {
-                window.parent.postMessage({
-                    type: 'ERROR',
-                    payload: { message: 'Chat error occurred' }
-                }, parentOrigin);
-            }
         } finally {
             setIsLoading(false);
             setStreamingMessage("");
         }
     };
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newValue = e.target.value;
-        setInput(newValue);
-
-        if (autoDetect && newValue.trim().length > 8) {
-            if (debounceTimeoutRef.current) {
-                clearTimeout(debounceTimeoutRef.current);
-            }
-
-            debounceTimeoutRef.current = setTimeout(() => {
-                const recentMessages = displayMessages.slice(-3).map(msg => ({
-                    content: msg.content,
-                    role: msg.role
-                }));
-
-                // Detect language and notify parent
-                detectInputLanguageChange(newValue, recentMessages);
-
-                // Check for language switch to notify parent SDK
-                const languageSwitchResult = checkLanguageSwitch(newValue, recentMessages);
-                if (languageSwitchResult.shouldSwitch && window.parent && window.parent !== window) {
-                    try {
-                        window.parent.postMessage({
-                            type: 'LANGUAGE_DETECTED',
-                            payload: {
-                                language: languageSwitchResult.newLanguage || 'en',
-                                direction: isRTL ? 'rtl' : 'ltr',
-                                confidence: languageSwitchResult.confidence
-                            }
-                        }, parentOrigin);
-                    } catch (error) {
-                        console.log('Could not notify parent about language detection:', error);
-                    }
-                }
-            }, 800);
-        }
-    };
-
+    // Simple copy function
     const copyMessage = async (messageContent: string, messageId: string) => {
         try {
-            console.log('Copy button clicked for message:', messageId);
-            console.log('Message content:', messageContent);
-            console.log('Current URL protocol:', window.location.protocol);
-            console.log('Is in iframe:', window !== window.top);
-
             const textContent = messageContent.replace(/<[^>]*>/g, '');
-            console.log('Cleaned text content:', textContent);
 
-            // Method 1: Try modern Clipboard API first
             if (navigator.clipboard && window.isSecureContext) {
-                try {
-                    console.log('Attempting copy with Clipboard API...');
-                    await navigator.clipboard.writeText(textContent);
-                    console.log('Copy successful using Clipboard API');
-                    setCopiedMessageId(messageId);
-                    setTimeout(() => setCopiedMessageId(null), 2000);
-                    trackChatEvent('SEND_MESSAGE', `Copy message - length: ${textContent.length}`);
-                    return;
-                } catch (clipboardError) {
-                    console.warn('Clipboard API failed:', clipboardError);
-                    // Fall through to next method
-                }
+                await navigator.clipboard.writeText(textContent);
             } else {
-                console.warn('Clipboard API not available or not in secure context');
-            }
-
-            // Method 2: Try execCommand fallback
-            console.log('Attempting copy with execCommand fallback...');
-            const textArea = document.createElement('textarea');
-            textArea.value = textContent;
-            textArea.style.position = 'fixed';
-            textArea.style.left = '-999999px';
-            textArea.style.top = '-999999px';
-            document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
-
-            try {
-                const successful = document.execCommand('copy');
-                document.body.removeChild(textArea);
-
-                if (successful) {
-                    console.log('Fallback copy successful with execCommand');
-                    setCopiedMessageId(messageId);
-                    setTimeout(() => setCopiedMessageId(null), 2000);
-                    trackChatEvent('SEND_MESSAGE', `Copy message (fallback) - length: ${textContent.length}`);
-                    return;
-                } else {
-                    console.warn('execCommand copy returned false');
-                }
-            } catch (execError) {
-                console.warn('execCommand copy failed:', execError);
+                // Fallback
+                const textArea = document.createElement('textarea');
+                textArea.value = textContent;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999999px';
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
                 document.body.removeChild(textArea);
             }
 
-            // Method 3: Manual selection fallback
-            console.log('Attempting manual selection fallback...');
+            setCopiedMessageId(messageId);
+            setTimeout(() => setCopiedMessageId(null), 2000);
+
             try {
-                const range = document.createRange();
-                const selection = window.getSelection();
-                const tempDiv = document.createElement('div');
-                tempDiv.style.position = 'fixed';
-                tempDiv.style.left = '-999999px';
-                tempDiv.innerHTML = textContent;
-                document.body.appendChild(tempDiv);
-
-                range.selectNodeContents(tempDiv);
-                selection?.removeAllRanges();
-                selection?.addRange(range);
-
-                const manualSuccess = document.execCommand('copy');
-                document.body.removeChild(tempDiv);
-                selection?.removeAllRanges();
-
-                if (manualSuccess) {
-                    console.log('Manual selection copy successful');
-                    setCopiedMessageId(messageId);
-                    setTimeout(() => setCopiedMessageId(null), 2000);
-                    trackChatEvent('SEND_MESSAGE', `Copy message (manual) - length: ${textContent.length}`);
-                    return;
-                }
-            } catch (manualError) {
-                console.warn('Manual selection copy failed:', manualError);
+                trackChatEvent('SEND_MESSAGE', `Copy message - length: ${textContent.length}`);
+            } catch (error) {
+                console.warn('Analytics tracking failed:', error);
             }
-
-            // All methods failed
-            throw new Error('All copy methods failed');
-
         } catch (error) {
-            console.error('All copy methods failed:', error);
-            console.log('Environment info:', {
-                protocol: window.location.protocol,
-                isSecureContext: window.isSecureContext,
-                hasClipboard: !!navigator.clipboard,
-                isIframe: window !== window.top,
-                userAgent: navigator.userAgent
-            });
-
-            // Show a more helpful error with instructions
-            const isHttps = window.location.protocol === 'https:';
-            const errorMsg = !isHttps
-                ? 'Copy requires HTTPS. Please try manually selecting and copying the text, or visit the HTTPS version of this site.'
-                : 'Copy failed due to browser security restrictions. Please manually select and copy the text above.';
-
-            alert(errorMsg);
+            console.error('Copy failed:', error);
         }
     };
 
+    // Combine messages for display
     const allMessages = [...displayMessages];
     if (streamingMessage) {
         allMessages.push({
@@ -899,46 +505,20 @@ function WidgetChatPage() {
         });
     }
 
-    // Always remain in guest mode for external widgets
-    useEffect(() => {
-        setIsGuestMode(true);
-    }, []);
-
-    // Handle nested widget detection
-    if (isNested) {
+    // Show loading until initialized
+    if (!isInitialized) {
         return (
-            <div className="flex items-center justify-center h-96 p-6">
-                <div className="text-center max-w-sm">
-                    <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <span className="text-2xl">⚠️</span>
-                    </div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Widget Nesting Detected</h3>
-                    <p className="text-sm text-gray-600 mb-4">
-                        This widget is already embedded on this page. Multiple instances have been prevented to avoid conflicts.
-                    </p>
-                    <p className="text-xs text-gray-500">
-                        If you need help with widget integration, contact support at alhayatgpt.com
-                    </p>
+            <div className="flex items-center justify-center h-96">
+                <div className="text-center">
+                    <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                    <p className="text-sm text-gray-600">Loading chat...</p>
                 </div>
             </div>
         );
     }
 
-    // Don't render until component is properly mounted AND this is the active instance
-    if (!isMounted || !isWidgetReady || !isActiveInstance.current) {
-        return <div className="flex items-center justify-center h-96">Loading...</div>;
-    }
-
-    // Final check to ensure we're still the active instance
-    if (globalWidgetInstance !== instanceId.current) {
-        return null; // Don't render anything if another instance is active
-    }
-
-    // Show full chat interface for both authenticated and guest users
     return (
-        <div className="flex flex-col bg-gray-50 widget-chat-container" style={{ height: '100%', minHeight: '100vh', position: 'relative' }}>
-            {/* Authentication Status Banner - Completely hidden for widget users */}
-
+        <div className="flex flex-col bg-gray-50" style={{ height: '100%', minHeight: '100vh' }}>
             {/* Permission Issues Banner */}
             {hasPermissionIssue && (
                 <div className="mx-2 mt-2">
@@ -955,63 +535,51 @@ function WidgetChatPage() {
             )}
 
             {/* Chat Messages Container */}
-            <div
-                ref={chatRef}
-                className="flex-1 px-3 md:px-6 lg:px-8 py-4 space-y-4 widget-messages-container"
-            >
+            <div ref={chatRef} className="flex-1 px-4 py-4 space-y-4 overflow-y-auto">
                 {allMessages.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-8">
-                        <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-gray-200/50 max-w-sm md:max-w-md lg:max-w-lg text-center">
-                            <div className="w-fit px-3 py-1 bg-gradient-to-br from-blue-500 to-purple-600 hover:from-purple-600 hover:to-blue-500 hover:shadow-md transition-all duration-200 hover:scale-105 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-                                <Link href={`https://alhayatgpt.com`} target="_blank">
+                        <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-gray-200/50 max-w-md text-center">
+                            <div className="w-fit px-3 py-1 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                                <Link href="https://alhayatgpt.com" target="_blank">
                                     <span className="text-white text-lg font-bold">Al Hayat GPT</span>
                                 </Link>
                             </div>
-                            <div className="mb-4">
-                                <MultilingualWelcome />
-                            </div>
-                            <h2 className="text-sm font-semibold text-gray-800 mb-2">
-                                Advanced Christian AI chatbot for theological discussions.
-                            </h2>
-                            <p className="text-xs text-gray-600 leading-relaxed">
-                                Start a conversation by typing your message below.
-                            </p>
+                            <SimpleWelcome />
                         </div>
                     </div>
                 )}
 
-                {allMessages.map((m, index) => {
+                {allMessages.map((m) => {
                     const timestamp = formatTime(m.timestamp);
-                    const isStreamingThisMessage = m.uniqueKey?.includes('streaming') && streamingMessage && m.role === 'assistant';
+                    const isStreamingThisMessage = m.uniqueKey?.includes('streaming');
 
                     return (
                         <div
                             key={m.uniqueKey || `fallback_${m.role}_${m.timestamp.getTime()}`}
-                            className={`widget-message flex items-start gap-3 ${m.role === "user"
-                                ? isRTL ? "justify-start" : "justify-end"
-                                : isRTL ? "justify-end" : "justify-start"
+                            className={`flex items-start gap-3 ${m.role === "user"
+                                ? (isRTL ? "justify-start" : "justify-end")
+                                : (isRTL ? "justify-end" : "justify-start")
                                 }`}
                         >
                             {m.role === "assistant" && !isRTL && AVATARS.ai}
 
                             <div
-                                className={`${m.role === "user" ? "max-w-xs md:max-w-md lg:max-w-lg chat-bubble-user" : "max-w-sm md:max-w-4xl lg:max-w-6xl chat-bubble-assistant"} ${m.role === "user"
-                                    ? "text-white"
-                                    : "text-gray-800"
-                                    } rounded-2xl px-4 py-3 transition-all duration-300 widget-message-hover`}
+                                className={`${m.role === "user" ? "max-w-xs" : "max-w-md"} ${m.role === "user"
+                                    ? "bg-gradient-to-br from-blue-500 to-blue-600 text-white"
+                                    : "bg-white text-gray-800 border border-gray-200"
+                                    } rounded-2xl px-4 py-3 shadow-lg`}
                             >
                                 <div className={`flex items-center gap-2 mb-1 ${isRTL ? 'justify-end' : 'justify-start'}`}>
                                     <span className={`text-xs font-medium ${m.role === "user" ? "text-blue-100" : "text-gray-500"}`}>
                                         {m.role === "user" ? "Guest" : "Assistant"}
                                     </span>
-
                                     <span className={`text-xs ${m.role === "user" ? "text-blue-200" : "text-gray-400"}`}>
                                         {timestamp}
                                     </span>
                                     {m.role === "assistant" && m.content && !isStreamingThisMessage && (
                                         <button
                                             onClick={() => copyMessage(m.content, m.uniqueKey || `msg_${m.timestamp.getTime()}`)}
-                                            className={`${isRTL ? 'mr-auto' : 'ml-auto'} p-1 rounded-lg hover:bg-gray-100 transition-all duration-200`}
+                                            className={`${isRTL ? 'mr-auto' : 'ml-auto'} p-1 rounded-lg hover:bg-gray-100 transition-colors`}
                                             title="Copy message"
                                         >
                                             {copiedMessageId === (m.uniqueKey || `msg_${m.timestamp.getTime()}`) ? (
@@ -1023,47 +591,41 @@ function WidgetChatPage() {
                                     )}
                                 </div>
 
-                                <div className={`text-sm ${getFontClass()}`}>
+                                <div className={`text-sm ${getFontClass ? getFontClass() : ''}`}>
                                     {m.role === "assistant" ? (
                                         <div>
                                             {m.content ? (
-                                                <div
-                                                    className="assistant-content prose prose-sm max-w-none prose-headings:font-semibold prose-headings:text-gray-800 prose-p:text-gray-700 prose-p:leading-relaxed prose-a:text-blue-600 prose-a:underline hover:prose-a:text-blue-800 prose-strong:text-gray-800 prose-em:text-gray-700 prose-code:bg-gray-100 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-gray-800 prose-pre:bg-gray-100 prose-pre:p-3 prose-pre:rounded-lg prose-ul:list-disc prose-ol:list-decimal prose-li:text-gray-700 prose-blockquote:border-l-4 prose-blockquote:border-blue-200 prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-gray-600 prose-table:border-collapse prose-table:table-auto prose-table:w-full prose-table:text-sm prose-thead:bg-gray-50 prose-th:border prose-th:border-gray-300 prose-th:px-4 prose-th:py-2 prose-th:text-left prose-th:font-semibold prose-th:text-gray-900 prose-tbody:divide-y prose-tbody:divide-gray-200 prose-tr:border-b prose-tr:border-gray-200 prose-td:border prose-td:border-gray-300 prose-td:px-4 prose-td:py-2 prose-td:text-gray-700 prose-tr:hover:bg-gray-50"
-                                                    dangerouslySetInnerHTML={{ __html: m.content }}
-                                                />
+                                                <div dangerouslySetInnerHTML={{ __html: m.content }} />
                                             ) : (
                                                 <div className="text-gray-500 italic">No response received</div>
                                             )}
                                             {isStreamingThisMessage && (
-                                                <span className={`inline-block w-1 h-4 bg-blue-500 rounded-sm animate-pulse ${isRTL ? 'mr-1' : 'ml-1'}`}></span>
+                                                <span className="inline-block w-1 h-4 bg-blue-500 rounded-sm animate-pulse ml-1"></span>
                                             )}
                                         </div>
                                     ) : (
-                                        <div className={`whitespace-pre-line break-words ${getFontClass()}`}>
+                                        <div className="whitespace-pre-line break-words">
                                             {m.content}
                                         </div>
                                     )}
                                 </div>
                             </div>
 
-                            <Link href={`https://alhayatgpt.com`} target="_blank" className="flex items-center gap-2">
-                                {m.role === "user" && !isRTL && AVATARS.user}
-                                {m.role === "assistant" && isRTL && AVATARS.ai}
-                                {m.role === "user" && isRTL && AVATARS.user}
-                            </Link>
-
+                            {m.role === "user" && !isRTL && AVATARS.user}
+                            {m.role === "assistant" && isRTL && AVATARS.ai}
+                            {m.role === "user" && isRTL && AVATARS.user}
                         </div>
                     );
                 })}
 
                 {isLoading && !streamingMessage && (
-                    <div className={`widget-message flex items-start gap-3 ${isRTL ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`flex items-start gap-3 ${isRTL ? 'justify-end' : 'justify-start'}`}>
                         {!isRTL && AVATARS.ai}
-                        <div className="chat-bubble-assistant rounded-2xl px-4 py-3 flex items-center gap-2">
-                            <div className="widget-typing">
-                                <span></span>
-                                <span></span>
-                                <span></span>
+                        <div className="bg-white rounded-2xl px-4 py-3 border border-gray-200 shadow-lg flex items-center gap-2">
+                            <div className="flex gap-1">
+                                <span className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></span>
+                                <span className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></span>
+                                <span className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></span>
                             </div>
                             <span className="text-xs text-gray-500">Thinking...</span>
                         </div>
@@ -1073,26 +635,24 @@ function WidgetChatPage() {
             </div>
 
             {/* Input Form */}
-            <div className="widget-footer flex-shrink-0 p-3 md:p-4 lg:p-6" style={{ position: 'sticky', bottom: 0, zIndex: 1000, backgroundColor: 'rgb(249 250 251)' }}>
+            <div className="flex-shrink-0 p-4 bg-gray-50 border-t border-gray-200">
                 <form onSubmit={handleSubmit}>
                     <div className="relative flex items-center gap-2">
                         <div className="flex-1 relative">
                             <input
                                 ref={inputRef}
-                                className={`widget-input w-full pr-12 text-sm ${getFontClass()}`}
-                                style={{ color: '#1f2937 !important', backgroundColor: '#ffffff !important' }}
+                                className={`w-full px-4 py-3 pr-12 rounded-xl bg-white border border-gray-200 text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${getFontClass ? getFontClass() : ''}`}
                                 value={input}
-                                onChange={handleInputChange}
-                                placeholder={getPlaceholderText()}
+                                onChange={(e) => setInput(e.target.value)}
+                                placeholder={getPlaceholderText ? getPlaceholderText() : "Type your message..."}
                                 disabled={isLoading}
                                 dir={isRTL ? 'rtl' : 'ltr'}
                             />
                             <button
                                 type="submit"
                                 disabled={isLoading || !input.trim()}
-                                className={`absolute ${isRTL ? 'left-2' : 'right-2'} top-1/2 -translate-y-1/2 p-2 rounded-lg widget-button disabled:opacity-50 disabled:cursor-not-allowed`}
+                                className={`absolute ${isRTL ? 'left-2' : 'right-2'} top-1/2 -translate-y-1/2 p-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors`}
                                 title="Send Message"
-                                style={{ padding: '8px', minWidth: 'auto', width: 'auto', height: 'auto' }}
                             >
                                 <PaperAirplaneIcon className="w-4 h-4" />
                             </button>
@@ -1104,24 +664,143 @@ function WidgetChatPage() {
     );
 }
 
-// Pure guest-only widget - no authentication required
+// Error Boundary Component
+interface ErrorBoundaryState {
+    hasError: boolean;
+    errorDetails?: string;
+}
+
+interface ErrorBoundaryProps {
+    children: React.ReactNode;
+}
+
+class WidgetErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+    constructor(props: ErrorBoundaryProps) {
+        super(props);
+        this.state = { hasError: false };
+    }
+
+    static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+        console.error('Error boundary triggered:', error);
+        return {
+            hasError: true,
+            errorDetails: error.message
+        };
+    }
+
+    componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+        console.error('Widget error boundary caught an error:', error, errorInfo);
+        console.error('Error stack:', error.stack);
+        console.error('Component stack:', errorInfo.componentStack);
+    }
+
+    handleRefresh = () => {
+        // For iframes, try to reload the iframe source, otherwise reload the page
+        try {
+            if (window.parent && window.parent !== window) {
+                // We're in an iframe - try to reload just the iframe
+                window.location.reload();
+            } else {
+                // We're in the main window
+                window.location.reload();
+            }
+        } catch (error) {
+            console.error('Refresh failed:', error);
+            // Force a location reload as fallback
+            window.location.href = window.location.href;
+        }
+    };
+
+    render() {
+        if (this.state.hasError) {
+            return (
+                <div className="flex items-center justify-center h-96 p-6">
+                    <div className="text-center max-w-sm">
+                        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <span className="text-2xl">⚠️</span>
+                        </div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Something went wrong</h3>
+                        <p className="text-sm text-gray-600 mb-4">
+                            The chat widget encountered an error. Please refresh to try again.
+                        </p>
+                        {this.state.errorDetails && (
+                            <p className="text-xs text-gray-500 mb-4 font-mono bg-gray-100 p-2 rounded">
+                                Error: {this.state.errorDetails}
+                            </p>
+                        )}
+                        <div className="space-y-2">
+                            <button
+                                onClick={this.handleRefresh}
+                                className="w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                            >
+                                Refresh Widget
+                            </button>
+                            <button
+                                onClick={() => this.setState({ hasError: false })}
+                                className="w-full px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                            >
+                                Try Again
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        return this.props.children;
+    }
+}
+
+// Main widget export with error boundary
 export default function WidgetPage() {
     const [isClient, setIsClient] = useState(false);
+    const [initError, setInitError] = useState<string | null>(null);
 
     useEffect(() => {
-        setIsClient(true);
+        try {
+            console.log('Widget page mounting...');
+            setIsClient(true);
+        } catch (error) {
+            console.error('Error setting client state:', error);
+            setInitError(error instanceof Error ? error.message : 'Client initialization failed');
+        }
     }, []);
 
-    // Don't render anything during SSR to avoid hydration issues
+    if (initError) {
+        return (
+            <div className="flex items-center justify-center h-96 p-6">
+                <div className="text-center max-w-sm">
+                    <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span className="text-2xl">⚠️</span>
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Initialization Failed</h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                        {initError}
+                    </p>
+                    <FallbackWidget />
+                </div>
+            </div>
+        );
+    }
+
     if (!isClient) {
-        return <div className="flex items-center justify-center h-96">Loading...</div>;
+        return (
+            <div className="flex items-center justify-center h-96">
+                <div className="text-center">
+                    <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                    <p className="text-sm text-gray-600">Loading...</p>
+                </div>
+            </div>
+        );
     }
 
     return (
-        <LanguageProvider>
-            <ChatProvider forceGuestMode={true}>
-                <WidgetChatPage />
-            </ChatProvider>
-        </LanguageProvider>
+        <WidgetErrorBoundary>
+            <LanguageProvider>
+                <GuestChatProvider>
+                    <WidgetChatPage />
+                </GuestChatProvider>
+            </LanguageProvider>
+        </WidgetErrorBoundary>
     );
 } 

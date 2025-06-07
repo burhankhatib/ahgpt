@@ -33,7 +33,325 @@ interface ChatProviderProps {
     forceGuestMode?: boolean; // Optional prop to force guest mode (for widgets)
 }
 
+// Widget-only provider that doesn't use Clerk at all
+export function GuestChatProvider({ children }: { children: React.ReactNode }) {
+    const [currentChat, setCurrentChat] = useState<Chat | null>(null);
+    const [chats, setChats] = useState<Chat[]>([]);
+    const [hiddenChatIds, setHiddenChatIds] = useState<Set<string>>(new Set());
+    const [isInvisibleMode, setIsInvisibleMode] = useState(false);
+
+    // Generate or retrieve persistent guest ID
+    const getGuestId = () => {
+        if (typeof window !== 'undefined') {
+            let guestId = localStorage.getItem('ahgpt_guest_id');
+            if (!guestId) {
+                guestId = `guest_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+                localStorage.setItem('ahgpt_guest_id', guestId);
+            }
+            return guestId;
+        }
+        return `guest_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+    };
+
+    // Extract domain from parent origin for guest users
+    const getGuestDomain = () => {
+        if (typeof window !== 'undefined') {
+            // First try to get parentOrigin from URL params (widget context)
+            const urlParams = new URLSearchParams(window.location.search);
+            const parentOrigin = urlParams.get('parentOrigin');
+
+            if (parentOrigin && parentOrigin !== window.location.origin) {
+                try {
+                    const url = new URL(parentOrigin);
+                    return url.hostname;
+                } catch (error) {
+                    console.warn('Failed to parse parent origin:', parentOrigin, error);
+                }
+            }
+
+            // Fallback to document referrer
+            if (document.referrer && document.referrer !== window.location.origin) {
+                try {
+                    const url = new URL(document.referrer);
+                    return url.hostname;
+                } catch (error) {
+                    console.warn('Failed to parse referrer:', document.referrer, error);
+                }
+            }
+        }
+
+        return 'Unknown';
+    };
+
+    const loadChats = useCallback(async () => {
+        const userId = getGuestId();
+
+        if (!userId) {
+            setChats([]);
+            return;
+        }
+
+        try {
+            console.log('Loading chats from Sanity for guest user:', userId);
+            const userChats = await chatService.getUserChats(userId);
+            const visibleChats = userChats.filter(chat => !hiddenChatIds.has(chat._id || ''));
+            setChats(visibleChats);
+        } catch (error) {
+            console.error('Error loading chats:', error);
+        }
+    }, [hiddenChatIds]);
+
+    useEffect(() => {
+        loadChats();
+    }, [loadChats]);
+
+    const createNewChat = () => {
+        setCurrentChat(null);
+
+        const uniqueKey = `chat_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+        const guestDomain = getGuestDomain();
+
+        const userData = {
+            firstName: 'Guest',
+            lastName: guestDomain,
+            email: 'guest@example.com',
+            clerkId: getGuestId()
+        };
+
+        const newChat: Chat = {
+            user: userData,
+            title: 'New Chat',
+            messages: [],
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            analytics: {
+                viewCount: 0,
+                exportCount: 0
+            },
+            uniqueKey: uniqueKey,
+            _id: uniqueKey
+        };
+
+        setCurrentChat(newChat);
+    };
+
+    const addMessage = async (message: Message) => {
+        if (!currentChat) return;
+
+        const messageWithKey = {
+            ...message,
+            uniqueKey: message.uniqueKey || `msg_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`
+        };
+
+        const updatedChat = {
+            ...currentChat,
+            messages: [...currentChat.messages, messageWithKey],
+            title: currentChat.messages.length === 0 && message.role === 'user'
+                ? message.content.slice(0, 100).trim() + (message.content.length > 100 ? '...' : '')
+                : currentChat.title,
+            updatedAt: new Date()
+        };
+
+        setCurrentChat(updatedChat);
+
+        try {
+            const guestDomain = getGuestDomain();
+            const freshUserData = {
+                firstName: 'Guest',
+                lastName: guestDomain,
+                email: 'guest@example.com',
+                clerkId: getGuestId()
+            };
+
+            const chatWithFreshUserData = {
+                ...updatedChat,
+                user: freshUserData
+            };
+
+            const savedChat = await chatService.saveChat(chatWithFreshUserData);
+            setCurrentChat(savedChat);
+
+            const isNewChat = !currentChat._id || currentChat._id === currentChat.uniqueKey;
+            if (isNewChat && !isInvisibleMode) {
+                await loadChats();
+            }
+        } catch (error) {
+            console.error('Error saving chat:', error);
+        }
+    };
+
+    const addMessages = async (messages: Message[]) => {
+        if (!currentChat || messages.length === 0) return;
+
+        const messagesWithKeys = messages.map(message => ({
+            ...message,
+            uniqueKey: message.uniqueKey || `msg_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`
+        }));
+
+        const updatedChat = {
+            ...currentChat,
+            messages: [...currentChat.messages, ...messagesWithKeys],
+            title: currentChat.messages.length === 0 && messages[0]?.role === 'user'
+                ? messages[0].content.slice(0, 100).trim() + (messages[0].content.length > 100 ? '...' : '')
+                : currentChat.title,
+            updatedAt: new Date()
+        };
+
+        setCurrentChat(updatedChat);
+
+        try {
+            const guestDomain = getGuestDomain();
+            const freshUserData = {
+                firstName: 'Guest',
+                lastName: guestDomain,
+                email: 'guest@example.com',
+                clerkId: getGuestId()
+            };
+
+            const chatWithFreshUserData = {
+                ...updatedChat,
+                user: freshUserData
+            };
+
+            const savedChat = await chatService.saveChat(chatWithFreshUserData);
+            setCurrentChat(savedChat);
+
+            const isNewChat = !currentChat._id || currentChat._id === currentChat.uniqueKey;
+            if (isNewChat && !isInvisibleMode) {
+                await loadChats();
+            }
+        } catch (error) {
+            console.error('Error saving chat with multiple messages:', error);
+        }
+    };
+
+    const addConversationTurn = async (userMessage: Message, assistantMessage: Message) => {
+        if (!currentChat) {
+            console.error('No current chat available for adding conversation turn');
+            return;
+        }
+
+        const messagesWithKeys = [
+            {
+                ...userMessage,
+                uniqueKey: userMessage.uniqueKey || `msg_user_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`
+            },
+            {
+                ...assistantMessage,
+                uniqueKey: assistantMessage.uniqueKey || `msg_ai_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`
+            }
+        ];
+
+        const updatedChat = {
+            ...currentChat,
+            messages: [...currentChat.messages, ...messagesWithKeys],
+            title: currentChat.messages.length === 0 && userMessage.role === 'user'
+                ? userMessage.content.slice(0, 100).trim() + (userMessage.content.length > 100 ? '...' : '')
+                : currentChat.title,
+            updatedAt: new Date()
+        };
+
+        setCurrentChat(updatedChat);
+
+        try {
+            const guestDomain = getGuestDomain();
+            const freshUserData = {
+                firstName: 'Guest',
+                lastName: guestDomain,
+                email: 'guest@example.com',
+                clerkId: getGuestId()
+            };
+
+            const chatWithFreshUserData = {
+                ...updatedChat,
+                user: freshUserData
+            };
+
+            const savedChat = await chatService.saveChat(chatWithFreshUserData);
+            setCurrentChat(savedChat);
+
+            const isNewChat = !currentChat._id || currentChat._id === currentChat.uniqueKey;
+            if (isNewChat && !isInvisibleMode) {
+                await loadChats();
+            }
+        } catch (error) {
+            console.error('Error saving conversation turn:', error);
+            throw error; // Re-throw to allow handling in calling component
+        }
+    };
+
+    const switchChat = async (chatId: string) => {
+        const chat = chats.find(c => c._id === chatId);
+        if (chat) {
+            setCurrentChat(chat);
+        }
+    };
+
+    const deleteChat = async (chatId: string): Promise<void> => {
+        // Guests cannot delete chats
+        console.warn('Guest users cannot delete chats');
+    };
+
+    const deleteAllChats = async (): Promise<void> => {
+        // Guests cannot delete chats
+        console.warn('Guest users cannot delete chats');
+    };
+
+    const hideChat = async (chatId: string): Promise<void> => {
+        setHiddenChatIds(prev => new Set([...prev, chatId]));
+        setChats(prev => prev.filter(chat => chat._id !== chatId));
+        if (currentChat?._id === chatId) {
+            setCurrentChat(null);
+        }
+    };
+
+    const hideAllChats = async (): Promise<void> => {
+        const chatIds = chats.map(chat => chat._id).filter(Boolean) as string[];
+        setHiddenChatIds(prev => new Set([...prev, ...chatIds]));
+        setChats([]);
+        setCurrentChat(null);
+    };
+
+    const refreshChats = async () => {
+        await loadChats();
+    };
+
+    const toggleInvisibleMode = () => {
+        setIsInvisibleMode(prev => !prev);
+    };
+
+    const value: ChatContextType = {
+        currentChat,
+        chats,
+        createNewChat,
+        addMessage,
+        addMessages,
+        addConversationTurn,
+        switchChat,
+        deleteChat,
+        deleteAllChats,
+        hideChat,
+        hideAllChats,
+        setCurrentChat,
+        refreshChats,
+        canManageChats: false, // Guests cannot manage chats
+        isInvisibleMode,
+        toggleInvisibleMode,
+    };
+
+    return (
+        <ChatContext.Provider value={value}>
+            {children}
+        </ChatContext.Provider>
+    );
+}
+
 export function ChatProvider({ children, forceGuestMode = false }: ChatProviderProps) {
+    // If forceGuestMode is true, use the guest provider instead
+    if (forceGuestMode) {
+        return <GuestChatProvider>{children}</GuestChatProvider>;
+    }
+
     // Conditionally use Clerk authentication based on context
     const clerkUser = useUser();
 
@@ -512,7 +830,7 @@ export function ChatProvider({ children, forceGuestMode = false }: ChatProviderP
         // Update local state immediately for responsive UI
         setCurrentChat(updatedChat);
 
-        // Save to Sanity for all users (authenticated and guests) - always sync regardless of invisible mode
+        // Save to Sanity for all users (authenticated and guests)
         try {
             const guestDomain = getGuestDomain();
 
@@ -535,24 +853,21 @@ export function ChatProvider({ children, forceGuestMode = false }: ChatProviderP
             };
 
             console.log('Saving conversation turn to Sanity:', {
-                chatId: currentChat._id,
-                messageCount: messagesWithKeys.length,
-                messageTypes: messagesWithKeys.map(m => m.role),
+                userMessageContent: userMessage.content.slice(0, 100) + '...',
+                assistantMessageContent: assistantMessage.content.slice(0, 100) + '...',
                 totalMessages: chatWithFreshUserData.messages.length,
-                allMessageTypes: chatWithFreshUserData.messages.map(m => m.role),
+                messageTypes: chatWithFreshUserData.messages.map(m => m.role),
                 chatUser: freshUserData,
                 guestDomain,
-                isInvisibleMode: isInvisibleMode
+                isAuthenticated: !!user
             });
 
             const savedChat = await chatService.saveChat(chatWithFreshUserData);
-
-            console.log('Chat saved successfully to Sanity:', {
+            console.log('Conversation turn saved successfully to Sanity:', {
                 chatId: savedChat._id,
                 messageCount: savedChat.messages.length,
                 messageTypes: savedChat.messages.map(m => m.role),
-                isAuthenticated: !!user,
-                isInvisibleMode: isInvisibleMode
+                isAuthenticated: !!user
             });
 
             // Update with the saved version (which might have a proper _id)
@@ -563,7 +878,7 @@ export function ChatProvider({ children, forceGuestMode = false }: ChatProviderP
             const isNewChat = !currentChat._id || currentChat._id === currentChat.uniqueKey;
 
             if (isNewChat) {
-                console.log('New chat detected, checking if should update sidebar:', {
+                console.log('New chat detected in addConversationTurn, checking if should update sidebar:', {
                     isNewChat,
                     isInvisibleMode,
                     shouldShowInSidebar: !isInvisibleMode
@@ -571,82 +886,52 @@ export function ChatProvider({ children, forceGuestMode = false }: ChatProviderP
 
                 if (!isInvisibleMode) {
                     // Only reload sidebar if invisible mode is OFF
-                    console.log('Invisible mode is OFF, reloading chats for sidebar update');
+                    console.log('Invisible mode is OFF, reloading chats for sidebar update (addConversationTurn)');
                     await loadChats();
                 } else {
-                    console.log('Invisible mode is ON, chat saved to Sanity but not shown in sidebar');
+                    console.log('Invisible mode is ON, chat saved to Sanity but not shown in sidebar (addConversationTurn)');
                 }
             }
         } catch (error) {
-            console.error('Error saving chat:', error);
+            console.error('Error saving conversation turn:', error);
 
-            // Check if it's a permissions error
-            if (isSanityPermissionError(error)) {
-                const permissionError = getSanityPermissionError(error);
-                console.warn('Sanity permissions issue:', permissionError);
-                showNotification({
-                    title: 'Chat Not Saved',
-                    message: 'Your conversation will continue but won\'t be saved to history due to permissions.',
-                    type: 'warning'
-                });
-            } else {
-                showNotification({
-                    title: 'Error',
-                    message: 'Failed to save message to history',
-                    type: 'error'
-                });
-            }
+            // Re-throw error to allow handling in calling component
+            throw error;
         }
     };
 
     const switchChat = async (chatId: string) => {
-        try {
-            console.log('Switching to chat:', chatId);
-            const chat = await chatService.getChatById(chatId);
-            if (chat) {
-                console.log('Loaded chat from Sanity:', {
-                    id: chat._id,
-                    title: chat.title,
-                    messageCount: chat.messages.length,
-                    user: chat.user
-                });
-                setCurrentChat(chat);
-                // Note: View count increment removed to avoid permissions issues
-                // This can be re-enabled when proper API endpoint is created
-            } else {
-                console.warn('Chat not found:', chatId);
-                showNotification({
-                    title: 'Error',
-                    message: 'Chat not found',
-                    type: 'error'
-                });
-            }
-        } catch (error) {
-            console.error('Error switching chat:', error);
-            showNotification({
-                title: 'Error',
-                message: 'Failed to load chat from database',
-                type: 'error'
-            });
+        const chat = chats.find(c => c._id === chatId);
+        if (chat) {
+            setCurrentChat(chat);
+
+            // Track view for analytics (when implemented)
+            // try {
+            //     await chatService.incrementChatView(chatId);
+            // } catch (error) {
+            //     console.error('Failed to track chat view:', error);
+            // }
         }
     };
 
     const deleteChat = async (chatId: string): Promise<void> => {
-        // Only authenticated users can delete chats
         if (!canManageChats) {
             showNotification({
-                title: 'Permission Denied',
-                message: 'Guest users cannot delete chats. Please sign in to manage your chat history.',
-                type: 'warning'
+                title: 'Access Denied',
+                message: 'Only authenticated users can delete chats',
+                type: 'error'
             });
             return;
         }
 
         try {
+            console.log('Deleting chat:', chatId);
             await chatService.deleteChat(chatId);
+
+            // Remove from local state
             setChats(prev => prev.filter(chat => chat._id !== chatId));
 
-            // If the deleted chat was the current chat, clear it
+            // If this was the current chat, clear it
             if (currentChat?._id === chatId) {
                 setCurrentChat(null);
             }
@@ -663,25 +948,27 @@ export function ChatProvider({ children, forceGuestMode = false }: ChatProviderP
                 message: 'Failed to delete chat',
                 type: 'error'
             });
-            throw error;
         }
     };
 
     const deleteAllChats = async (): Promise<void> => {
-        // Only authenticated users can delete chats
         if (!canManageChats) {
             showNotification({
-                title: 'Permission Denied',
-                message: 'Guest users cannot delete chats. Please sign in to manage your chat history.',
-                type: 'warning'
+                title: 'Access Denied',
+                message: 'Only authenticated users can delete chats',
+                type: 'error'
             });
             return;
         }
 
         try {
-            await chatService.deleteAllUserChats(user?.id || '');
+            console.log('Deleting all chats for user:', user?.id);
+            await chatService.deleteAllUserChats(user!.id);
+
+            // Clear local state
             setChats([]);
             setCurrentChat(null);
+
             showNotification({
                 title: 'Success',
                 message: 'All chats deleted successfully',
@@ -694,88 +981,67 @@ export function ChatProvider({ children, forceGuestMode = false }: ChatProviderP
                 message: 'Failed to delete all chats',
                 type: 'error'
             });
-            throw error;
         }
     };
 
     const hideChat = async (chatId: string): Promise<void> => {
-        try {
-            setHiddenChatIds(prev => new Set([...prev, chatId]));
-            setChats(prev => prev.filter(chat => chat._id !== chatId));
+        setHiddenChatIds(prev => new Set([...prev, chatId]));
+        setChats(prev => prev.filter(chat => chat._id !== chatId));
 
-            // If the hidden chat was the current chat, clear it
-            if (currentChat?._id === chatId) {
-                setCurrentChat(null);
-            }
-
-            showNotification({
-                title: 'Success',
-                message: 'Chat hidden from sidebar (still saved in database)',
-                type: 'success'
-            });
-        } catch (error) {
-            console.error('Error hiding chat:', error);
-            showNotification({
-                title: 'Error',
-                message: 'Failed to hide chat',
-                type: 'error'
-            });
-            throw error;
-        }
-    };
-
-    const hideAllChats = async (): Promise<void> => {
-        try {
-            const allChatIds = chats.map(chat => chat._id).filter(Boolean) as string[];
-            setHiddenChatIds(prev => new Set([...prev, ...allChatIds]));
-            setChats([]);
+        // If this was the current chat, clear it
+        if (currentChat?._id === chatId) {
             setCurrentChat(null);
-            showNotification({
-                title: 'Success',
-                message: 'All chats hidden from sidebar (still saved in database)',
-                type: 'success'
-            });
-        } catch (error) {
-            console.error('Error hiding all chats:', error);
-            showNotification({
-                title: 'Error',
-                message: 'Failed to hide all chats',
-                type: 'error'
-            });
-            throw error;
         }
-    };
 
-    const toggleInvisibleMode = () => {
-        setIsInvisibleMode(prev => !prev);
         showNotification({
-            title: isInvisibleMode ? 'Invisible Mode OFF' : 'Invisible Mode ON',
-            message: isInvisibleMode
-                ? 'New chats will now appear in sidebar'
-                : 'New chats will be hidden from sidebar but saved to database',
+            title: 'Chat Hidden',
+            message: 'Chat hidden from sidebar (still accessible from dashboard)',
             type: 'info'
         });
     };
 
+    const hideAllChats = async (): Promise<void> => {
+        const chatIds = chats.map(chat => chat._id).filter(Boolean) as string[];
+        setHiddenChatIds(prev => new Set([...prev, ...chatIds]));
+        setChats([]);
+        setCurrentChat(null);
+
+        showNotification({
+            title: 'All Chats Hidden',
+            message: 'All chats hidden from sidebar (still accessible from dashboard)',
+            type: 'info'
+        });
+    };
+
+    const refreshChats = async () => {
+        await loadChats();
+    };
+
+    const toggleInvisibleMode = () => {
+        setIsInvisibleMode(prev => !prev);
+    };
+
+    const value: ChatContextType = {
+        currentChat,
+        chats,
+        createNewChat,
+        addMessage,
+        addMessages,
+        addConversationTurn,
+        switchChat,
+        deleteChat,
+        deleteAllChats,
+        hideChat,
+        hideAllChats,
+        setCurrentChat,
+        refreshChats,
+        canManageChats,
+        isInvisibleMode,
+        toggleInvisibleMode,
+    };
+
     return (
-        <ChatContext.Provider value={{
-            currentChat,
-            chats,
-            createNewChat,
-            addMessage,
-            addMessages,
-            addConversationTurn,
-            switchChat,
-            deleteChat,
-            deleteAllChats,
-            hideChat,
-            hideAllChats,
-            setCurrentChat,
-            refreshChats: loadChats,
-            canManageChats: canManageChats,
-            isInvisibleMode,
-            toggleInvisibleMode
-        }}>
+        <ChatContext.Provider value={value}>
             {children}
         </ChatContext.Provider>
     );
@@ -783,7 +1049,7 @@ export function ChatProvider({ children, forceGuestMode = false }: ChatProviderP
 
 export function useChat() {
     const context = useContext(ChatContext);
-    if (context === undefined) {
+    if (!context) {
         throw new Error('useChat must be used within a ChatProvider');
     }
     return context;

@@ -77,6 +77,7 @@ export default function ChatDetailModal({ chat, isOpen, onClose, onDelete }: Cha
         const languages: Record<string, { name: string; flag: string }> = {
             'en': { name: 'English', flag: '🇺🇸' },
             'ar': { name: 'Arabic', flag: '🇸🇦' },
+            'fa': { name: 'Persian', flag: '🇮🇷' },
             'he': { name: 'Hebrew', flag: '🇮🇱' },
             'zh': { name: 'Chinese', flag: '🇨🇳' },
             'hi': { name: 'Hindi', flag: '🇮🇳' },

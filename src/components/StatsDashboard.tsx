@@ -115,8 +115,8 @@ export default function StatsDashboard() {
         const languages: Record<string, string> = {
             'en': 'English',
             'ar': 'Arabic',
-            'he': 'Hebrew',
             'fa': 'Persian',
+            'he': 'Hebrew',
             'es': 'Spanish',
             'fr': 'French',
             'de': 'German',
@@ -163,13 +163,55 @@ export default function StatsDashboard() {
             }));
     };
 
+    // Normalize country names to ensure consistent grouping
+    const normalizeCountryName = (countryName: string): string => {
+        const normalizedCountries: Record<string, string> = {
+            // United States variations
+            'USA': 'United States',
+            'US': 'United States',
+            'America': 'United States',
+            'United States of America': 'United States',
+
+            // United Kingdom variations
+            'UK': 'United Kingdom',
+            'Britain': 'United Kingdom',
+            'Great Britain': 'United Kingdom',
+            'England': 'United Kingdom',
+            'Wales': 'United Kingdom',
+            'Scotland': 'United Kingdom',
+            'Northern Ireland': 'United Kingdom',
+
+            // China variations
+            'PRC': 'China',
+            'People\'s Republic of China': 'China',
+
+            // Russia variations
+            'Russian Federation': 'Russia',
+
+            // South Korea variations
+            'Republic of Korea': 'South Korea',
+            'Korea': 'South Korea',
+
+            // Iran variations
+            'Islamic Republic of Iran': 'Iran',
+
+            // Other common variations
+            'Holland': 'Netherlands',
+            'UAE': 'United Arab Emirates',
+            'Emirates': 'United Arab Emirates',
+            'Czech Republic': 'Czechia',
+        };
+
+        return normalizedCountries[countryName] || countryName;
+    };
+
     const getCountryCode = (countryName: string): string => {
         const codes: Record<string, string> = {
             'Iran': 'IR',
             'Israel': 'IL',
             'Palestine': 'PS',
             'Saudi Arabia': 'SA',
-            'UAE': 'AE',
+            'United Arab Emirates': 'AE',
             'Germany': 'DE',
             'France': 'FR',
             'Netherlands': 'NL',
@@ -212,7 +254,7 @@ export default function StatsDashboard() {
             'Croatia': 'HR',
             'Serbia': 'RS',
             'Slovakia': 'SK',
-            'Czech Republic': 'CZ',
+            'Czechia': 'CZ',
             'Hungary': 'HU',
             'Estonia': 'EE',
             'Latvia': 'LV',
@@ -222,8 +264,6 @@ export default function StatsDashboard() {
             'Malta': 'MT',
             'Iceland': 'IS',
             'Ireland': 'IE',
-            'Wales': 'GB',
-            'Scotland': 'GB'
         };
         return codes[countryName] || '';
     };
@@ -231,6 +271,7 @@ export default function StatsDashboard() {
     const statistics = useMemo(() => {
         const stats = {
             totalChats: filteredChats.length,
+            totalMessages: 0,
             chatsWithLocation: 0,
             websiteUsers: 0,
             sdkUsers: 0,
@@ -256,11 +297,19 @@ export default function StatsDashboard() {
             // Safety checks
             if (!chat || !chat.user || !chat._id) return;
 
+            // Count total messages in this chat (both user and AI messages)
+            if (chat.messages && Array.isArray(chat.messages)) {
+                stats.totalMessages += chat.messages.length;
+            }
+
             // Check if chat has valid Sanity location data
             const hasValidLocation = chat.location &&
                 chat.location.country &&
                 chat.location.country !== 'Unknown' &&
                 chat.location.source !== 'unknown';
+
+            // Normalize country name for consistent grouping
+            const normalizedCountry = hasValidLocation ? normalizeCountryName(chat.location!.country!) : 'Unknown';
 
             if (hasValidLocation) {
                 stats.chatsWithLocation++;
@@ -286,10 +335,9 @@ export default function StatsDashboard() {
                 stats.languages[langName] = (stats.languages[langName] || 0) + 1;
             }
 
-            // Only count countries from chats with valid Sanity location data
+            // Only count countries from chats with valid Sanity location data (grouped by normalized country name)
             if (hasValidLocation) {
-                const country = chat.location!.country!;
-                stats.countries[country] = (stats.countries[country] || 0) + 1;
+                stats.countries[normalizedCountry] = (stats.countries[normalizedCountry] || 0) + 1;
             }
 
             // Collect recent chats (user messages) with language and location data
@@ -317,9 +365,9 @@ export default function StatsDashboard() {
 
                             // Use Sanity location data if available, otherwise skip location info
                             const locationInfo = hasValidLocation ? {
-                                country: chat.location!.country!,
-                                countryCode: chat.location!.ip ? getCountryCode(chat.location!.country!) : '',
-                                countryFlag: chat.location!.ip ? getCountryFlag(getCountryCode(chat.location!.country!)) : '🌍',
+                                country: normalizedCountry,
+                                countryCode: chat.location!.ip ? getCountryCode(normalizedCountry) : '',
+                                countryFlag: chat.location!.ip ? getCountryFlag(getCountryCode(normalizedCountry)) : '🌍',
                                 city: chat.location!.city
                             } : {
                                 country: 'Unknown',
@@ -413,8 +461,9 @@ export default function StatsDashboard() {
                     </div>
                 </div>
 
-                {/* Main Stats Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+                {/* Main Stats Cards - 2 rows with 3 cards each */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    {/* First Row */}
                     <StatCard
                         title="Total Chats"
                         value={(statistics?.totalChats || 0).toLocaleString()}
@@ -422,11 +471,19 @@ export default function StatsDashboard() {
                         icon="💬"
                     />
                     <StatCard
+                        title="Total Messages"
+                        value={(statistics?.totalMessages || 0).toLocaleString()}
+                        subtitle={`${statistics?.totalChats > 0 ? Math.round((statistics.totalMessages / statistics.totalChats) * 10) / 10 : 0} avg per chat`}
+                        icon="📝"
+                    />
+                    <StatCard
                         title="With Location Data"
                         value={(statistics?.chatsWithLocation || 0).toLocaleString()}
                         subtitle={`${statistics?.totalChats > 0 ? Math.round((statistics.chatsWithLocation / statistics.totalChats) * 100) : 0}% of total`}
                         icon="📍"
                     />
+
+                    {/* Second Row */}
                     <StatCard
                         title="Website Users"
                         value={(statistics?.websiteUsers || 0).toLocaleString()}
@@ -530,7 +587,7 @@ export default function StatsDashboard() {
                         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                             <span className="mr-2">🗺️</span>
                             Top Countries
-                            <span className="ml-2 text-sm text-gray-500">(Sanity Data Only)</span>
+                            <span className="ml-2 text-sm text-gray-500">(Grouped by Country)</span>
                         </h3>
                         <div className="space-y-3">
                             {topCountries.length > 0 ? (

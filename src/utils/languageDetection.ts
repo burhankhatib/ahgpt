@@ -1,6 +1,6 @@
 import { franc } from 'franc';
 
-export type DetectedLanguage = 'en' | 'zh' | 'hi' | 'es' | 'ar' | 'fr' | 'bn' | 'pt' | 'ru' | 'id' | 'ur' | 'de' | 'ja' | 'tr' | 'ko' | 'vi' | 'te' | 'mr' | 'ta' | 'th' | 'he' | 'bal' | 'ms' | 'fi' | 'sv' | 'no' | 'da';
+export type DetectedLanguage = 'en' | 'zh' | 'hi' | 'es' | 'ar' | 'fa' | 'fr' | 'bn' | 'pt' | 'ru' | 'id' | 'ur' | 'de' | 'ja' | 'tr' | 'ko' | 'vi' | 'te' | 'mr' | 'ta' | 'th' | 'he' | 'bal' | 'ms' | 'fi' | 'sv' | 'no' | 'da';
 
 // Language codes mapping for franc detection
 const LANGUAGE_MAPPING: Record<string, DetectedLanguage> = {
@@ -24,6 +24,11 @@ const LANGUAGE_MAPPING: Record<string, DetectedLanguage> = {
   'arb': 'ar', // Standard Arabic
   'arz': 'ar', // Egyptian Arabic
   'apc': 'ar', // Levantine Arabic
+  
+  // Persian/Farsi
+  'fas': 'fa', // Persian
+  'per': 'fa', // Persian (alternative code)
+  'prs': 'fa', // Dari Persian (detected by franc for Persian text)
   
   // French
   'fra': 'fr',
@@ -156,6 +161,13 @@ const LANGUAGE_KEYWORDS: Record<DetectedLanguage, RegExp[]> = {
     /\b(في|من|إلى|على|عن|مع|هذا|هذه|ذلك|تلك|التي|الذي|كان|كانت|يكون|تكون|له|لها|لكم|لنا)\b/g,
     /\b(ما|كيف|أين|متى|لماذا|من|أي|هل|نعم|لا|شكرا|مرحبا|السلام|عليكم|وعليكم|السلام)\b/g,
     /\b(أريد|أحتاج|أحب|أعرف|أفهم|أستطيع|يمكن|يجب|سوف|قد|لقد|منذ|حتى|بعد|قبل)\b/g
+  ],
+  
+  // Persian/Farsi
+  fa: [
+    /\b(در|از|به|با|را|این|آن|که|هست|است|بود|می|خواهد|باید|کرد|کند|برای|تا|یا)\b/g,
+    /\b(چه|چگونه|کجا|کی|چرا|کیست|کدام|بله|خیر|متشکرم|سلام|درود|لطفا|ببخشید)\b/g,
+    /\b(می‌خواهم|احتیاج|دوست|می‌دانم|می‌فهمم|می‌توانم|باید|می‌روم|هستم|می‌کنم|می‌گویم)\b/g
   ],
   
   // Hebrew
@@ -378,7 +390,7 @@ export function detectLanguage(text: string): DetectedLanguage {
       try {
         const detected = franc(cleanText);
         const mappedLanguage = LANGUAGE_MAPPING[detected];
-        if (mappedLanguage && (mappedLanguage === 'ar' || mappedLanguage === 'ur' || mappedLanguage === 'bal')) {
+        if (mappedLanguage && (mappedLanguage === 'ar' || mappedLanguage === 'fa' || mappedLanguage === 'ur' || mappedLanguage === 'bal')) {
           return mappedLanguage;
         }
       } catch (error) {
@@ -426,7 +438,7 @@ export function detectLanguage(text: string): DetectedLanguage {
       console.log(`🔍 [Enhanced Language Detection] Franc detected: ${detected} for text: ${cleanText.substring(0, 50)}...`);
       const mappedLanguage = LANGUAGE_MAPPING[detected];
       
-      if (mappedLanguage && (mappedLanguage === 'ar' || mappedLanguage === 'ur' || mappedLanguage === 'bal')) {
+      if (mappedLanguage && (mappedLanguage === 'ar' || mappedLanguage === 'fa' || mappedLanguage === 'ur' || mappedLanguage === 'bal')) {
         console.log(`✅ [Enhanced Language Detection] Successfully detected ${mappedLanguage} via Franc`);
         return mappedLanguage;
       }
@@ -589,7 +601,7 @@ function detectByCharacters(text: string): DetectedLanguage {
 }
 
 export function isRTL(language: DetectedLanguage): boolean {
-  return language === 'ar' || language === 'ur' || language === 'he' || language === 'bal';
+  return language === 'ar' || language === 'fa' || language === 'ur' || language === 'he' || language === 'bal';
 }
 
 export function hasRTLCharacters(text: string): boolean {
@@ -605,7 +617,7 @@ export function detectConversationLanguage(messages: Array<{ content: string; ro
   // Take the last 5 messages for better context (increased from 3)
   const recentMessages = messages.slice(-5);
   const languageCounts: Record<DetectedLanguage, number> = {
-    en: 0, zh: 0, hi: 0, es: 0, ar: 0, fr: 0, bn: 0, pt: 0, ru: 0, id: 0,
+    en: 0, zh: 0, hi: 0, es: 0, ar: 0, fa: 0, fr: 0, bn: 0, pt: 0, ru: 0, id: 0,
     ur: 0, de: 0, ja: 0, tr: 0, ko: 0, vi: 0, te: 0, mr: 0, ta: 0, th: 0, he: 0,
     bal: 0, ms: 0, fi: 0, sv: 0, no: 0, da: 0
   };
@@ -803,7 +815,7 @@ function calculateScriptDominance(text: string, language: DetectedLanguage): num
 
   // Map language to script and return dominance ratio
   const scriptMap: Record<DetectedLanguage, keyof typeof scriptCounts> = {
-    ar: 'arabic', ur: 'arabic', bal: 'arabic',
+    ar: 'arabic', fa: 'arabic', ur: 'arabic', bal: 'arabic',
     he: 'hebrew',
     zh: 'chinese',
     hi: 'devanagari', mr: 'devanagari',

@@ -138,11 +138,12 @@ export const chatType = defineType({
           title: 'Detected Language',
           type: 'string',
           description: 'Auto-detected language using Franc from user messages',
-          readOnly: true,
+          readOnly: false,
           options: {
               list: [
                   { title: 'English', value: 'en' },
                   { title: 'Arabic', value: 'ar' },
+                  { title: 'Persian', value: 'fa' },
                   { title: 'Hebrew', value: 'he' },
                   { title: 'Chinese', value: 'zh' },
                   { title: 'Hindi', value: 'hi' },

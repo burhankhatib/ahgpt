@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { detectLanguage, detectConversationLanguage, isRTL, detectLanguageSwitch } from '@/utils/languageDetection';
 
-type Language = 'en' | 'zh' | 'hi' | 'es' | 'ar' | 'fr' | 'bn' | 'pt' | 'ru' | 'id' | 'ur' | 'de' | 'ja' | 'tr' | 'ko' | 'vi' | 'te' | 'mr' | 'ta' | 'th' | 'he' | 'bal' | 'ms' | 'fi' | 'sv' | 'no' | 'da';
+type Language = 'en' | 'zh' | 'hi' | 'es' | 'ar' | 'fa' | 'fr' | 'bn' | 'pt' | 'ru' | 'id' | 'ur' | 'de' | 'ja' | 'tr' | 'ko' | 'vi' | 'te' | 'mr' | 'ta' | 'th' | 'he' | 'bal' | 'ms' | 'fi' | 'sv' | 'no' | 'da';
 
 interface LanguageContextType {
     language: Language;
@@ -44,6 +44,7 @@ const FONT_CONFIG = {
 
     // Arabic script languages - Noto Naskh Arabic (traditional, highly readable)
     ar: { fontClass: 'font-noto-naskh-arabic', fontSize: 'text-lg' },
+    fa: { fontClass: 'font-noto-naskh-arabic', fontSize: 'text-lg' }, // Persian uses Arabic script
     ur: { fontClass: 'font-noto-naskh-arabic', fontSize: 'text-lg' },
 
     // Hebrew script - Noto Sans Hebrew (modern, clean Hebrew typography)
@@ -243,6 +244,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
             // Arabic script languages (RTL)
             ar: 'اكتب رسالتك...',
+            fa: 'پیام خود را تایپ کنید...', // Persian
             ur: 'اپنا پیغام ٹائپ کریں...',
             bal: 'اپنا پیغام ٹائپ کریں...',
 

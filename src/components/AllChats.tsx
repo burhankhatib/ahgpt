@@ -47,7 +47,7 @@ type DateRange = {
     start: Date | null;
     end: Date | null;
 };
-type Language = 'all' | 'en' | 'ar' | 'he' | 'fi' | 'sv' | 'no' | 'da' | 'zh' | 'hi' | 'es' | 'fr' | 'bn' | 'pt' | 'ru' | 'id' | 'ur' | 'de' | 'ja' | 'tr' | 'ko' | 'vi' | 'te' | 'mr' | 'ta' | 'th' | 'bal' | 'ms';
+type Language = 'all' | 'en' | 'ar' | 'fa' | 'he' | 'fi' | 'sv' | 'no' | 'da' | 'zh' | 'hi' | 'es' | 'fr' | 'bn' | 'pt' | 'ru' | 'id' | 'ur' | 'de' | 'ja' | 'tr' | 'ko' | 'vi' | 'te' | 'mr' | 'ta' | 'th' | 'bal' | 'ms';
 type SourceFilter = 'all' | 'website' | 'widget' | string;
 type LocationFilter = 'all' | string;
 
@@ -76,6 +76,7 @@ interface FilterStats {
 const allLanguages: LanguageOption[] = [
     { code: 'en', name: 'English', flag: '🇺🇸', nativeName: 'English' },
     { code: 'ar', name: 'Arabic', flag: '🇸🇦', nativeName: 'العربية' },
+    { code: 'fa', name: 'Persian', flag: '🇮🇷', nativeName: 'فارسی' },
     { code: 'he', name: 'Hebrew', flag: '🇮🇱', nativeName: 'עברית' },
     { code: 'zh', name: 'Chinese', flag: '🇨🇳', nativeName: '中文' },
     { code: 'hi', name: 'Hindi', flag: '🇮🇳', nativeName: 'हिन्दी' },
