@@ -10,6 +10,7 @@
  * 2. Maximum Compatibility: Uses standard, universally supported browser APIs.
  * 3. Robust Loading: Ensures the widget can be embedded on any website.
  * 4. Simple API: Easy to use and understand.
+ * 5. Centralized Styling: Loads external CSS for consistent appearance.
  */
 
 // Define the shape of the public API that will be exposed on the window object.
@@ -58,6 +59,32 @@ if ((window as any).AlHayatGPT) {
     } as AlHayatGPTSDK;
 
     /**
+     * Load external CSS from Al Hayat GPT for consistent styling.
+     * This ensures all widget implementations use the same centralized styles.
+     */
+    function _loadExternalCSS(): void {
+        // Check if the CSS has already been loaded to prevent duplicates
+        const existingLink = document.querySelector('link[href="https://www.alhayatgpt.com/api/globals.css"]');
+        if (existingLink) {
+            return; // CSS already loaded
+        }
+
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = 'https://www.alhayatgpt.com/api/globals.css';
+        link.type = 'text/css';
+        
+        // Add error handling for CSS loading
+        link.onerror = () => {
+            console.warn('Al Hayat GPT SDK: Could not load external CSS. Widget will use default styling.');
+        };
+        
+        // Add to document head
+        document.head.appendChild(link);
+        console.log('Al Hayat GPT SDK: External CSS loaded for consistent styling.');
+    }
+
+    /**
      * The internal function that handles the actual widget creation.
      * @param options - The widget configuration.
      */
@@ -74,6 +101,9 @@ if ((window as any).AlHayatGPT) {
             console.error(`Al Hayat GPT SDK: Container element with id '${options.containerId}' not found.`);
             return;
         }
+
+        // Load external CSS before creating the widget
+        _loadExternalCSS();
 
         // --- Core Iframe Creation ---
         const iframe = document.createElement('iframe');
