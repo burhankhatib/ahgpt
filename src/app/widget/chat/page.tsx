@@ -770,17 +770,48 @@ function WidgetChatPage() {
 
     const copyMessage = async (messageContent: string, messageId: string) => {
         try {
+            console.log('Copy button clicked for message:', messageId);
+            console.log('Message content:', messageContent);
+
             const textContent = messageContent.replace(/<[^>]*>/g, '');
+            console.log('Cleaned text content:', textContent);
+
+            // Check if clipboard API is available
+            if (!navigator.clipboard) {
+                console.warn('Clipboard API not available, using fallback method');
+                // Fallback for non-HTTPS environments or older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = textContent;
+                document.body.appendChild(textArea);
+                textArea.select();
+                const successful = document.execCommand('copy');
+                document.body.removeChild(textArea);
+
+                if (successful) {
+                    console.log('Fallback copy successful');
+                    setCopiedMessageId(messageId);
+                    setTimeout(() => {
+                        setCopiedMessageId(null);
+                    }, 2000);
+                } else {
+                    throw new Error('Fallback copy failed');
+                }
+                return;
+            }
+
             await navigator.clipboard.writeText(textContent);
+            console.log('Copy successful using Clipboard API');
             setCopiedMessageId(messageId);
 
             setTimeout(() => {
                 setCopiedMessageId(null);
             }, 2000);
 
-            trackChatEvent('SEND_MESSAGE');
+            trackChatEvent('SEND_MESSAGE', `Copy message - length: ${textContent.length}`);
         } catch (error) {
             console.error('Failed to copy message:', error);
+            // Show user-friendly error message
+            alert('Unable to copy message. Please try selecting and copying the text manually.');
         }
     };
 

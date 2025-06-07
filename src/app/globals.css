@@ -734,21 +734,7 @@
   @apply text-blue-800;
 }
 
-/* Fade-in animation (keeping for backward compatibility) */
-@keyframes fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-fade-in {
-  animation: fade-in 0.3s ease-out;
-}
+/* Removed fade-in animations to prevent streaming disruption */
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
@@ -854,18 +840,7 @@
   margin-bottom: 16px;
   display: flex;
   flex-direction: column;
-  animation: messageSlideIn 0.3s ease-out;
-}
-
-@keyframes messageSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  /* Removed animation to prevent visual disruption during streaming */
 }
 
 /* User Message */
@@ -1117,8 +1092,9 @@ button.send-btn:active {
   background: #f3f4f6;
   border-color: #3b82f6;
   color: #3b82f6;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  /* Removed transform to prevent layout shifts */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
 }
 
 /* Mobile Responsive for Widget */
@@ -1266,13 +1242,14 @@ button.send-btn:active {
 .widget-message {
   margin-bottom: 16px !important;
   display: flex !important;
-  animation: messageSlideIn 0.3s ease-out !important;
+  /* Removed animation to prevent visual disruption during streaming */
 }
 
-/* Widget Message Hover Effect */
+/* Widget Message Hover Effect - Subtle and smooth */
 .widget-message-hover:hover {
-  transform: translateY(-1px) !important;
-  transition: all 0.2s ease !important;
+  /* Removed transform to prevent layout shifts during streaming */
+  transition: opacity 0.2s ease !important;
+  opacity: 0.95 !important;
 }
 
 /* Widget Typing Indicator */
@@ -1333,6 +1310,62 @@ button.send-btn:active {
 [dir="rtl"] .chat-bubble-assistant {
   border-radius: 18px 18px 4px 18px !important;
   text-align: right !important;
+}
+
+/* Copy Button Styling for Widgets */
+.chat-bubble-assistant button[title="Copy message"],
+.chat-bubble-user button[title="Copy message"] {
+  background: rgba(255, 255, 255, 0.8) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  border-radius: 6px !important;
+  padding: 4px !important;
+  margin: 0 4px !important;
+  transition: all 0.2s ease !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 24px !important;
+  min-height: 24px !important;
+}
+
+.chat-bubble-assistant button[title="Copy message"]:hover,
+.chat-bubble-user button[title="Copy message"]:hover {
+  background: rgba(255, 255, 255, 1) !important;
+  border-color: rgba(0, 0, 0, 0.2) !important;
+  transform: scale(1.05) !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+.chat-bubble-assistant button[title="Copy message"] svg,
+.chat-bubble-user button[title="Copy message"] svg {
+  width: 12px !important;
+  height: 12px !important;
+  color: #6b7280 !important;
+}
+
+.chat-bubble-assistant button[title="Copy message"]:hover svg,
+.chat-bubble-user button[title="Copy message"]:hover svg {
+  color: #374151 !important;
+}
+
+/* Ensure copy button is visible in user messages */
+.chat-bubble-user button[title="Copy message"] {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.chat-bubble-user button[title="Copy message"]:hover {
+  background: white !important;
+  border-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.chat-bubble-user button[title="Copy message"] svg {
+  color: #3b82f6 !important;
+}
+
+.chat-bubble-user button[title="Copy message"]:hover svg {
+  color: #1d4ed8 !important;
 }
 
 
