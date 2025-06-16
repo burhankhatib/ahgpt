@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Chat } from '@/types/chat';
-import { getAllChats } from '@/sanity/lib/data/getAllChats';
 
 interface UseLiveChatsReturn {
     chats: Chat[];
@@ -12,89 +11,66 @@ interface UseLiveChatsReturn {
 }
 
 export function useLiveChats(
-    refreshInterval: number = 5000, // 5 seconds default
+    refreshInterval: number = 5000,
     enableAutoRefresh: boolean = true
 ): UseLiveChatsReturn {
     const [chats, setChats] = useState<Chat[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const intervalRef = useRef<NodeJS.Timeout | null>(null);
-    const mountedRef = useRef(true);
 
-    const fetchChats = useCallback(async (isInitial: boolean = false) => {
+    const fetchChats = async () => {
         try {
-            if (isInitial) {
-                setLoading(true);
-            }
             setError(null);
             
-            console.log('🔄 [useLiveChats] Fetching chats with live updates...');
+            const response = await fetch('/api/admin/chats');
             
-            const response = await getAllChats();
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
             
-            if (mountedRef.current) {
-                setChats(response);
-                
-                console.log(`✅ [useLiveChats] Loaded ${response.length} chats with live updates`);
-                
-                // Log sample of language and location data
-                const withLanguage = response.filter(c => c.detectedLanguage).length;
-                const withLocation = response.filter(c => c.location?.country).length;
-                console.log(`📊 [useLiveChats] Chats with language: ${withLanguage}/${response.length}`);
-                console.log(`🌍 [useLiveChats] Chats with location: ${withLocation}/${response.length}`);
+            const data = await response.json();
+            
+            if (!data.success) {
+                throw new Error(data.error || 'Failed to fetch chats');
             }
-        } catch (error) {
-            console.error('❌ [useLiveChats] Error fetching chats:', error);
-            if (mountedRef.current) {
-                setError(error instanceof Error ? error.message : 'Failed to fetch chats');
-            }
+            
+            setChats(data.chats || []);
+            
+        } catch (err) {
+            console.error('Error fetching chats:', err);
+            setError(err instanceof Error ? err.message : 'Failed to fetch chats');
         } finally {
-            if (mountedRef.current && isInitial) {
-                setLoading(false);
-            }
+            setLoading(false);
         }
-    }, []);
+    };
 
-    // Setup polling interval for real-time updates
     useEffect(() => {
+        // Only run on client side
+        if (typeof window === 'undefined') {
+            return;
+        }
+
         // Initial fetch
-        fetchChats(true);
+        fetchChats();
 
-        // Setup interval for live updates
+        // Setup interval for auto-refresh
+        let interval: NodeJS.Timeout | null = null;
+        
         if (enableAutoRefresh) {
-            intervalRef.current = setInterval(() => {
-                fetchChats(false);
-            }, refreshInterval);
-
-            console.log(`🔄 [useLiveChats] Auto-refresh enabled with ${refreshInterval}ms interval`);
+            interval = setInterval(fetchChats, refreshInterval);
         }
 
         return () => {
-            if (intervalRef.current) {
-                clearInterval(intervalRef.current);
-                intervalRef.current = null;
+            if (interval) {
+                clearInterval(interval);
             }
         };
-    }, [fetchChats, refreshInterval, enableAutoRefresh]);
-
-    // Cleanup on unmount
-    useEffect(() => {
-        return () => {
-            mountedRef.current = false;
-            if (intervalRef.current) {
-                clearInterval(intervalRef.current);
-            }
-        };
-    }, []);
-
-    const refetch = useCallback(async () => {
-        await fetchChats(false);
-    }, [fetchChats]);
+    }, [refreshInterval, enableAutoRefresh]);
 
     return {
         chats,
         loading,
         error,
-        refetch
+        refetch: fetchChats
     };
 } 

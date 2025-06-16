@@ -127,6 +127,8 @@ export default function DebugPage() {
             <div className="max-w-4xl mx-auto">
                 <h1 className="text-3xl font-bold text-gray-900 mb-8">Debug: Location & Language Detection</h1>
 
+
+
                 {/* Location Detection Test */}
                 <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
                     <h2 className="text-xl font-semibold text-gray-900 mb-4">🌍 Location Detection Test</h2>
