@@ -27,6 +27,7 @@ export const EventActions = {
     EXPORT_PDF: 'export_pdf',
     EXPORT_TEXT: 'export_text',
     EMAIL_EXPORT: 'email_export',
+    ENHANCED_EXPORT: 'enhanced_export',
     
     // Navigation events
     OPEN_SIDEBAR: 'open_sidebar',

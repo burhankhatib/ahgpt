@@ -29,6 +29,7 @@ import {
     ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 import ChatDetailModal from './ChatDetailModal';
+import EnhancedExport from './EnhancedExport';
 
 // Enhanced interfaces for better type safety
 interface UserLocation {
@@ -719,6 +720,20 @@ ${'='.repeat(80)}`
                                 <DocumentArrowDownIcon className="h-4 w-4" />
                                 {isExporting ? 'Exporting...' : 'Export'}
                             </button>
+
+                            <EnhancedExport
+                                filteredChats={filteredChats}
+                                isExporting={isExporting}
+                                setIsExporting={setIsExporting}
+                                filterSummary={{
+                                    userTypeFilter,
+                                    sourceFilter,
+                                    languageFilter,
+                                    locationFilter,
+                                    selectedDateRange,
+                                    searchQuery
+                                }}
+                            />
 
                             <button
                                 onClick={openDeleteAllConfirm}

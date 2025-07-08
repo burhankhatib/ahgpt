@@ -9,11 +9,13 @@ import {
     XMarkIcon,
     ExclamationTriangleIcon,
     EyeSlashIcon,
-    EyeIcon
+    EyeIcon,
+    MicrophoneIcon
 } from '@heroicons/react/24/outline';
 import { useChat } from '@/contexts/ChatContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { trackChatEvent } from '@/utils/analytics';
+import Link from 'next/link';
 
 interface SidebarProps {
     isOpen: boolean;
@@ -104,7 +106,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 </div>
 
                 {/* New Chat Button */}
-                <div className="flex-shrink-0 p-4 border-b border-gray-200/30">
+                <div className="flex-shrink-0 p-4 border-b border-gray-200/30 space-y-3">
                     <button
                         onClick={handleNewChat}
                         className="w-full flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl"
@@ -112,6 +114,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         <PlusIcon className="w-5 h-5" />
                         <span className="font-medium">New Chat</span>
                     </button>
+
+                    {/* Voice Agent Button */}
+                    <Link href="/chat/voice-agent" onClick={onClose}>
+                        <button
+                            className="w-full flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl hover:from-purple-600 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+                        >
+                            <MicrophoneIcon className="w-5 h-5" />
+                            <span className="font-medium">Voice Agent</span>
+                        </button>
+                    </Link>
                 </div>
 
                 {/* Header Actions */}

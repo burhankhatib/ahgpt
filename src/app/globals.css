@@ -397,6 +397,9 @@
 @media (max-width: 768px) {
   .chat-message-content table {
     @apply text-sm;
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
   }
   
   .chat-message-content th,
@@ -404,6 +407,25 @@
     @apply px-3 py-2;
     min-width: 80px;
     max-width: 200px;
+  }
+  
+  /* Enhanced mobile table scrolling */
+  .chat-message-content table::-webkit-scrollbar {
+    height: 8px;
+  }
+  
+  .chat-message-content table::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+  }
+  
+  .chat-message-content table::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+  }
+  
+  .chat-message-content table::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
   }
 }
 

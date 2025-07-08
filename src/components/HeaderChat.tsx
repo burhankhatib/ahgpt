@@ -1,7 +1,7 @@
 "use client"
 
 import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/nextjs'
-import { ArrowPathIcon, Bars3Icon, SparklesIcon } from '@heroicons/react/24/solid'
+import { ArrowPathIcon, Bars3Icon, SparklesIcon, MicrophoneIcon } from '@heroicons/react/24/solid'
 import React, { useState, useEffect } from 'react'
 import { trackChatEvent } from '@/utils/analytics'
 import LanguageToggle from './LanguageToggle'
@@ -80,6 +80,16 @@ export default function HeaderChat({ onMenuClick }: HeaderChatProps) {
                         <div className="flex items-center gap-3">
                             {/* Language Toggle */}
                             <LanguageToggle />
+
+                            {/* Voice Agent Link */}
+                            <Link href="/chat/voice-agent">
+                                <button
+                                    className="p-2.5 rounded-xl hover:bg-purple-100/80 transition-all duration-200 text-purple-600 hover:text-purple-800"
+                                    title="Voice Agent"
+                                >
+                                    <MicrophoneIcon className="w-5 h-5" />
+                                </button>
+                            </Link>
 
                             <button
                                 onClick={handleRestartChat}
